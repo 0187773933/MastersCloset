@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Master's Closet - Edit Check In</title>
+		<link rel="icon" href="">
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.min.css">
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<div class="col-sm">
+					<center><h1>Edit Check In</h1></center>
+				</div>
+			</div>
+			<br><br>
+			<div class="row">
+				<center>
+					<form id="checkin-edit-form" action="/admin/checkin/edit" onSubmit="return on_submit( event )" method="post">
+						<div class="row g-2 mb-3">
+							<div class="col-xl-3"></div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="uuid" type="text" class="form-control" name="uuid" readonly>
+									<label for="uuid">UUID</label>
+								</div>
+							</div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="name" type="text" class="form-control" name="name">
+									<label for="name">Name</label>
+								</div>
+							</div>
+							<div class="col-xl-3"></div>
+						</div>
+						<div class="row g-2 mb-3">
+							<div class="col-xl-3"></div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="ULID" type="text" class="form-control" name="ULID" readonly>
+									<label for="ULID">ULID</label>
+								</div>
+							</div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="date" type="text" class="form-control" name="date" readonly>
+									<label for="date">Date</label>
+								</div>
+							</div>
+							<div class="col-xl-3"></div>
+						</div>
+						<div class="row g-2 mb-3">
+							<div class="col-xl-3"></div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="time" type="text" class="form-control" name="time" readonly>
+									<label for="time">Time</label>
+								</div>
+							</div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="type" type="text" class="form-control" name="type">
+									<label for="type">Type</label>
+								</div>
+							</div>
+							<div class="col-xl-3"></div>
+						</div>
+						<div class="row g-2 mb-3">
+							<div class="col-xl-3"></div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="barcode_number" type="number" class="form-control" name="barcode_number">
+									<label for="barcode_number">Barcode</label>
+								</div>
+							</div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-check">
+									<input class="form-check-input" type="checkbox" name="spanish" id="spanish">
+									<label class="form-check-label" for="spanish">Español</label>
+								</div>
+							</div>
+							<div class="col-xl-3"></div>
+						</div>
+						<!-- Additional Fields for Print Job -->
+						<div class="row g-2 mb-3">
+							<div class="col-xl-3"></div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="family_size" type="number" class="form-control" name="family_size">
+									<label for="family_size">Family Size</label>
+								</div>
+							</div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="total_clothing_items" type="number" class="form-control" name="total_clothing_items">
+									<label for="total_clothing_items">Total Clothing Items</label>
+								</div>
+							</div>
+							<div class="col-xl-3"></div>
+						</div>
+
+						<div class="row g-2 mb-3">
+							<div class="col-xl-3"></div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="shoes" type="number" class="form-control" name="shoes">
+									<label for="shoes">Shoes</label>
+								</div>
+							</div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="shoes_limit" type="number" class="form-control" name="shoes_limit">
+									<label for="shoes_limit">Shoes Limit</label>
+								</div>
+							</div>
+							<div class="col-xl-3"></div>
+						</div>
+						<div class="row g-2 mb-3">
+							<div class="col-xl-3"></div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="accessories" type="number" class="form-control" name="accessories">
+									<label for="accessories">Accessories</label>
+								</div>
+							</div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="accessories_limit" type="number" class="form-control" name="accessories_limit">
+									<label for="accessories_limit">Accessories Limit</label>
+								</div>
+							</div>
+							<div class="col-xl-3"></div>
+						</div>
+						<div class="row g-2 mb-3">
+							<div class="col-xl-3"></div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="seasonal" type="number" class="form-control" name="seasonal">
+									<label for="seasonal">Seasonals</label>
+								</div>
+							</div>
+							<div class="col-xl-3 col-sm-6">
+								<div class="form-floating">
+									<input id="seasonal_limit" type="number" class="form-control" name="seasonal_limit">
+									<label for="seasonal_limit">Seasonals Limit</label>
+								</div>
+							</div>
+							<div class="col-xl-3"></div>
+						</div>
+						<div class="form-row">
+							<button id ="print-button" type="button" class="btn btn-warning">Print</button>
+							<button id ="save-button" type="submit" class="btn btn-success">Save</button>
+						</div>
+					</form>
+				</center>
+			</div>
+		</div>
+		<script>
+			function load_api() {
+				return new Promise( function( resolve , reject ) {
+					try {
+						var timestamp = new Date().getTime();
+						var script = document.createElement( "script" );
+						script.src = "/cdn/api.js?v=" + timestamp;
+						script.crossOrigin = "anonymous";
+						document.head.appendChild( script );
+						script.onload = resolve;
+						return;
+					}
+					catch( error ) { console.log( error ); reject( error ); return; }
+				});
+			}
+			// colors
+			// https://getbootstrap.com/docs/5.3/utilities/background/
+			function clear_form() {
+				let form = document.getElementById( "user-edit-form" );
+				for ( let i = 0; i < form.elements.length; ++i ) {
+					let element = form.elements[ i ];
+					if ( element.type === "submit" ) { continue; }
+					element.value = '';
+				}
+			}
+			function form_data_to_json( form_data ) {
+				let obj = {};
+				for (let key of form_data.keys()) {
+					obj[key] = form_data.get(key);
+				}
+				console.log( obj );
+				return JSON.stringify(obj);
+			}
+			// function form_data_to_object(form_data) {
+			// 	let object = {};
+			// 	for(let pair of form_data.entries()) {
+			// 		let keyPath = pair[0].split('[');
+			// 		let depth = keyPath.length;
+			// 		let last = keyPath.pop();
+			// 		last = last.replace(']','');
+
+			// 		let current = object;
+			// 		for(let i=0; i<depth-1; i++){
+			// 			let key = keyPath[i].replace(']', '');
+			// 			if(!(key in current))
+			// 				current[key] = {};
+			// 			current = current[key];
+			// 		}
+			// 		current[last] = pair[1];
+			// 	}
+			// 	return object;
+			// }
+
+			async function submit_form() {
+				let form = document.getElementById( "checkin-edit-form" );
+				let form_data = new FormData( form );
+				let spanishCheckbox = document.getElementById('spanish');
+				let spanishValue = spanishCheckbox ? spanishCheckbox.checked : false;
+				window.check_in.print_job = {
+					"family_size": parseInt( form_data.get( "family_size" ) ) ,
+					"total_clothing_items": parseInt( form_data.get( "total_clothing_items" ) ) ,
+					"shoes": parseInt( form_data.get( "shoes" ) ) ,
+					"shoes_limit": parseInt( form_data.get( "shoes_limit" ) ) ,
+					"accessories": parseInt( form_data.get( "accessories" ) ) ,
+					"accessories_limit": parseInt( form_data.get( "accessories_limit" ) ) ,
+					"seasonal": parseInt( form_data.get( "seasonal" ) ) ,
+					"seasonal_limit": parseInt( form_data.get( "seasonal_limit" ) ) ,
+					"family_name": form_data.get( "name" ) ,
+					"barcode_number": form_data.get( "barcode_number" ) ,
+					"spanish": spanishValue ,
+				};
+				console.log( window.check_in );
+				let url = `admin/checkins/edit/${window.passed_uuid}/${window.passed_ulid}`;
+				let result = await api_submit_form( url , JSON.stringify( window.check_in ) );
+				return result;
+			}
+			async function on_submit( event ) {
+				event.preventDefault();
+				let result = await submit_form();
+				console.log( result );
+				// clear_form();
+				if ( result === true ) {
+					alert( "Check In Info Saved !" );
+				} else {
+					alert( "Error Saving !" );
+				}
+			}
+
+			function populate_form( user_info ) {
+				for(let key in window.check_in) {
+				  if (window.check_in.hasOwnProperty(key)) {
+					let el = document.getElementById(key);
+					if(el) {
+					  if(el.type === "checkbox") {
+						el.checked = window.check_in[key];
+					  } else {
+						el.value = window.check_in[key] || "";
+					  }
+					}
+
+					if(key === 'print_job') {
+					  for(let subKey in window.check_in[key]) {
+						if(window.check_in[key].hasOwnProperty(subKey)) {
+						  let subEl = document.getElementById(subKey);
+						  if(subEl) {
+							subEl.value = window.check_in[key][subKey] || "";
+						  }
+						}
+					  }
+					}
+				  }
+				}
+			}
+			async function init() {
+				await load_api();
+
+				window.passed_uuid = window.location.pathname.split( "/checkin/" )[ 1 ].split( "/" )[ 0 ];
+				window.passed_ulid = window.location.pathname.split( "/edit/" )[ 1 ];
+				console.log( passed_uuid , passed_ulid );
+
+				window.check_in = await api_get_check_in( passed_uuid , passed_ulid );
+				console.log( window.check_in );
+				populate_form();
+
+				$( "#print-button" ).click( async function( event ) {
+					event.preventDefault();
+					let form = document.getElementById( "checkin-edit-form" );
+					let form_data = new FormData( form );
+					let spanishCheckbox = document.getElementById('spanish');
+					let spanishValue = spanishCheckbox ? spanishCheckbox.checked : false;
+					let print_job = {
+						"family_size": parseInt( form_data.get( "family_size" ) ) ,
+						"total_clothing_items": parseInt( form_data.get( "total_clothing_items" ) ) ,
+						"shoes": parseInt( form_data.get( "shoes" ) ) ,
+						"shoes_limit": parseInt( form_data.get( "shoes_limit" ) ) ,
+						"accessories": parseInt( form_data.get( "accessories" ) ) ,
+						"accessories_limit": parseInt( form_data.get( "accessories_limit" ) ) ,
+						"seasonal": parseInt( form_data.get( "seasonal" ) ) ,
+						"seasonal_limit": parseInt( form_data.get( "seasonal_limit" ) ) ,
+						"family_name": form_data.get( "name" ) ,
+						"barcode_number": form_data.get( "barcode_number" ) ,
+						"spanish": spanishValue ,
+					};
+					console.log( print_job );
+					let print_result = await api_print( print_job );
+					console.log( print_result );
+					if ( print_result[ "result" ] === true ) {
+						alert( "Printed !" );
+					} else {
+						alert( "Error Printing !" );
+					}
+				});
+			}
+			$( document ).ready( init );
+		</script>
+	</body>
+</html>

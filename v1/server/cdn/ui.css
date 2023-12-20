@@ -1,0 +1,86 @@
+.btn-qrcode {
+	color: #fff;
+	background-color: #17a2b8;
+	border-color: #17a2b8;
+}
+.btn-qrcode:hover {
+	color: #fff;
+	background-color: #138496;
+	border-color: #117a8b;
+}
+.btn-sms {
+	color: #fff;
+	background-color: #00D8AE;
+	border-color: #00D8AE;
+}
+.btn-sms:hover {
+	color: #fff;
+	background-color: #00D8AE;
+	border-color: #00D8AE;
+}
+
+.btn-verified {
+	color: #fff;
+	background-color: #00D8AE;
+	border-color: #00D8AE;
+}
+.btn-verified:hover {
+	color: #fff;
+	background-color: #00D8AE;
+	border-color: #00D8AE;
+}
+
+.btn-unverified {
+	color: #fff;
+	background-color: #913C67;
+	border-color: #913C67;
+}
+.btn-unverified:hover {
+	color: #fff;
+	background-color: #913C67;
+	border-color: #913C67;
+}
+
+.bg-spouse {
+	color: #fff;
+	background-color: #913C67;
+	border-color: #913C67;
+}
+.bg-spouse:hover {
+	color: #fff;
+	background-color: #E599F7;
+	border-color: #E599F7;
+}
+
+.input-name {
+/*	max-width: 40ch;*/
+}
+
+.floating-verified {
+    position: fixed;
+    top: 10px;
+    right: 10px; /* Align to the right side */
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+}
+
+.floating-verified img {
+    display: block;
+    width: 60px;
+    height: auto;
+    margin-right: 10px; /* Space between image and text */
+}
+
+.floating-verified span {
+}
+
+.badge-custom {
+    padding-left: 1px; /* Adjust this value as needed */
+    padding-right: 1px; /* Adjust this value as needed */
+}
+
+.no-gutters-custom {
+    padding-right: 0;
+    padding-left: 0;
+}

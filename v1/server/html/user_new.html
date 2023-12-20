@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Join</title>
+		<link rel="icon" href="">
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.min.css">
+		<script src="https://cdn.jsdelivr.net/npm/ulid@2.3.0/dist/index.umd.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/dist/modules/libsodium-wrappers.min.js" async></script>
+		<script src="/cdn/utils.js" crossorigin="anonymous"></script>
+		<script src="/cdn/ui.js" crossorigin="anonymous"></script>
+		<link rel="stylesheet" type="text/css" href="/cdn/ui.css" crossorigin="anonymous">
+	</head>
+	<body>
+		<div class="container">
+			<br>
+			<div class="row justify-content-center">
+				<div class="col-12">
+					<div class="d-flex justify-content-center">
+						<img src="/logo.png" class="img-fluid logo" alt="logo">
+					</div>
+				</div>
+			</div>
+			<br>
+			<div class="row" id="buttons-row">
+				<div class="col-12 d-flex justify-content-center" id="buttons-content"></div>
+			</div>
+			<br>
+			<div id="main-row"></div>
+			<div id="extras-row"></div>
+		</div>
+		<script>
+			function format_user_data() {
+				const user = window.USER;
+				const familyMembers = window.FAMILY_MEMBERS;
+
+				// Format identity
+				const identity = [
+					user.identity.first_name || '',
+					user.identity.middle_name || '',
+					user.identity.last_name || ''
+				].join('||');
+
+				// Format email and phone number
+				const emailPhone = [
+					user.email_address || '',
+					user.phone_number || ''
+				].join('||');
+
+				// Check and format address if available
+				let address = '';
+				if (user.identity && user.identity.address) {
+					address = [
+						user.identity.address.street_number || '',
+						user.identity.address.street_name || '',
+						user.identity.address.address_two || '',
+						user.identity.address.city || '',
+						user.identity.address.zipcode || ''
+					].join('||');
+				}
+
+				// Check and format date of birth if available
+				let dob = '';
+				if (user.identity && user.identity.date_of_birth) {
+					dob = [
+						user.identity.date_of_birth.day || '',
+						user.identity.date_of_birth.month || '',
+						user.identity.date_of_birth.year || ''
+					].join('||');
+				}
+
+				// Format family members
+				let fmData = '';
+				if (familyMembers) {
+					fmData = Object.values(familyMembers).map(fm => {
+						const age = fm.age || '';
+						const sex = (fm.sex && fm.sex.toUpperCase().charAt(0)) || '';
+						const spouse = fm.spouse ? '1' : '0';
+						return `${age}${sex}S-${spouse}`;
+					}).join('-');
+				}
+
+				// Combine all data
+				const combinedData = [
+					identity,
+					emailPhone,
+					address,
+					dob,
+					fmData,
+					user.spanish ? 'T' : 'F'
+				].join('||');
+
+				return combinedData;
+			}
+
+
+			class MCT_UI {
+				constructor( options={} ) {
+					this.options = options;
+					this.stack = options.stack;
+					this.buttons_stack = options.buttons_stack;
+					this.buttons = options.buttons;
+					this.ids = {};
+					for ( let key in this.options.ids ) {
+						this.ids[ key ] = {
+							name: key ,
+							visible: false ,
+							render: this.options.ids[ key ] ,
+							// populate?: this.options.ids[ key ]() , // TODO ?
+							// html: "" ,
+						}
+					}
+					$( this.options.anchor ).on( "render_active_user" , this.render_active_user );
+					// this.clear();
+					this.render_buttons();
+				}
+				clear() {
+					set_url( `/admin/user/new` );
+					$( "#user-search-input" ).val( "" );
+					$( this.options.anchor ).html( "" );
+					$( "#user-search-input" ).focus();
+					window.USER = {};
+					window.BARCODES = {};
+					window.FAMILY_MEMBERS = {};
+					// $( this.options.buttons_anchor ).html( "" );
+					this.buttons_stack = this.options.buttons_stack;
+					this.render_buttons();
+					$( "#verified-img" ).hide();
+					$( "#verified-button-text" ).text( "Un-Verified" );
+					$( "#verified-button" ).addClass( "btn-unverified" );
+				}
+				render_buttons() {
+					if ( this.buttons_stack.length < 1 ) { return; }
+					$( this.options.buttons_anchor ).html( "" );
+					let new_ui_stack = [];
+					// Object.keys( this.ids ).forEach( x => this.ids[ x ].visible = false ); // we arn't really doing anything with visible
+					for ( let i = 0; i < this.buttons_stack.length; ++i ) {
+						let x_button = this.buttons[ this.buttons_stack[ i ] ];
+						if ( !x_button ) { return; }
+						let html = `<button id="${this.buttons_stack[ i ]}" type="submit" class="btn btn-${x_button.color} m-4">${x_button.text}</button>`
+						// x_id.visible = true;
+						new_ui_stack.push( html );
+					}
+					let new_ui_stack_html_string = new_ui_stack.join( " " );
+					$( this.options.buttons_anchor ).html( new_ui_stack_html_string );
+					for ( let i = 0; i < this.buttons_stack.length; ++i ) {
+						$( `#${this.buttons_stack[ i ]}` ).on( "click" , this.buttons[ this.buttons_stack[ i ] ].on_click );
+					}
+				}
+				render() {
+					if ( this.stack.length < 1 ) { return; }
+					$( this.options.anchor ).html( "" );
+					let new_ui_stack = [];
+					Object.keys( this.ids ).forEach( x => this.ids[ x ].visible = false );
+					for ( let i = 0; i < this.stack.length; ++i ) {
+						let x_id = this.ids[ this.stack[ i ] ];
+						if ( !x_id ) { return; }
+						let html = x_id.render();
+						x_id.visible = true;
+						new_ui_stack.push( html );
+						new_ui_stack.push( "<br><br>" );
+					}
+					let new_ui_stack_html_string = new_ui_stack.join( " " );
+					$( this.options.anchor ).html( new_ui_stack_html_string );
+				}
+				render_new_form() {
+					set_url( `/join` );
+					this.buttons_stack = [ "new-user-save-button" , "new-user-cancel-button" ];
+					this.render_buttons();
+					this.stack = [ "user_new_form" , "user_qr_code" ];
+					this.render();
+					$( "#add-barcode-button" ).parent().parent().hide();
+					window.USER = {
+						"email_address": "" ,
+						"phone_number": "" ,
+						"identity": {
+							"first_name": "" ,
+							"middle_name": "" ,
+							"last_name": "" ,
+							"address": {
+								"street_number": 0 ,
+								"street_name": "" ,
+								"address_two": "" ,
+								"city": "" ,
+								"zipcode": "" ,
+							} ,
+							"date_of_birth": {
+								"day": 0 ,
+								"month": "" ,
+								"year": 0
+							} ,
+						} ,
+						"spanish": false
+					};
+					window.BARCODES = {};
+					window.FAMILY_MEMBERS = {};
+					$( "#user_first_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); window.USER.identity.first_name = event.target.value; });
+					$( "#user_middle_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); window.USER.identity.middle_name = event.target.value; });
+					$( "#user_last_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); window.USER.identity.last_name = event.target.value; });
+					$( "#user_email" ).on( "change" , ( event ) => { window.USER.email_address = event.target.value });
+					$( "#user_phone_number" ).on( "change" , ( event ) => { window.USER.phone_number = event.target.value });
+					$( "#user_street_number" ).on( "change" , ( event ) => { window.USER.identity.address.street_number = event.target.value });
+					$( "#user_street_name" ).on( "change" , ( event ) => { window.USER.identity.address.street_name = event.target.value });
+					$( "#user_address_two" ).on( "change" , ( event ) => { window.USER.identity.address.address_two = event.target.value });
+					$( "#user_city" ).on( "change" , ( event ) => { window.USER.identity.address.city = event.target.value });
+					$( "#user_state" ).on( "change" , ( event ) => { window.USER.identity.address.state = event.target.value });
+					$( "#user_zip_code" ).on( "change" , ( event ) => { window.USER.identity.address.zipcode = event.target.value });
+					$( "#user_birth_day" ).on( "change" , ( event ) => { window.USER.identity.date_of_birth.day = event.target.value });
+					$( "#user_birth_month" ).on( "change" , ( event ) => { window.USER.identity.date_of_birth.month = event.target.value });
+					$( "#user_birth_year" ).on( "change" , ( event ) => { window.USER.identity.date_of_birth.year = event.target.value });
+					$( "#user_spanish" ).on( "change" , ( event ) => { window.USER.spanish = event.target.checked; });
+				}
+			}
+
+			function on_new_button_click( event ) {
+				console.log( "on_new_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				window.UI.render_new_form();
+			}
+
+			async function on_new_save_button_click( event ) {
+				console.log( "on_new_save_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				// update dynamic form stuff
+				window.USER.barcodes = Object.values( window.BARCODES );
+				window.USER.barcodes = window.USER.barcodes.filter( ( x ) => { return x !== ""; } );
+
+				let x_family_members = Object.values( window.FAMILY_MEMBERS );
+				x_family_members = x_family_members.filter( ( x ) => { return x.age > -1; } );
+				x_family_members.forEach( ( x ) => { x.age = parseInt( x.age ); } )
+				window.USER.family_members = x_family_members;
+
+				if ( window?.USER?.identity?.date_of_birth?.day ) {
+					window.USER.identity.date_of_birth.day = parseInt( window.USER.identity.date_of_birth.day );
+				}
+				if ( window?.USER?.identity?.date_of_birth?.year ) {
+					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
+				}
+
+				let user_data = format_user_data();
+				console.log( user_data );
+				const buf = fflate.strToU8( user_data );
+				// The default compression method is gzip
+				// Increasing mem may increase performance at the cost of memory
+				// The mem ranges from 0 to 12, where 4 is the default
+				const compressed = fflate.compressSync( buf , { level: 6 , mem: 8 } );
+				console.log( Array.from( compressed ).join( " " ) );
+				const compressed_base64_string = btoa( String.fromCharCode.apply( null , compressed ) );
+				console.log( compressed_base64_string );
+				// const compressedString = fflate.strFromU8( fflate.compressSync( buf ) , true );
+				// console.log( compressedString );
+				// console.log( btoa( compressedString ) );
+
+				// const decompressed = fflate.decompressSync(compressed);
+				// const origText = fflate.strFromU8(decompressed);
+				// console.log(origText); // Hello world!
+
+				// let new_user_result = await api_new_user( window.USER );
+				// if ( !new_user_result ) { window.location.hfref = "/"; return; }
+				// if ( !new_user_result.result?.uuid ) { window.location.hfref = "/"; return; }
+				// window.USER = new_user_result.result;
+				// console.log( window.USER );
+				window.location.href = `/join/display?u=${compressed_base64_string}`;
+
+				// show_user_handoff_qrcode();
+				// window.UI.render_active_user();
+			}
+
+			function on_new_cancel_button_click( event ) {
+				console.log( "on_new_cancel_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				// window.UI.render_active_user();
+				window.UI.render_new_form();
+			}
+
+			function on_show_handoff_qrc_button_click( event ) {
+				console.log( "on_show_handoff_qrc_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				// they won't be able to get to it
+				// show_user_handoff_qrcode();
+
+				// so you could have them take a picture of this one , which could then just be scanned later
+				show_user_uuid_qrcode();
+			}
+
+			function on_sms_user_button_click( event ) {
+				console.log( "on_sms_user_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				let link = document.createElement('a');
+				link.href = `/admin/user/sms/${window.USER.uuid}`;
+				link.target = '_blank';
+				link.rel = 'noopener noreferrer';
+				let clickEvent = new MouseEvent('click', {
+					'view': window,
+					'bubbles': true,
+					'cancelable': false
+				});
+				link.dispatchEvent( clickEvent );
+			}
+
+			function on_email_user_button_click( event ) {
+				console.log( "on_email_user_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				let link = document.createElement('a');
+				link.href = `/admin/user/email/${window.USER.uuid}`;
+				link.target = '_blank';
+				link.rel = 'noopener noreferrer';
+				let clickEvent = new MouseEvent('click', {
+					'view': window,
+					'bubbles': true,
+					'cancelable': false
+				});
+				link.dispatchEvent( clickEvent );
+			}
+
+			function on_verified_button_click( event ) {
+				if ( event ) { event.preventDefault(); }
+				window.USER.verified = !window.USER.verified;
+				console.log( "on_verified_button_click()" , window.USER.verified );
+				if ( window.USER.verified ) {
+					$( "#verified-img" ).show();
+					$( "#verified-button-text" ).text( "" );
+					$( "#verified-button" ).removeClass( "btn-unverified" );
+					// $( "#verified-button" ).addClass( "btn-verified" );
+				}
+				else {
+					$( "#verified-img" ).hide();
+					$( "#verified-button-text" ).text( "Un-Verified" );
+					// $( "#verified-button" ).removeClass( "btn-verified" );
+					$( "#verified-button" ).addClass( "btn-unverified" );
+				}
+			}
+
+			async function init() {
+				window.UI = new MCT_UI({
+					anchor: "#main-row" ,
+					// stack: [ "user_balance_table" , "user_search_table" , "shopping_for_selector" , "alert_check_in_allowed" , "alert_check_in_failed" ] ,
+					stack: [] ,
+					ids: {
+						"alert_check_in_allowed": get_ui_alert_check_in_allowed ,
+						"alert_check_in_failed": get_ui_alert_check_in_failed ,
+						"shopping_for_selector": get_ui_shopping_for_selector ,
+						"user_edit_form": get_ui_user_edit_form ,
+						"user_new_form": get_ui_user_new_form ,
+						"user_search_table": get_ui_user_search_table ,
+						"user_balance_table": get_ui_user_balance_table ,
+						"active_user_info": get_ui_active_user_info ,
+						"user_qr_code": get_ui_user_qr_code_display ,
+					} ,
+					buttons_anchor: "#buttons-content" ,
+					buttons_stack: [ "new-user-button" ] ,
+					buttons: {
+						"new-user-button": {
+							text: "New User" ,
+							color: "success" ,
+							on_click: on_new_button_click ,
+						} ,
+						"new-user-save-button": {
+							text: "Save" ,
+							color: "success" ,
+							on_click: on_new_save_button_click ,
+						} ,
+						"new-user-cancel-button": {
+							text: "Cancel" ,
+							color: "warning" ,
+							on_click: on_new_cancel_button_click ,
+						} ,
+						"show-handoff-qrc-button": {
+							text: "QR Code" ,
+							color: "qrcode" ,
+							on_click: on_show_handoff_qrc_button_click ,
+						} ,
+						"sms-user-button": {
+							text: "SMS" ,
+							color: "sms" ,
+							on_click: on_sms_user_button_click ,
+						} ,
+						"email-user-button": {
+							text: "Email" ,
+							color: "secondary" ,
+							on_click: on_email_user_button_click ,
+						} ,
+					} ,
+				});
+				window.UI.render_new_form();
+			}
+			document.addEventListener( "DOMContentLoaded" , init );
+		</script>
+	</body>
+</html>

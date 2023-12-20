@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Master's Closet - Signup - Handoff</title>
+		<link rel="icon" href="">
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
+		<style type="text/css">
+			.logo {
+				max-height: 150px !important;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<div class="col-sm">
+					<center><h1>Displays a QR Code for New User to Scan</h1></center>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm">
+					<center><img src="/logo.png" class="img-fluid logo" alt="logo"></center>
+				</div>
+			</div>
+			<br>
+			<div class="row">
+				<div class="col-sm">
+					<center id="qrcode-image"></center>
+				</div>
+			</div>
+		</div>
+		<script>
+			const uuid_v4_regex = /^[0-9A-F]{8}-[0-9A-F]{4}-[4][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i;
+			function is_uuid( str ) { return uuid_v4_regex.test( str ); }
+			function get_sent_uuid() {
+				const current_url = window.location.pathname;
+				if ( current_url.indexOf( "/handoff/" ) === -1 ) { return false; }
+				let x_uuid = current_url.split( "/handoff/" );
+				if ( x_uuid.length < 1 ) { return false }
+				x_uuid = x_uuid[ 1 ].trim();
+				if ( x_uuid.length < 1 ) { return false }
+				if ( is_uuid( x_uuid ) === false ) { return false }
+				return x_uuid;
+			}
+
+			function generate_qr_code( uuid ) {
+				let user_qrcode = new QRCode( document.getElementById( "qrcode-image" ) , {
+					text: `${window.location.protocol}//${window.location.host}/user/login/fresh/${uuid}` ,
+					width: 256 ,
+					height: 256 ,
+					colorDark : "#000000" ,
+					colorLight : "#ffffff" ,
+					correctLevel : QRCode.CorrectLevel.H
+				});
+			}
+			// https://davidshimjs.github.io/qrcodejs/
+			// https://github.com/davidshimjs/qrcodejs
+			function init() {
+				let sent_uuid = get_sent_uuid();
+				if ( !sent_uuid ) { alert( "Provided UUID Invalid !!!" ); }
+				generate_qr_code( sent_uuid );
+			}
+			document.addEventListener( "DOMContentLoaded" , init );
+		</script>
+	</body>

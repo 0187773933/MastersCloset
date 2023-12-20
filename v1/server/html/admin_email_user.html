@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Master's Closet - Email User</title>
+		<link rel="icon" href="">
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<center><h1 id="email_single_user_text">Master's Closet - Send Email</h1></center>
+			</div>
+			<br>
+			<div class="row">
+				<div class="col-lg-3 col-md-3 col-sm-3"></div>
+				<div class="col-lg-6 col-md-6 col-sm-6">
+					<form id="form-email" action="/admin/user/email" method="POST">
+						<div class="form-row">
+							<div class="col">
+								<div class="input-group">
+									<span class="input-group-text">To :</span>
+									<input type="text" class="form-control" name="email-address" aria-label="email-address" id="email-address"></input>
+								</div>
+							</div>
+						</div>
+						<div class="form-row">
+							<div class="col">
+								<div class="input-group">
+									<span class="input-group-text">Subject :</span>
+									<input type="text" class="form-control" name="email-subject" aria-label="email-subject" id="email-subject"></input>
+								</div>
+							</div>
+						</div>
+						<div class="form-row">
+							<div class="col">
+								<div class="input-group">
+									<span class="input-group-text">Message</span>
+									<textarea class="form-control" name="email-message" aria-label="email-message" rows="10" id="email-message"></textarea>
+								</div>
+							</div>
+						</div>
+						<br>
+						<div class="form-row">
+							<button id="submit-button" type="submit" class="btn btn-success">Send</button>
+						</div>
+					</form>
+				</div>
+				<div class="col-lg-3 col-md-3 col-sm-3"></div>
+			</div>
+		</div>
+		<script>
+			function load_api() {
+				return new Promise( function( resolve , reject ) {
+					try {
+						var timestamp = new Date().getTime();
+						var script = document.createElement( "script" );
+						script.src = "/cdn/api.js?v=" + timestamp;
+						script.crossOrigin = "anonymous";
+						document.head.appendChild( script );
+						script.onload = resolve;
+						return;
+					}
+					catch( error ) { console.log( error ); reject( error ); return; }
+				});
+			}
+			async function init() {
+				await load_api();
+				window.passed_uuid = window.location.pathname.split( "/email/" )[ 1 ];
+				window.user_info = await api_get_user_from_uuid( window.passed_uuid );
+				console.log( window.user_info );
+				document.getElementById( "email_single_user_text" ).textContent = `Send Email to : ${window.user_info.name_string}`;
+				document.getElementById( "email-address" ).value = `${window.user_info.email_address}`;
+				const email_message = document.getElementById( "email-message" );
+				const email_form = document.getElementById( "form-email" );
+				email_form.addEventListener( "submit" , function( event ) {
+					if ( event ) { event.preventDefault(); }
+					let form_data = new FormData( email_form );
+					console.log( form_data );
+					let result = confirm( `Confirm Email Text of : ${email_message.value}` );
+					if ( result === true ) {
+						email_form.submit();
+						return;
+					}
+				});
+			}
+			$( window ).on( "load" , init )
+		</script>
+	</body>
+</html>

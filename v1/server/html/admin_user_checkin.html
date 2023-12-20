@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>User Check In</title>
+		<link rel="icon" href="">
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.min.css">
+		<script src="https://cdn.jsdelivr.net/npm/ulid@2.3.0/dist/index.umd.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
+		<script src="/cdn/utils.js" crossorigin="anonymous"></script>
+		<script src="/cdn/ui.js" crossorigin="anonymous"></script>
+		<link rel="stylesheet" type="text/css" href="/cdn/ui.css" crossorigin="anonymous">
+	</head>
+	<body>
+		<a href="#" id="verified-button" class="btn floating-verified">
+			<img style="display: none;" id="verified-img" src="/cdn/verified.png" alt="verified 45424">
+			<h3 id="verified-button-text">Un-Verified</h3>
+		</a>
+		<br>
+		<div class="container">
+			<div class="row" id="search-row">
+				<div class="col-lg-2 col-md-1"></div>
+				<div class="col-lg-8 col-md-10">
+					<div class="input-group mb-3">
+						<span class="input-group-text" id="search-button">Search</span>
+						<input id="user-search-input" type="text" class="form-control flex-grow-1">
+						<button class="btn btn-outline-secondary" type="button" id="search-clear-button">Clear</button>
+					</div>
+				</div>
+				<div class="col-lg-2 col-md-1"></div>
+			</div>
+			<div class="row" id="buttons-row">
+				<center id="buttons-content"></center>
+			</div>
+			<br>
+			<div class="row" id="main-row"></div>
+			<div class="row" id="extras-row"></div>
+		</div>
+		<script>
+			function load_api() {
+				return new Promise( function( resolve , reject ) {
+					try {
+						var timestamp = new Date().getTime();
+						var script = document.createElement( "script" );
+						script.src = "/cdn/api.js?v=" + timestamp;
+						script.crossOrigin = "anonymous";
+						document.head.appendChild( script );
+						script.onload = resolve;
+						return;
+					}
+					catch( error ) { console.log( error ); reject( error ); return; }
+				});
+			}
+			class MCT_UI {
+				constructor( options={} ) {
+					this.options = options;
+					this.stack = options.stack;
+					this.buttons_stack = options.buttons_stack;
+					this.buttons = options.buttons;
+					this.ids = {};
+					for ( let key in this.options.ids ) {
+						this.ids[ key ] = {
+							name: key ,
+							visible: false ,
+							render: this.options.ids[ key ] ,
+							// populate?: this.options.ids[ key ]() , // TODO ?
+							// html: "" ,
+						}
+					}
+					$( this.options.anchor ).on( "render_active_user" , this.render_active_user );
+					// this.clear();
+					this.render_buttons();
+				}
+				clear() {
+					set_url( `/admin/user/checkin` );
+					$( "#user-search-input" ).val( "" );
+					$( this.options.anchor ).html( "" );
+					$( "#user-search-input" ).focus();
+					window.USER = {};
+					window.BARCODES = {};
+					window.FAMILY_MEMBERS = {};
+					// $( this.options.buttons_anchor ).html( "" );
+					this.buttons_stack = this.options.buttons_stack;
+					this.render_buttons();
+					$( "#verified-button" ).hide();
+					$( "#verified-img" ).hide();
+				}
+				render_buttons() {
+					if ( this.buttons_stack.length < 1 ) { return; }
+					$( this.options.buttons_anchor ).html( "" );
+					let new_ui_stack = [];
+					// Object.keys( this.ids ).forEach( x => this.ids[ x ].visible = false ); // we arn't really doing anything with visible
+					for ( let i = 0; i < this.buttons_stack.length; ++i ) {
+						let x_button = this.buttons[ this.buttons_stack[ i ] ];
+						if ( !x_button ) { return; }
+						let html = `<button id="${this.buttons_stack[ i ]}" type="submit" class="btn btn-${x_button.color}">${x_button.text}</button>`
+						// x_id.visible = true;
+						new_ui_stack.push( html );
+					}
+					let new_ui_stack_html_string = new_ui_stack.join( " " );
+					$( this.options.buttons_anchor ).html( new_ui_stack_html_string );
+					for ( let i = 0; i < this.buttons_stack.length; ++i ) {
+						$( `#${this.buttons_stack[ i ]}` ).on( "click" , this.buttons[ this.buttons_stack[ i ] ].on_click );
+					}
+				}
+				render() {
+					if ( this.stack.length < 1 ) { return; }
+					$( this.options.anchor ).html( "" );
+					let new_ui_stack = [];
+					Object.keys( this.ids ).forEach( x => this.ids[ x ].visible = false );
+					for ( let i = 0; i < this.stack.length; ++i ) {
+						let x_id = this.ids[ this.stack[ i ] ];
+						if ( !x_id ) { return; }
+						let html = x_id.render();
+						x_id.visible = true;
+						new_ui_stack.push( html );
+						new_ui_stack.push( "<br><br>" );
+					}
+					let new_ui_stack_html_string = new_ui_stack.join( " " );
+					$( this.options.anchor ).html( new_ui_stack_html_string );
+				}
+				render_search_table( search_results ) {
+					this.stack = [ "user_search_table" ];
+					this.render();
+					populate_user_search_table( search_results );
+				}
+				async render_active_user( user ) {
+					console.log( "render_active_user()" );
+					window.STATE = "active-user";
+					if ( !window.USER?.uuid ) {
+						this.clear();
+						return;
+					}
+
+					// 1.) Prep UI
+					this.buttons_stack = [ "check-in-print-button" , "edit-user-button" , "new-user-button" ];
+					this.render_buttons();
+					set_url( `/admin/user/checkin/${window.USER.uuid}` );
+
+					$( "#check-in-button" ).on( "click" , on_check_in_button_click );
+					$( "#edit-user-button" ).on( "click" , on_edit_button_click );
+					$( "#new-user-button" ).on( "click" , on_new_button_click );
+					// this.stack = [ "active_user_info" , "shopping_for_selector" , "user_balance_table" ];
+					this.stack = [ "active_user_info" , "shopping_for_selector_advanced" , "user_balance_table" ];
+					this.render();
+					$( "#active-username" ).text( window.USER.name_string );
+
+					// 2.) Pre-Check the Current Check-In Status of the User
+					let check_in_test = await api_check_in_uuid_test( window.USER.uuid );
+					console.log( "check_in_test.user.family_members" , check_in_test.user.family_members );
+					window.BALANCE_CONFIG = check_in_test.balance_config; // need this for shopping-for buttons;
+
+					// 3.) Update Shopping-For Selector
+					// let shopping_for_elem = document.getElementById( "shopping_for_user_family_members" );
+					// if ( !check_in_test.user.family_members ) { check_in_test.user.family_members = []; }
+					// let shopping_for_max = ( check_in_test.user.family_members.length + 1 );
+					// let shopping_for_value = ( check_in_test.user.family_members.length + 1 );
+
+					window.FAMILY_MEMBERS = {};
+
+					// Add Self
+					// console.log( "adding self" );
+					let self_ulid = on_add_family_member_display();
+					let self_text = document.getElementById( `user_family_member_label_${self_ulid}` );
+					self_text.textContent = "Self";
+
+					// Add Family Members
+					if ( window.USER[ "family_members" ] ) {
+						for ( let i = 0; i < window.USER[ "family_members" ].length; ++i ) {
+							if ( window.USER[ "family_members" ][ i ].age < 0 ) { continue; }
+							let family_member_ulid = on_add_family_member_display();
+							window.FAMILY_MEMBERS[ family_member_ulid ] = window.USER[ "family_members" ][ i ];
+							console.log( "adding" , family_member_ulid , window.FAMILY_MEMBERS[ family_member_ulid ] );
+
+							let age = document.getElementById( `user_family_member_${family_member_ulid}_age` );
+							let gender_text = document.getElementById( `user_family_member_${family_member_ulid}_gender_text` );
+							let spouse = document.getElementById( `user_family_member_${family_member_ulid}_spouse` );
+
+							if ( age ) {
+								if ( window.USER[ "family_members" ][ i ].age ) {
+									age.textContent = window.USER[ "family_members" ][ i ].age;
+								}
+							}
+
+							if ( gender_text ) {
+								if ( window.USER[ "family_members" ][ i ].sex ) {
+									if ( window.USER[ "family_members" ][ i ].sex === "male" ) {
+										gender_text.textContent = "Male";
+									} else if ( window.USER[ "family_members" ][ i ].sex === "female" ) {
+										gender_text.textContent = "Female";
+									}
+								}
+
+								if ( window.USER[ "family_members" ][ i ].age < 18 ) {
+									if ( window.USER[ "family_members" ][ i ].sex === "male" ) {
+										gender_text.textContent = "Boy";
+									} else if ( window.USER[ "family_members" ][ i ].sex === "female" ) {
+										gender_text.textContent = "Girl";
+									}
+									spouse.parentNode.parentNode.style.display = "none";
+								}
+							}
+
+							if ( spouse ) {
+								if ( window.USER[ "family_members" ][ i ].spouse ) {
+									spouse.style.display = "block";
+								}
+							}
+
+						}
+					}
+
+					// 4.) Populate Balance Table
+					let shopping_for_value = ( check_in_test.user.family_members.length + 1 ); // +1 for self
+					populate_user_balance_table( shopping_for_value , check_in_test.user.balance , check_in_test.balance_config );
+					$( "#print-checkin-button" ).on( "click" , on_check_in_print_button_click );
+
+					// 5.) Stylize Table Based on Pre-Check-In Result
+					switch ( check_in_test.result.result ) {
+						case true:
+							$( "#user-balance-table" ).removeClass( "table-danger" );
+							$( "#user-balance-table" ).addClass( "table-success" );
+							break;
+						case false:
+							$( "#active-user-time-remaining" ).text( convert_milliseconds_to_time_string( check_in_test.result.time_remaining ) );
+							$( "#user-balance-table" ).removeClass( "table-success" );
+							$( "#user-balance-table" ).addClass( "table-danger" );
+							break;
+					}
+
+					if ( window.USER.verified ) {
+						console.log( "Verified" );
+						$( "#verified-button" ).show();
+						$( "#verified-img" ).show();
+						$( "#verified-button-text" ).text( "" );
+						$( "#verified-button" ).removeClass( "btn-unverified" );
+						// $( "#verified-button" ).addClass( "btn-verified" );
+					}
+					else {
+						console.log( "Un-Verified" );
+						$( "#verified-button" ).show();
+						$( "#verified-img" ).hide();
+						$( "#verified-button-text" ).text( "Un-Verified" );
+						// $( "#verified-button" ).removeClass( "btn-verified" );
+						$( "#verified-button" ).addClass( "btn-unverified" );
+					}
+
+				}
+				render_edit_form() {
+					console.log( "render_edit_form()" );
+					window.STATE = "edit";
+					set_url( `/admin/user/checkin/${window.USER.uuid}/edit` );
+					this.buttons_stack = [ "edit-user-save-button" , "edit-user-cancel-button" , "edit-user-delete-button" , "show-handoff-qrc-button" , "sms-user-button" , "email-user-button" ];
+					this.render_buttons();
+					this.stack = [ "user_edit_form" , "user_qr_code" ];
+					this.render();
+					populate_user_edit_form( window.USER );
+					$( "#user_first_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); window.USER.identity.first_name = event.target.value; });
+					$( "#user_middle_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); window.USER.identity.middle_name = event.target.value; });
+					$( "#user_last_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); window.USER.identity.last_name = event.target.value; });
+					$( "#user_email" ).on( "change" , ( event ) => { window.USER.email_address = event.target.value });
+					$( "#user_phone_number" ).on( "change" , ( event ) => { window.USER.phone_number = event.target.value });
+					$( "#user_street_number" ).on( "change" , ( event ) => { window.USER.identity.address.street_number = event.target.value });
+					$( "#user_street_name" ).on( "change" , ( event ) => { window.USER.identity.address.street_name = event.target.value });
+					$( "#user_address_two" ).on( "change" , ( event ) => { window.USER.identity.address.address_two = event.target.value });
+					$( "#user_city" ).on( "change" , ( event ) => { window.USER.identity.address.city = event.target.value });
+					$( "#user_state" ).on( "change" , ( event ) => { window.USER.identity.address.state = event.target.value });
+					$( "#user_zip_code" ).on( "change" , ( event ) => { window.USER.identity.address.zipcode = event.target.value });
+					$( "#user_birth_day" ).on( "change" , ( event ) => { window.USER.identity.date_of_birth.day = event.target.value });
+					$( "#user_birth_month" ).on( "change" , ( event ) => { window.USER.identity.date_of_birth.month = event.target.value });
+					$( "#user_birth_year" ).on( "change" , ( event ) => { window.USER.identity.date_of_birth.year = event.target.value });
+					$( "#user_spanish" ).on( "change" , ( event ) => { window.USER.spanish = event.target.checked; });
+					if ( window.USER.verified ) {
+						$( "#verified-img" ).show();
+						$( "#verified-button-text" ).text( "" );
+						$( "#verified-button" ).removeClass( "btn-unverified" );
+						// $( "#verified-button" ).addClass( "btn-verified" );
+					}
+					else {
+						$( "#verified-img" ).hide();
+						$( "#verified-button-text" ).text( "Un-Verified" );
+						// $( "#verified-button" ).removeClass( "btn-verified" );
+						$( "#verified-button" ).addClass( "btn-unverified" );
+					}
+				}
+				render_new_form() {
+					console.log( "render_new_form()" );
+					set_url( `/admin/user/checkin/new` );
+					this.buttons_stack = [ "new-user-save-button" , "new-user-cancel-button" ];
+					this.render_buttons();
+					this.stack = [ "user_new_form" , "user_qr_code" ];
+					this.render();
+					$( "#user-search-input" ).val( "" );
+					$( "#verified-button-text" ).text( "Un-Verified" );
+					$( "#verified-button" ).addClass( "btn-unverified" );
+					$( "#verified-button" ).show();
+					window.USER = {};
+					window.BARCODES = {};
+					window.FAMILY_MEMBERS = {};
+					$( "#user_first_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); set_nested_property( window.USER , [ "identity" , "first_name" ] , event.target.value ); });
+					$( "#user_middle_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); set_nested_property( window.USER , [ "identity" , "middle_name" ] , event.target.value ); });
+					$( "#user_last_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); set_nested_property( window.USER , [ "identity" , "last_name" ] , event.target.value ); });
+					$( "#user_email" ).on( "change" , ( event ) => { window.USER.email_address = event.target.value });
+					$( "#user_phone_number" ).on( "change" , ( event ) => { window.USER.phone_number = event.target.value });
+					$( "#user_street_number" ).on( "change" , ( event ) => { set_nested_property( window.USER , [ "identity" , "address" , "street_number" ] , event.target.value ); });
+					$( "#user_street_name" ).on( "change" , ( event ) => { set_nested_property( window.USER , [ "identity" , "address" , "street_name" ] , event.target.value ); });
+					$( "#user_address_two" ).on( "change" , ( event ) => { set_nested_property( window.USER , [ "identity" , "address" , "address_two" ] , event.target.value ); });
+					$( "#user_city" ).on( "change" , ( event ) => { set_nested_property( window.USER , [ "identity" , "address" , "city" ] , event.target.value ); });
+					$( "#user_state" ).on( "change" , ( event ) => { set_nested_property( window.USER , [ "identity" , "address" , "state" ] , event.target.value ); });
+					$( "#user_zip_code" ).on( "change" , ( event ) => { set_nested_property( window.USER , [ "identity" , "address" , "zipcode" ] , event.target.value ); });
+					$( "#user_birth_day" ).on( "change" , ( event ) => { set_nested_property( window.USER , [ "identity" , "date_of_birth" , "day" ] , event.target.value ); });
+					$( "#user_birth_month" ).on( "change" , ( event ) => { set_nested_property( window.USER , [ "identity" , "date_of_birth" , "month" ] , event.target.value ); });
+					$( "#user_birth_year" ).on( "change" , ( event ) => { set_nested_property( window.USER , [ "identity" , "date_of_birth" , "year" ] , event.target.value ); });
+					$( "#user_spanish" ).on( "change" , ( event ) => { window.USER.spanish = event.target.checked; });
+					$( "#verified-button" ).addClass( "btn-unverified" );
+					$( "#verified-button-text" ).show();
+				}
+			}
+
+			function on_clear_button_click( event ) {
+				console.log( "on_clear_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				window.UI.clear();
+			}
+
+			function on_edit_button_click( event ) {
+				console.log( "on_edit_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				window.UI.render_edit_form();
+			}
+
+			async function on_edit_save_button_click( event ) {
+				console.log( "on_edit_save_button_click()" );
+				if ( event ) { event.preventDefault(); }
+
+				// update dynamic forms
+				window.USER.barcodes = Object.values( window.BARCODES );
+				window.USER.barcodes = window.USER.barcodes.filter( ( x ) => { return x !== ""; } );
+
+				let x_family_members = Object.values( window.FAMILY_MEMBERS );
+				console.log( x_family_members );
+				x_family_members = x_family_members.filter( ( x ) => { return x.age > -1; } );
+				x_family_members.forEach( ( x ) => { x.age = parseInt( x.age ); } )
+				window.USER.family_members = x_family_members;
+				console.log( window.USER.family_members );
+
+				if ( window?.USER?.identity?.date_of_birth?.day ) {
+					window.USER.identity.date_of_birth.day = parseInt( window.USER.identity.date_of_birth.day );
+				}
+				if ( window?.USER?.identity?.date_of_birth?.year ) {
+					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
+				}
+
+				// save
+				let edit_result = await api_edit_user( window.USER );
+				console.log( edit_result );
+				window.USER = edit_result.user;
+
+				// alert( "User Info Saved !" );
+				window.UI.render_active_user();
+			}
+
+			function on_edit_cancel_button_click( event ) {
+				console.log( "on_edit_cancel_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				window.UI.render_active_user();
+			}
+
+			async function on_edit_delete_button_click( event ) {
+				console.log( "on_edit_delete_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				let result = confirm( `Are You Absolutely Sure You Want to Delete : ${window.USER.name_string} ???` );
+				if ( result === true ) {
+					console.log( "delete confimed" );
+					await api_delete_user( window.USER.uuid );
+					window.UI.clear();
+					return;
+				} else {
+					console.log( "delete rejected" );
+					return;
+				}
+			}
+
+			async function on_check_in_button_click( event ) {
+				console.log( "on_check_in_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				window.UI.render_active_user();
+			}
+
+			async function on_check_in_print_button_click( event ) {
+				console.log( "on_check_in_print_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				let balance_table = document.getElementById( "user-balance-table-body" );
+				let balance_inputs = balance_table.querySelectorAll( "input" );
+				let shopping_for = document.querySelectorAll( ".user-family-member.btn-primary" ).length;
+
+				let boys = 0;
+				let girls = 0;
+				let men = 0;
+				let women = 0;
+				Object.keys( window.FAMILY_MEMBERS ).forEach( ( i ) => {
+					const x = window.FAMILY_MEMBERS[ i ];
+					switch ( x.sex ) {
+						case "male":
+							if ( !x.age ) { break; }
+							if ( x.age > 17 ) {
+								men += 1;
+							} else {
+								boys += 1;
+							}
+							break;
+						case "female":
+							if ( !x.age ) { break; }
+							if ( x.age > 17 ) {
+								women += 1;
+							} else {
+								girls += 1;
+							}
+							break;
+					}
+				});
+				let form_data = {
+					"uuid": window.USER.uuid ,
+					"shopping_for": shopping_for ,
+					"boys": boys , "girls": girls ,
+					"men": men , "women": women
+				};
+				for ( let i = 0; i < balance_inputs.length; ++i ) {
+					form_data[ balance_inputs[ i ].id ] = parseInt( balance_inputs[ i ].value );
+				}
+				console.log( "new hola" , form_data );
+				let valid_check_in = await api_check_in_uuid( window.USER.uuid , form_data );
+				console.log( `${window.USER.uuid} === Checked In === ${valid_check_in}` );
+				window.UI.clear();
+			}
+
+			function on_new_button_click( event ) {
+				console.log( "on_new_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				window.UI.render_new_form();
+			}
+
+			async function on_new_save_button_click( event ) {
+				console.log( "on_new_save_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				// update dynamic form stuff
+
+				window.USER.barcodes = Object.values( window.BARCODES );
+				window.USER.barcodes = window.USER.barcodes.filter( ( x ) => { return x !== ""; } );
+
+				let x_family_members = Object.values( window.FAMILY_MEMBERS );
+				console.log( x_family_members );
+				x_family_members = x_family_members.filter( ( x ) => { return x.age > -1; } );
+				x_family_members.forEach( ( x ) => { x.age = parseInt( x.age ); } )
+				window.USER.family_members = x_family_members;
+				console.log( window.USER.family_members );
+
+				if ( window?.USER?.identity?.date_of_birth?.day ) {
+					window.USER.identity.date_of_birth.day = parseInt( window.USER.identity.date_of_birth.day );
+				}
+				if ( window?.USER?.identity?.date_of_birth?.year ) {
+					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
+				}
+
+				let new_user_result = await api_new_user( window.USER );
+				if ( !new_user_result.result?.uuid ) { return false; }
+				window.USER = new_user_result.result;
+				console.log( window.USER );
+				document.getElementById( "user-search-input" ).value = window.USER.uuid;
+				show_user_handoff_qrcode();
+				window.UI.render_active_user();
+			}
+
+			function on_new_cancel_button_click( event ) {
+				console.log( "on_new_cancel_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				window.UI.render_active_user();
+			}
+
+			function on_show_handoff_qrc_button_click( event ) {
+				console.log( "on_show_handoff_qrc_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				// they won't be able to get to it
+				// show_user_handoff_qrcode();
+
+				// so you could have them take a picture of this one , which could then just be scanned later
+				show_user_uuid_qrcode();
+			}
+
+			function on_sms_user_button_click( event ) {
+				console.log( "on_sms_user_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				let link = document.createElement('a');
+				link.href = `/admin/user/sms/${window.USER.uuid}`;
+				link.target = '_blank';
+				link.rel = 'noopener noreferrer';
+				let clickEvent = new MouseEvent('click', {
+					'view': window,
+					'bubbles': true,
+					'cancelable': false
+				});
+				link.dispatchEvent( clickEvent );
+			}
+
+			function on_email_user_button_click( event ) {
+				console.log( "on_email_user_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				let link = document.createElement('a');
+				link.href = `/admin/user/email/${window.USER.uuid}`;
+				link.target = '_blank';
+				link.rel = 'noopener noreferrer';
+				let clickEvent = new MouseEvent('click', {
+					'view': window,
+					'bubbles': true,
+					'cancelable': false
+				});
+				link.dispatchEvent( clickEvent );
+			}
+
+			function on_verified_button_click( event ) {
+				if ( event ) { event.preventDefault(); }
+				if ( window.STATE === "active-user" ) { return; }
+				window.USER.verified = !window.USER.verified;
+				console.log( "on_verified_button_click()" , window.USER.verified );
+				if ( window.USER.verified ) {
+					$( "#verified-img" ).show();
+					$( "#verified-button-text" ).text( "" );
+					$( "#verified-button" ).removeClass( "btn-unverified" );
+					// $( "#verified-button" ).addClass( "btn-verified" );
+				}
+				else {
+					$( "#verified-img" ).hide();
+					$( "#verified-button-text" ).text( "Un-Verified" );
+					// $( "#verified-button" ).removeClass( "btn-verified" );
+					$( "#verified-button" ).addClass( "btn-unverified" );
+				}
+			}
+
+			async function _on_check_in_input_change( typed_input="" ) {
+				console.log( "_on_check_in_input_change()" , typed_input );
+				let valid_uuid = is_uuid( typed_input );
+				if ( valid_uuid ) {
+					let user = await api_get_user_from_uuid( typed_input );
+					if ( user ) {
+						console.log( "UUID !" , typed_input );
+						window.USER = user;
+						window.UI.render_active_user();
+					}
+					return;
+				}
+				let valid_barcode = is_barcode( typed_input );
+				if ( valid_barcode ) {
+					let user = await api_get_user_from_barcode( typed_input );
+					if ( user ) {
+						if ( user.uuid ) {
+							console.log( "Barcode !" , typed_input );
+							console.log( user );
+							window.USER = user;
+							window.UI.render_active_user();
+						}
+					}
+					return;
+				}
+				console.log( `Not a UUID , Not a Barcode , Searching : ${typed_input}` );
+				let search_results = await api_fuzzy_search_username( typed_input );
+				if ( !search_results ) {
+					// window.UI.clear();
+					return;
+				}
+				if ( search_results.length < 1 ) {
+					// window.UI.clear();
+					return;
+				}
+				window.UI.render_search_table( search_results )
+			}
+			let timeout_id;
+			const debounce_time = 200;
+			async function on_check_in_input_change( event ) {
+				if ( event ) { event.preventDefault(); }
+				// clearTimeout( timeout_id );
+				let typed_input = event?.target?.value;
+				if ( !typed_input ) { typed_input = document.getElementById( "user-search-input" ).value; }
+				_on_check_in_input_change( typed_input );
+				// if ( typed_input.length < 2 ) { return; }
+				// timeout_id = setTimeout( () => {
+				// 	_on_check_in_input_change( typed_input );
+				// } , debounce_time );
+			}
+			async function init() {
+				await load_api();
+				window.UI = new MCT_UI({
+					anchor: "#main-row" ,
+					// stack: [ "user_balance_table" , "user_search_table" , "shopping_for_selector" , "alert_check_in_allowed" , "alert_check_in_failed" ] ,
+					stack: [] ,
+					ids: {
+						"alert_check_in_allowed": get_ui_alert_check_in_allowed ,
+						"alert_check_in_failed": get_ui_alert_check_in_failed ,
+						"shopping_for_selector_advanced": get_ui_shopping_for_selector_advanced ,
+						"shopping_for_selector": get_ui_shopping_for_selector ,
+						"user_edit_form": get_ui_user_edit_form ,
+						"user_new_form": get_ui_user_new_form ,
+						"user_search_table": get_ui_user_search_table ,
+						"user_balance_table": get_ui_user_balance_table ,
+						"active_user_info": get_ui_active_user_info ,
+						"user_qr_code": get_ui_user_qr_code_display ,
+					} ,
+					buttons_anchor: "#buttons-content" ,
+					buttons_stack: [ "new-user-button" ] ,
+					buttons: {
+						"check-in-button": {
+							text: "Check In" ,
+							color: "primary" ,
+							on_click: on_check_in_button_click ,
+						} ,
+						"check-in-print-button": {
+							text: "Print" ,
+							color: "warning" ,
+							on_click: on_check_in_print_button_click ,
+						} ,
+						"edit-user-button": {
+							text: "Edit" ,
+							color: "primary" ,
+							on_click: on_edit_button_click ,
+						} ,
+						"edit-user-save-button": {
+							text: "Save" ,
+							color: "success" ,
+							on_click: on_edit_save_button_click ,
+						} ,
+						"edit-user-cancel-button": {
+							text: "Cancel" ,
+							color: "warning" ,
+							on_click: on_edit_cancel_button_click ,
+						} ,
+						"edit-user-delete-button": {
+							text: "Delete" ,
+							color: "danger" ,
+							on_click: on_edit_delete_button_click ,
+						} ,
+						"new-user-button": {
+							text: "New User" ,
+							color: "success" ,
+							on_click: on_new_button_click ,
+						} ,
+						"new-user-save-button": {
+							text: "Save" ,
+							color: "success" ,
+							on_click: on_new_save_button_click ,
+						} ,
+						"new-user-cancel-button": {
+							text: "Cancel" ,
+							color: "warning" ,
+							on_click: on_new_cancel_button_click ,
+						} ,
+						"show-handoff-qrc-button": {
+							text: "QR Code" ,
+							color: "qrcode" ,
+							on_click: on_show_handoff_qrc_button_click ,
+						} ,
+						"sms-user-button": {
+							text: "SMS" ,
+							color: "sms" ,
+							on_click: on_sms_user_button_click ,
+						} ,
+						"email-user-button": {
+							text: "Email" ,
+							color: "secondary" ,
+							on_click: on_email_user_button_click ,
+						} ,
+					} ,
+				});
+				// window.UI.hide_all_buttons();
+				$( "#user-search-input" ).on( "input" , on_check_in_input_change );
+				$( "#search-clear-button" ).on( "click" , on_clear_button_click );
+				$( "#verified-button" ).on( "click" , on_verified_button_click );
+
+				let sent_state = user_checkin_detect_state();
+				window.STATE = sent_state;
+				if ( sent_state ) {
+					switch( sent_state ) {
+						case "edit":
+							let sent_uuid = user_checkin_detect_uuid();
+							if ( !sent_uuid ) { break; }
+							let user = await api_get_user_from_uuid( sent_uuid );
+							window.USER = user;
+							document.getElementById( "user-search-input" ).value = sent_uuid;
+							window.UI.render_edit_form();
+							break;
+						case "new":
+							window.UI.render_new_form();
+							break;
+						default:
+							// window.UI.render_active_user();
+							break;
+					}
+				} else {
+					let sent_uuid = user_checkin_detect_uuid();
+					if ( !sent_uuid ) {
+						window.UI.clear();
+						return;
+					}
+					let user = await api_get_user_from_uuid( sent_uuid );
+					window.USER = user;
+					document.getElementById( "user-search-input" ).value = sent_uuid;
+					window.UI.render_active_user();
+				}
+
+			}
+			document.addEventListener( "DOMContentLoaded" , init );
+		</script>
+	</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Master's Closet - Users</title>
+		<link rel="icon" href="">
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.min.css">
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<div class="col-sm">
+					<center><h1>Master's Closet - Admin - View All Users</h1></center>
+				</div>
+			</div>
+			<br>
+			<div class="row">
+				<div class="col-sm-12">
+					<div class="table-responsive">
+						<table id="users-table" class="table table-hover table-striped-columns">
+							<thead>
+								<tr>
+									<th scope="col">#</th>
+									<th scope="col">Username <button class="btn btn-secondary btn-small" onclick="sort_table( 1 , 'alphabetical' )" data-sort="desc"><i class="bi bi-sort-down"></i></button></th>
+									<th scope="col">UUID <button class="btn btn-secondary btn-small" onclick="sort_table( 2 , 'alphabetical' )" data-sort="desc"><i class="bi bi-sort-down"></i></button></i></th>
+									<th scope="col">Last Check-In <button class="btn btn-secondary btn-small" onclick="sort_table( 3 , 'date' )" data-sort="desc"><i class="bi bi-sort-down"></i></button></i></th>
+								</tr>
+							</thead>
+							<tbody id="users-table-body"></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script>
+			function load_api() {
+				return new Promise( function( resolve , reject ) {
+					try {
+						var timestamp = new Date().getTime();
+						var script = document.createElement( "script" );
+						script.src = "/cdn/api.js?v=" + timestamp;
+						script.crossOrigin = "anonymous";
+						document.head.appendChild( script );
+						script.onload = resolve;
+						return;
+					}
+					catch( error ) { console.log( error ); reject( error ); return; }
+				});
+			}
+			function parse_custom_date_time_string( dts ) {
+				let time = dts.split( " @ " )[ 1 ];
+				let parsable_string = `${dts.slice(0,2)} ${dts[2]}${dts.slice(3,5).toLowerCase()} ${dts.slice(5,9)} ${time.slice(0,8)}`;
+				// console.log( parsable_string );
+				return Date.parse( parsable_string );
+			}
+			function sort_table( column_index , method="alphabetical" , fresh=false ) {
+				const table = document.getElementById( "users-table" );
+				const rows = Array.from( table.rows ).slice( 1 ); // exclude header row
+				let sorting_button = table.rows[ 0 ].querySelectorAll( '[data-sort]' )[ ( column_index - 1 ) ];
+				let sort_direction = sorting_button.getAttribute( "data-sort" );
+				const sortedRows = rows.slice().sort( ( a , b ) => {
+					const aValue = a.cells[ column_index ].innerText;
+					const bValue = b.cells[ column_index ].innerText;
+					let result;
+					switch( method ) {
+						case "alphabetical":
+							if ( sort_direction === "asc" ) {
+								result = bValue.localeCompare( aValue );
+							} else if ( sort_direction === "desc" ) {
+								result = aValue.localeCompare( bValue );
+							}
+							break;
+						case "date":
+							if ( sort_direction === "asc" ) {
+								console.log( "asc" );
+								if ( aValue === "" ) { result = 1; break; }
+								if ( bValue === "" ) { result = -1; break; }
+								const aDate = parse_custom_date_time_string( aValue );
+								const bDate = parse_custom_date_time_string( bValue );
+								result = ( aDate - bDate );
+							} else if ( sort_direction === "desc" ) {
+								console.log( "desc" );
+								if ( aValue === "" ) { result = 1; break; }
+								if ( bValue === "" ) { result = -1; break; }
+								const aDate = parse_custom_date_time_string( aValue );
+								const bDate = parse_custom_date_time_string( bValue );
+								result = ( bDate - aDate );
+							}
+							break;
+						default:
+							break;
+					}
+					return result;
+				});
+
+				let new_sort_direction = sort_direction === 'asc' ? 'desc' : 'asc';
+				sorting_button.setAttribute( "data-sort" , new_sort_direction );
+				if ( !fresh ) {
+					let sorting_icon = sorting_button.querySelector( "i" );
+					sorting_icon.classList.toggle( "bi-sort-down" );
+					sorting_icon.classList.toggle( "bi-sort-up" );
+				}
+
+				for ( let i = 0; i < sortedRows.length; ++i ) {
+					table.tBodies[ 0 ].appendChild( sortedRows[ i ] );
+					sortedRows[ i ].childNodes[ 0 ].innerText = ( i + 1 )
+				}
+			}
+			function populate_table() {
+				let table_body_element = document.getElementById( "users-table-body" );
+				for ( let i = 0; i < window.users.length; ++i ) {
+					let _tr = document.createElement( "tr" );
+					let user_number = document.createElement( "th" );
+					user_number.setAttribute( "scope" , "row" );
+					user_number.textContent = `${(i + 1)}`;
+					_tr.appendChild( user_number );
+
+					let username = document.createElement( "td" );
+					username.textContent = window.users[ i ][ "username" ];
+					_tr.appendChild( username );
+
+					let uuid_holder = document.createElement( "td" );
+					let uuid_text = document.createElement( "span" );
+					uuid_text.textContent = window.users[ i ][ "uuid" ];
+					uuid_text.innerHTML += "&nbsp;&nbsp;"
+
+					let uuid_edit_button = document.createElement( "a" );
+					uuid_edit_button.setAttribute( "href" , `/admin/user/edit/${window.users[ i ][ "uuid" ]}` );
+					uuid_edit_button.setAttribute( "target" , "_blank" );
+					uuid_edit_button.className = "btn btn-warning p-1";
+					let uuid_edit_button_icon = document.createElement( "i" );
+					uuid_edit_button_icon.className = "bi bi-pen";
+					uuid_edit_button.appendChild( uuid_edit_button_icon );
+
+					let uuid_delete_button = document.createElement( "a" );
+					uuid_delete_button.className = "btn btn-danger p-1";
+					let uuid_delete_button_icon = document.createElement( "i" );
+					uuid_delete_button_icon.className = "bi bi-trash3-fill";
+					uuid_delete_button.appendChild( uuid_delete_button_icon );
+					uuid_delete_button.onclick = async function() {
+						let result = confirm( `Are You Absolutely Sure You Want to Delete : ${window.users[ i ][ "username" ]} ???` );
+						if ( result === true ) {
+							console.log( "delete confimed" );
+							await api_delete_user( window.users[ i ][ "uuid" ] );
+							// could just cross out this table row ,
+							// but lets just trigger a refresh
+							// setTimeout( function() {
+							// 	location.reload( true );
+							// } , 1000 );
+							location.reload( true );
+							return;
+						} else {
+							console.log( "delete rejected" );
+							return;
+						}
+					};
+
+					uuid_holder.appendChild( uuid_text );
+					uuid_holder.appendChild( uuid_edit_button );
+					uuid_holder.appendChild( uuid_delete_button );
+
+					_tr.appendChild( uuid_holder );
+					// <button id ="submit-button" type="submit" class="btn btn-success">Save</button>
+
+					// let uuid = document.createElement( "a" );
+					// uuid.setAttribute( "href" ,  );
+					// uuid.setAttribute( "target" , "_blank" );
+					// uuid.textContent = window.users[ i ][ "uuid" ];
+					// uuid_holder.appendChild( uuid );
+					// _tr.appendChild( uuid_holder );
+
+					let last_check_in = document.createElement( "td" );
+					if ( window.users[ i ][ "last_check_in" ][ "date" ] ) {
+						last_check_in.textContent = `${window.users[ i ][ "last_check_in" ][ "date" ]} @ ${window.users[ i ][ "last_check_in" ][ "time" ]}`;
+					}
+					_tr.appendChild( last_check_in );
+
+					table_body_element.appendChild( _tr );
+				}
+			}
+			function print_duration( start , stop ) {
+				let duration = ( stop - start );
+				// let minutes = Math.floor( duration / 60000 );
+				// let seconds = ( Math.floor( duration / 1000 ) % 60 );
+				// console.log( `api_get_all_users() took : ${minutes} minutes and ${seconds} seconds` );
+				console.log( `api_get_all_users() took : ${duration} milliseconds` );
+			}
+			async function init() {
+				await load_api();
+				let start = new Date();
+				window.users = await api_get_all_users();
+				let stop = new Date();
+				print_duration( start , stop );
+				populate_table();
+				sort_table( 3 , method="date" , true );
+			}
+			$( document ).ready( init );
+		</script>
+	</body>
+</html>

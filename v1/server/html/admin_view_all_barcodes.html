@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Master's Closet - Barcodes</title>
+		<link rel="icon" href="">
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.min.css">
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<div class="col-sm">
+					<center><h1>Master's Closet - Admin - View All Barcodes</h1></center>
+				</div>
+			</div>
+<!-- 			<br>
+			<div class="row">
+				<center>
+					<button class="btn btn-primary" onclick="on_copy_emails()">Copy Emails to Clipboard</button>
+				<center>
+			</div> -->
+			<br>
+			<div class="row">
+				<div class="table-responsive-sm">
+					<table id="barcodes-table" class="table table-hover table-striped-columns">
+						<thead>
+							<tr>
+								<th scope="col">Barcode <button class="btn btn-secondary btn-small" onclick="sort_table( 0 , 'alphabetical' )" data-sort="desc"><i class="bi bi-sort-down"></i></button></th>
+								<th scope="col">Name <button class="btn btn-secondary btn-small" onclick="sort_table( 1 , 'alphabetical' )" data-sort="desc"><i class="bi bi-sort-down"></i></button></th>
+							</tr>
+						</thead>
+						<tbody id="barcodes-table-body"></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+		<script>
+			function load_api() {
+				return new Promise( function( resolve , reject ) {
+					try {
+						var timestamp = new Date().getTime();
+						var script = document.createElement( "script" );
+						script.src = "/cdn/api.js?v=" + timestamp;
+						script.crossOrigin = "anonymous";
+						document.head.appendChild( script );
+						script.onload = resolve;
+						return;
+					}
+					catch( error ) { console.log( error ); reject( error ); return; }
+				});
+			}
+			function sort_table( column_index , method="alphabetical" , fresh=false ) {
+				const table = document.getElementById( "barcodes-table" );
+				const rows = Array.from( table.rows ).slice( 1 ); // exclude header row
+				let sorting_button = table.rows[ 0 ].querySelectorAll( '[data-sort]' )[ ( column_index ) ];
+				let sort_direction = sorting_button.getAttribute( "data-sort" );
+				const sortedRows = rows.slice().sort( ( a , b ) => {
+					const aValue = a.cells[ column_index ].innerText;
+					const bValue = b.cells[ column_index ].innerText;
+					let result;
+					switch( method ) {
+						case "alphabetical":
+							if ( sort_direction === "asc" ) {
+								result = bValue.localeCompare( aValue );
+							} else if ( sort_direction === "desc" ) {
+								result = aValue.localeCompare( bValue );
+							}
+							break;
+						case "date":
+							if ( sort_direction === "asc" ) {
+								if ( aValue === "" ) { result = 1; break; }
+								if ( bValue === "" ) { result = -1; break; }
+								const aDate = parse_custom_date_time_string( aValue );
+								const bDate = parse_custom_date_time_string( bValue );
+								result = ( aDate - bDate );
+							} else if ( sort_direction === "desc" ) {
+								if ( aValue === "" ) { result = -1; break; }
+								if ( bValue === "" ) { result = 1; break; }
+								const aDate = parse_custom_date_time_string( aValue );
+								const bDate = parse_custom_date_time_string( bValue );
+								result = ( bDate - aDate );
+							}
+							break;
+						default:
+							break;
+					}
+					return result;
+				});
+
+				let new_sort_direction = sort_direction === 'asc' ? 'desc' : 'asc';
+				sorting_button.setAttribute( "data-sort" , new_sort_direction );
+				if ( !fresh ) {
+					let sorting_icon = sorting_button.querySelector( "i" );
+					sorting_icon.classList.toggle( "bi-sort-down" );
+					sorting_icon.classList.toggle( "bi-sort-up" );
+				}
+
+				for ( let i = 0; i < sortedRows.length; ++i ) {
+					table.tBodies[ 0 ].appendChild( sortedRows[ i ] );
+					// sortedRows[ i ].childNodes[ 0 ].innerText = ( i + 1 )
+				}
+			}
+			function populate_table() {
+				let table_body_element = document.getElementById( "barcodes-table-body" );
+				for ( let i = 0; i < window.barcodes.length; ++i ) {
+					for ( let j = 0; j < window.barcodes[ i ].barcodes.length; ++j ) {
+						let _tr = document.createElement( "tr" );
+
+						let barcode = document.createElement( "td" );
+						barcode.textContent = window.barcodes[ i ].barcodes[ j ];
+						_tr.appendChild( barcode );
+
+						let name_string = document.createElement( "td" );
+						name_string.textContent = window.barcodes[ i ].name;
+						_tr.appendChild( name_string );
+
+						let uuid_edit_button = document.createElement( "a" );
+						uuid_edit_button.setAttribute( "href" , `/admin/user/checkin/${window.barcodes[ i ].uuid}/edit` );
+						uuid_edit_button.setAttribute( "target" , "_blank" );
+						uuid_edit_button.className = "btn btn-warning p-1";
+						let uuid_edit_button_icon = document.createElement( "i" );
+						uuid_edit_button_icon.className = "bi bi-pen";
+						uuid_edit_button.appendChild( uuid_edit_button_icon );
+						let spacer = document.createElement( "span" );
+						spacer.textContent = " ";
+						name_string.appendChild( spacer );
+						name_string.appendChild( uuid_edit_button );
+
+						table_body_element.appendChild( _tr );
+					}
+				}
+			}
+			function print_duration( start , stop ) {
+				let duration = ( stop - start );
+				console.log( `api_get_all_barcodes() took : ${duration} milliseconds` );
+			}
+			async function init() {
+				await load_api();
+				let start = new Date();
+				window.barcodes = await api_get_all_barcodes();
+				let stop = new Date();
+				console.log( window.barcodes );
+				print_duration( start , stop );
+				// parse_barcodes();
+				populate_table();
+				sort_table( 0 , method="alphabetical" , true );
+			}
+			$( document ).ready( init );
+		</script>
+	</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Master's Closet - View Log File</title>
+		<link rel="icon" href="">
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.min.css">
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<div class="col-sm">
+					<center><h1>Master's Closet - Admin - View Log File</h1></center>
+				</div>
+			</div>
+			<br>
+			<div class="row">
+				<div class="table-responsive-sm">
+					<table id="log-file-table" class="table table-hover table-striped-columns">
+						<thead>
+							<tr>
+								<th scope="col" data-sort="desc">Number</th>
+								<th scope="col">Date <button class="btn btn-secondary btn-small" onclick="sort_table( 1 , 'alphabetical' )" data-sort="desc"><i class="bi bi-sort-down"></i></button></th>
+							</tr>
+						</thead>
+						<tbody id="log-file-table-body"></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+		<script>
+			function load_api() {
+				return new Promise( function( resolve , reject ) {
+					try {
+						var timestamp = new Date().getTime();
+						var script = document.createElement( "script" );
+						script.src = "/cdn/api.js?v=" + timestamp;
+						script.crossOrigin = "anonymous";
+						document.head.appendChild( script );
+						script.onload = resolve;
+						return;
+					}
+					catch( error ) { console.log( error ); reject( error ); return; }
+				});
+			}
+			function sort_table( column_index , method="alphabetical" , fresh=false ) {
+				const table = document.getElementById( "log-file-table" );
+				const rows = Array.from( table.rows ).slice( 1 ); // exclude header row
+				let sorting_button = table.rows[ 0 ].querySelectorAll( '[data-sort]' )[ ( column_index ) ];
+				let sort_direction = sorting_button.getAttribute( "data-sort" );
+				const sortedRows = rows.slice().sort( ( a , b ) => {
+					const aValue = a.cells[ column_index ].innerText;
+					const bValue = b.cells[ column_index ].innerText;
+					let result;
+					switch( method ) {
+						case "alphabetical":
+							if ( sort_direction === "asc" ) {
+								result = bValue.localeCompare( aValue );
+							} else if ( sort_direction === "desc" ) {
+								result = aValue.localeCompare( bValue );
+							}
+							break;
+						case "date":
+							if ( sort_direction === "asc" ) {
+								if ( aValue === "" ) { result = 1; break; }
+								if ( bValue === "" ) { result = -1; break; }
+								const aDate = parse_custom_date_time_string( aValue );
+								const bDate = parse_custom_date_time_string( bValue );
+								result = ( aDate - bDate );
+							} else if ( sort_direction === "desc" ) {
+								if ( aValue === "" ) { result = -1; break; }
+								if ( bValue === "" ) { result = 1; break; }
+								const aDate = parse_custom_date_time_string( aValue );
+								const bDate = parse_custom_date_time_string( bValue );
+								result = ( bDate - aDate );
+							}
+							break;
+						default:
+							break;
+					}
+					return result;
+				});
+
+				let new_sort_direction = sort_direction === 'asc' ? 'desc' : 'asc';
+				sorting_button.setAttribute( "data-sort" , new_sort_direction );
+				if ( !fresh ) {
+					let sorting_icon = sorting_button.querySelector( "i" );
+					sorting_icon.classList.toggle( "bi-sort-down" );
+					sorting_icon.classList.toggle( "bi-sort-up" );
+				}
+
+				for ( let i = 0; i < sortedRows.length; ++i ) {
+					table.tBodies[ 0 ].appendChild( sortedRows[ i ] );
+					// sortedRows[ i ].childNodes[ 0 ].innerText = ( i + 1 )
+				}
+			}
+			function populate_table() {
+				let table_body_element = document.getElementById( "log-file-table-body" );
+				for ( let i = 0; i < window.log_file.length; ++i ) {
+					let _tr = document.createElement( "tr" );
+
+					// let items = window.log_file[ i ].split( "-" );
+					// let date_string = items[ 0 ];
+
+					let number = document.createElement( "td" );
+					number.textContent = ( i + 1 );
+					_tr.appendChild( number );
+
+					let message = document.createElement( "td" );
+					message.textContent = window.log_file[ i ];
+					_tr.appendChild( message );
+
+					// let date_view_button = document.createElement( "a" );
+					// date_view_button.setAttribute( "href" , `/admin/logs/${window.log_file[ i ]}` );
+					// date_view_button.setAttribute( "target" , "_blank" );
+					// date_view_button.className = "btn btn-success p-1";
+					// let date_view_button_icon = document.createElement( "i" );
+					// date_view_button_icon.className = "bi bi-card-list";
+					// date_view_button.appendChild( date_view_button_icon );
+					// let n_spacer = document.createElement( "span" );
+					// n_spacer.textContent = " "
+					// date.appendChild( n_spacer );
+					// date.appendChild( date_view_button );
+
+					// _tr.appendChild( date );
+
+					table_body_element.appendChild( _tr );
+				}
+			}
+			function print_duration( start , stop ) {
+				let duration = ( stop - start );
+				console.log( `api_get_all_log_files() took : ${duration} milliseconds` );
+			}
+			async function init() {
+				await load_api();
+				window.passed_log_file_name = window.location.pathname.split( "/logs/" )[ 1 ];
+				window.log_file = await api_get_log_file( window.passed_log_file_name );
+				populate_table();
+				sort_table( 1 , method="alphabetical" , true );
+				window.scrollTo( 0 , document.body.scrollHeight );
+			}
+			$( window ).on( "load" , init )
+		</script>
+	</body>
+</html>

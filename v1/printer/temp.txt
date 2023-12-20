@@ -1,0 +1,17 @@
+Toni J Little SecondLastName 3rdLastName
+phoebe_fahe7@gmail.com-neva_corwi7@hotmail.com
++1937-535-3982
+81MS-94FS-25MS-03FS-01MS
+6135-4979 Jennifer Lane-1319 Hart Ridge Road
+Saginaw-Salinas-San Francisco-OH-45424
+99-12-1969
+T
+
+
+FirstName||MiddleName||LastName
+EmailAddress||PhoneNumber
+81MS-94FS-25MS-03FS-01MS // this is example of 5 max family members. AgeSexSpouse
+4DigitStreetNumber||StreetName||Address2
+City||2DigitStateCode||4DigitZipCode
+2DigitBirthDay||2DigitBirthMonth||4DigitBirthYear
+T // spanish ( true/false )

@@ -1,0 +1,209 @@
+// tracking := app.Group( "/t" )
+	app.Get( "/t/:id" , func( fiber_context *fiber.Ctx ) ( error ) {
+		id := fiber_context.Params( "id" )
+		ip := fiber_context.IP()
+		ips := fiber_context.IPs()
+		// fmt.Println( ip )
+		if ip == "127.0.0.1" {
+			if len( ips ) > 0 {
+				fmt.Println( ips )
+				ip = ips[ 0 ]
+			}
+		} else if ip == "172.17.0.1" {
+			if len( ips ) > 0 {
+				fmt.Println( ips )
+				ip = ips[ 0 ]
+			}
+		}
+		global_total_key := fmt.Sprintf( "ANALYTICS.%s.TOTAL" , id )
+		global_ips_key := fmt.Sprintf( "ANALYTICS.%s.IPS" , id )
+		global_records_key := fmt.Sprintf( "ANALYTICS.%s.RECORDS" , id )
+		// ip_total_key := fmt.Sprintf( "ANALYTICS.%s.%s.TOTAL" , id , ip )
+		// ip_times_key := fmt.Sprintf( "ANALYTICS.%s.%s.TIMES" , id , ip )
+
+		time_string := GetFormattedTimeString()
+		record := fmt.Sprintf( "%s === %s" , time_string , ip )
+
+		redis := GetRedisConnection( config.Redis.Host , config.Redis.Port , config.Redis.DB , config.Redis.Password )
+		redis.Increment( global_total_key )
+		// redis.Increment( ip_total_key )
+		// redis.ListPushRight( ip_times_key , time_string )
+		redis.ListPushRight( global_records_key , record )
+		RedisSetAdd( redis , global_ips_key , ip )
+
+		fmt.Printf( "%s === %s === new tracking\n" , time_string , ip )
+		fiber_context.Set( fiber.HeaderContentType , fiber.MIMETextHTML )
+		return fiber_context.SendString( "<html><h1>new tracking</h1></html>" )
+	})
+
+	app.Get( "/a/:id" , func( fiber_context *fiber.Ctx ) ( error ) {
+		id := fiber_context.Params( "id" )
+		ip := fiber_context.IP()
+		global_total_key := fmt.Sprintf( "ANALYTICS.%s.TOTAL" , id )
+		// global_ips_key := fmt.Sprintf( "ANALYTICS.%s.IPS" , id )
+		global_records_key := fmt.Sprintf( "ANALYTICS.%s.RECORDS" , id )
+
+		redis := GetRedisConnection( config.Redis.Host , config.Redis.Port , config.Redis.DB , config.Redis.Password )
+		total_views := redis.Get( global_total_key )
+
+		records := RedisGetList( redis , global_records_key )
+		records_html_string := "<ol>\n"
+		for _ , v := range records {
+			records_html_string = records_html_string + fmt.Sprintf( "<li>%v</li>\n" , v )
+		}
+		records_html_string = records_html_string + "</ol>"
+		fmt.Println( records )
+
+		fmt.Printf( "Total Views === %v\n" , total_views )
+		fmt.Printf( "%s === analytics\n" , ip )
+		html_result_string := fmt.Sprintf( "<html>\n\t<h1>Total Views = %s</h1>\n%s\n</html>" , total_views , records_html_string )
+		fiber_context.Set( fiber.HeaderContentType , fiber.MIMETextHTML )
+		return fiber_context.SendString( html_result_string )
+	})
+
+	app.Post( "/a-list" , func( fiber_context *fiber.Ctx ) ( error ) {
+		sent_api_key := fiber_context.Get( "key" )
+
+		// Timing attacks possible ? , yes ?
+		// just add random delay if wrong
+		if sent_api_key != config.ServerAPIKey {
+			fiber_context.Set( fiber.HeaderContentType , fiber.MIMETextHTML )
+			return fiber_context.SendString( "?" )
+		}
+
+		// Parse Uploaded UUIDs
+		var uploaded types.AListResponse
+		fiber_context.BodyParser( &uploaded )
+
+		// Get Values From Redis
+		redis := GetRedisConnection( config.Redis.Host , config.Redis.Port , config.Redis.DB , config.Redis.Password )
+		values := RedisGetMulti( redis , uploaded.UUIDS )
+		result := map[string]string{}
+		for i , e := range values {
+			result[ uploaded.UUIDS[ i ] ] = e
+		}
+
+		// Send Results
+		return fiber_context.JSON( result )
+		// fmt.Println( fiber )
+		// fiber_context.Set( fiber.HeaderContentType , fiber.MIMETextHTML )
+		// return fiber_context.SendString( "testing" )
+	})
+
+	app.Get( "/a-list/*" , func( fiber_context *fiber.Ctx ) ( error ) {
+
+		// Parse UUIDs Separated by "/" in URL
+		uuids := strings.Split( fiber_context.Params( "*" ) , "/" )
+
+		// Get Values From Redis
+		redis := GetRedisConnection( config.Redis.Host , config.Redis.Port , config.Redis.DB , config.Redis.Password )
+		redis_results := RedisMulti( redis , uuids )
+
+		// Build HTML String
+		html_string := `<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Results</title>
+	<style>
+		table {
+			border-collapse: collapse;
+			font-family: Tahoma, Geneva, sans-serif;
+		}
+		table td {
+			padding: 15px;
+			text-align: center;
+		}
+		table th td {
+			background-color: #54585d;
+			color: #ffffff;
+			font-weight: bold;
+			font-size: 13px;
+			border: 1px solid #54585d;
+		}
+		table tbody td {
+			color: #636363;
+			border: 1px solid #dddfe1;
+		}
+		table tbody tr {
+			background-color: #f9fafb;
+		}
+		table tbody tr:nth-child(odd) {
+			background-color: #ffffff;
+		}
+		th {
+			padding-left: 10px;
+			padding-right: 10px;
+		}
+	</style>
+</head>
+<body>
+	<table id="result_table">
+		<tr>
+			<th>UUID</th>
+			<th>Total</th>
+			<th>Unique</th>
+			<th>Name</th>
+			<th>Latest Record</th>
+		</tr>
+`
+		html_string_suffix := `	</table>
+</body>
+</html>`
+
+		// Sort By Total Views
+		// have to make a hard copy , so it doesn't get changed during sort
+		var totals_copy []int
+		for _ , e := range redis_results.Totals {
+			totals_copy = append( totals_copy , e )
+		}
+		sorted_indexes_by_totals := NewSlice( totals_copy )
+		sort.Sort( sorted_indexes_by_totals )
+		reverse_sorted := ReverseInts( sorted_indexes_by_totals.indexes )
+		// fmt.Println( "Lengths Match ? ===" , len( uuids ) , len( redis_results.Totals ) , len( redis_results.Names ) , len( redis_results.Records ) )
+
+		// Populate HTML Table with Values
+		for _ , sorted_index := range reverse_sorted {
+			// html_string += fmt.Sprintf( "\t\t<li>%s === %s === %s</li>\n" , uuid , redis_results.Totals[ i ] , redis_results.Records[ i ][ ( len( redis_results.Records[ i ] ) - 1 ) ] )
+			// fmt.Println( i , sorted_index , redis_results.Totals[ sorted_index ] , redis_results.Names[ sorted_index ] )
+			uuid_link := fmt.Sprintf( "<a target=\"_blank\" href=\"%s/a/%s\">%s</a>" , config.ServerBaseUrl , uuids[ sorted_index ] , uuids[ sorted_index ] )
+			// fmt.Println( uuid_link )
+
+			unique_views := CountUniqueViewsInRecords( redis_results.Records[ sorted_index ] )
+			// fmt.Println( "Unique Views ===" , unique_views )
+
+			html_string += fmt.Sprintf( "\t\t<tr>\n" )
+			html_string += fmt.Sprintf( "\t\t\t<td>%s</td>\n" , uuid_link )
+			html_string += fmt.Sprintf( "\t\t\t<td>%d</td>\n" , redis_results.Totals[ sorted_index ] )
+			html_string += fmt.Sprintf( "\t\t\t<td>%d</td>\n" , unique_views )
+			html_string += fmt.Sprintf( "\t\t\t<td>%s</td>\n" , redis_results.Names[ sorted_index ] )
+			if len( redis_results.Records[ sorted_index ] ) > 0 {
+				html_string += fmt.Sprintf( "\t\t\t<td>%s</td>\n" , redis_results.Records[ sorted_index ][ ( len( redis_results.Records[ sorted_index ] ) - 1 ) ] )
+			} else {
+				html_string += fmt.Sprintf( "\t\t\t<td></td>\n" )
+			}
+			html_string += fmt.Sprintf( "\t\t</tr>\n" )
+		}
+
+		html_string += html_string_suffix
+
+		// Send Results
+		fiber_context.Set( fiber.HeaderContentType , fiber.MIMETextHTML )
+		return fiber_context.SendString( html_string )
+	})
+
+	// app.Get( "/a-list" ) // returns HTML list
+	// app.Get( "/set/name/:id" )
+	app.Get( "/set/name/:id/:name" , func( fiber_context *fiber.Ctx ) ( error ) {
+		id := fiber_context.Params( "id" )
+		name , _ := net_url.PathUnescape( fiber_context.Params( "name" ) )
+		redis := GetRedisConnection( config.Redis.Host , config.Redis.Port , config.Redis.DB , config.Redis.Password )
+		name_key := fmt.Sprintf( "ANALYTICS.%s.NAME" , id )
+		result := redis.Set( name_key , name )
+		html_result_string := fmt.Sprintf( "<html>\n\t<h1>%s === %s === %s</h1>\n</html>" , id , name , result )
+		fiber_context.Set( fiber.HeaderContentType , fiber.MIMETextHTML )
+		return fiber_context.SendString( html_result_string )
+	})
+
+	return
