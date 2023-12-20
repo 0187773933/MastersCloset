@@ -8,5 +8,5 @@ id=$(sudo docker run -dit \
 -v /home/morphs/mct/save_files/:/home/morphs/mct/save_files \
 -v /home/morphs/mct/logs/:/home/morphs/mct/logs \
 -p 5950:5950 \
-$APP_NAME config.json)
+$APP_NAME /home/morphs/mct/config.json)
 sudo docker logs -f $id

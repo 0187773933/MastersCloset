@@ -49,6 +49,6 @@ RUN echo "PATH=$PATH:/usr/local/go/bin" | tee -a /home/$USERNAME/.bashrc
 
 WORKDIR /home/$USERNAME
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sudo chmod +x /entrypoint.sh
 USER $USERNAME
 ENTRYPOINT [ "/entrypoint.sh" ]
