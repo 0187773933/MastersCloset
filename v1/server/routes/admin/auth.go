@@ -46,7 +46,8 @@ func HandleLogin( context *fiber.Ctx ) ( error ) {
 			Path: "/" ,
 			// Domain: "blah.ngrok.io" , // probably should set this for webkit
 			HTTPOnly: true ,
-			SameSite: "Lax" ,
+			// SameSite: "Lax" ,
+			SameSite: "None" ,
 			Expires: time.Now().AddDate( 10 , 0 , 0 ) , // aka 10 years from now
 		} ,
 	)
