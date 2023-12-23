@@ -91,6 +91,7 @@ type User struct {
 	Username string `json:"username"`
 	NameString string `json:"name_string"`
 	UUID string `json:"uuid"`
+	ULID string `json:"ulid"`
 	Barcodes []string `json:"barcodes"`
 	EmailAddress string `json:"email_address"`
 	PhoneNumber string `json:"phone_number"`
@@ -101,7 +102,6 @@ type User struct {
 	CreatedDate string `json:"created_date"`
 	CreatedTime string `json:"created_time"`
 	CheckIns []CheckIn `json:"check_ins"`
-	// FailedCheckIns []FailedCheckIn `json:"failed_check_ins"`
 	FailedCheckIns []CheckIn `json:"failed_check_ins"`
 	Balance Balance `json:"balance"`
 	TimeRemaining int `json:"time_remaining"`

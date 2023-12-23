@@ -42,6 +42,7 @@ message User {
 	string email_address = 3;
 	string phone_number = 4;
 	bool spanish = 5;
+	string ulid = 6;
 }`;
 
 const BASE_64_REGEX = /^(?:[A-Za-z0-9+/]{4})*?(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
@@ -49,22 +50,38 @@ function is_proto_message( message ) {
 	let b64_test = BASE_64_REGEX.test( message );
 	if ( !b64_test ) { return false; }
 	let proto_message = atob( message );
-
 	console.log( proto_message );
-
 	let proto_message_buffer = new Uint8Array( proto_message.length );
 	for ( let i = 0; i < proto_message.length; i++ ) {
 		proto_message_buffer[ i ] = proto_message.charCodeAt( i );
 	}
 	console.log( proto_message_buffer );
-
 	var root = new protobuf.Root();
 	protobuf.parse( USER_PROTO , root , { keepCase: true , alternateCommentMode: false , preferTrailingComment: false } );
 	root.resolveAll();
 	var UserMessage = root.lookupType( "user.User" );
 	var decoded_message = UserMessage.decode( proto_message_buffer );
-
 	console.log( "is_proto_message()" , decoded_message );
+	return decoded_message
+}
+
+function set_cookie( name , value , days=3650 ) {
+	let expires = "";
+	let date = new Date();
+	date.setTime( date.getTime() + ( days * 24 * 60 * 60 * 1000 ) );
+	expires = "; expires=" + date.toUTCString();
+	document.cookie = name + "=" + ( value || "" ) + expires + "; path=/; SameSite=Lax; Secure";
+}
+
+function get_cookie( name ) {
+    let name_eq = name + "=";
+    let ca = document.cookie.split( ";" );
+    for( let i = 0; i < ca.length; i++ ) {
+        let c = ca[ i ];
+        while ( c.charAt( 0 ) === " " ) c = c.substring( 1 , c.length );
+        if ( c.indexOf( name_eq ) === 0 ) return c.substring( name_eq.length , c.length );
+    }
+    return null;
 }
 
 function title_case( str ) {

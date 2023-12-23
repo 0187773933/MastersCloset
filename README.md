@@ -19,6 +19,8 @@
 ## TODO
 1. fix shopping for text after "shopping for" selection/de-selection
 2. fix mobile user sign-up flow
+	- detect "the-masters-closet-user-ulid" cookie
+		- redirect to `"/join/display/:ulid"`
 3. update user_new.html with new changes
 	- find max length eyoyo can scan qrc or aztec codes
 	```

@@ -3,8 +3,8 @@ package userroutes
 import (
 	"fmt"
 	"time"
-	"math/rand"
-	json "encoding/json"
+	// "math/rand"
+	// json "encoding/json"
 	// net_url "net/url"
 	fiber "github.com/gofiber/fiber/v2"
 	rate_limiter "github.com/gofiber/fiber/v2/middleware/limiter"
@@ -15,7 +15,7 @@ import (
 	user "github.com/0187773933/MastersCloset/v1/user"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
 	log "github.com/0187773933/MastersCloset/v1/log"
-	bleve "github.com/blevesearch/bleve/v2"
+	// bleve "github.com/blevesearch/bleve/v2"
 )
 
 var GlobalConfig *types.ConfigFile

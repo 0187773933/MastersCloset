@@ -293,6 +293,8 @@
 				// let user_data = format_user_data();
 
 				let x_user = window.USER;
+				x_user[ "ulid" ] = ULID.ulid();
+				set_cookie( "the-masters-closet-user-ulid" , x_user[ "ulid" ] );
 				x_user[ "family_members" ] = Object.values( window.FAMILY_MEMBERS );
 				console.log( x_user );
 
@@ -335,16 +337,11 @@
 				// const base64_encrypted_compressed = btoa( String.fromCharCode.apply( null , encrypted_compressed ) );
 				// console.log( "b64 encrypted compressed" , base64_encrypted_compressed );
 
-
-
-
 				// let y = sodium_secretbox_decrypt( x , LIBSODIUM_KEY );
 
 				// let decoder = new TextDecoder( "utf-8" );
 				// let string = decoder.decode( y );
 				// console.log(string);
-
-
 
 				// const compressedString = fflate.strFromU8( fflate.compressSync( buf ) , true );
 				// console.log( compressedString );
@@ -484,6 +481,13 @@
 					} ,
 				});
 				window.UI.render_new_form();
+				let test_cookie = get_cookie( "the-masters-closet-user-ulid" );
+				if ( test_cookie ) {
+					console.log( "we had a ulid cookie !!!" , test_cookie );
+					// TODO , probably should present modal asking if you don't want to make a new user ,
+					// and just present the qrcode to be scanned in with the ulid
+					// only works if it was successfully saved
+				}
 			}
 			document.addEventListener( "DOMContentLoaded" , init );
 		</script>

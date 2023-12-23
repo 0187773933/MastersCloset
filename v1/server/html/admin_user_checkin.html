@@ -568,7 +568,12 @@
 				}
 				let valid_proto_message = is_proto_message( typed_input );
 				if ( valid_proto_message ) {
-					console.log( "recieved proto message from qrcode" );
+					console.log( "received proto message from qrcode" );
+					console.log( valid_proto_message );
+					window.USER = valid_proto_message;
+					// todo , pre-save and get valide uuid
+					window.UI.render_edit_form();
+					return;
 				}
 				console.log( `Not a UUID , Not a Barcode , Searching : ${typed_input}` );
 				let search_results = await api_fuzzy_search_username( typed_input );
