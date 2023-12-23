@@ -63,10 +63,11 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	fiber_app.Get( "/cdn/ui.css" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/ui.css" ) } )
 	fiber_app.Get( "/cdn/verified.png" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/verified.png" ) } )
 	fiber_app.Get( "/favicon.ico" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/favicon.ico" ) } )
+	fiber_app.Get( "/cdn/sodium.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/sodium.js" ) } )
 
 	fiber_app.Get( "/join" , public_limiter , RenderJoinPage )
-	fiber_app.Get( "/join/display" , public_limiter , CheckInDisplay )
-	fiber_app.Post( "/user/new" , user_creation_limiter , HandleNewUserJoin )
+	// fiber_app.Get( "/join/display" , public_limiter , CheckInDisplay )
+	// fiber_app.Post( "/user/new" , user_creation_limiter , HandleNewUserJoin )
 	fiber_app.Get( "/checkin" , public_limiter , CheckIn )
 
 	user_route_group := fiber_app.Group( "/user" )
@@ -207,59 +208,59 @@ func CheckInDisplay( context *fiber.Ctx ) ( error ) {
 	return context.SendFile( "./v1/server/html/user_check_in.html" )
 }
 
-func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
+// func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 
-	var viewed_user user.User
-	json.Unmarshal( context.Body() , &viewed_user )
+// 	var viewed_user user.User
+// 	json.Unmarshal( context.Body() , &viewed_user )
 
-	viewed_user.Config = GlobalConfig
+// 	viewed_user.Config = GlobalConfig
 
-	// Treat this as a Temp User
-	if viewed_user.Identity.FirstName == "" && viewed_user.Identity.MiddleName == "" && viewed_user.Identity.LastName == "" {
-		viewed_user.Identity.FirstName = "Temp"
-		rand.Seed( time.Now().UnixNano() )
-		viewed_user.Identity.MiddleName = fmt.Sprintf( "%v%v%v%v%v%v" , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) )
-		viewed_user.Identity.LastName = fmt.Sprintf( "%v%v%v%v%v%v" , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) )
-	}
+// 	// Treat this as a Temp User
+// 	if viewed_user.Identity.FirstName == "" && viewed_user.Identity.MiddleName == "" && viewed_user.Identity.LastName == "" {
+// 		viewed_user.Identity.FirstName = "Temp"
+// 		rand.Seed( time.Now().UnixNano() )
+// 		viewed_user.Identity.MiddleName = fmt.Sprintf( "%v%v%v%v%v%v" , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) )
+// 		viewed_user.Identity.LastName = fmt.Sprintf( "%v%v%v%v%v%v" , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) )
+// 	}
 
-	viewed_user.FormatUsername()
+// 	viewed_user.FormatUsername()
 
-	new_user := user.New( viewed_user.Username , GlobalConfig )
-	log.Println( new_user )
+// 	new_user := user.New( viewed_user.Username , GlobalConfig )
+// 	log.Println( new_user )
 
-	viewed_user.UUID = new_user.UUID
-	viewed_user.CreatedDate = new_user.CreatedDate
-	viewed_user.CreatedTime = new_user.CreatedTime
-	viewed_user.Save()
+// 	viewed_user.UUID = new_user.UUID
+// 	viewed_user.CreatedDate = new_user.CreatedDate
+// 	viewed_user.CreatedTime = new_user.CreatedTime
+// 	viewed_user.Save()
 
-	// add to search index
-	search_index , _ := bleve.Open( GlobalConfig.BleveSearchPath )
-	defer search_index.Close()
-	search_item := types.SearchItem{
-		UUID: new_user.UUID ,
-		Name: viewed_user.NameString ,
-	}
-	log.Printf( "Updating Search Index with : %s\n" , viewed_user.NameString )
-	search_index.Index( new_user.UUID , search_item )
+// 	// add to search index
+// 	search_index , _ := bleve.Open( GlobalConfig.BleveSearchPath )
+// 	defer search_index.Close()
+// 	search_item := types.SearchItem{
+// 		UUID: new_user.UUID ,
+// 		Name: viewed_user.NameString ,
+// 	}
+// 	log.Printf( "Updating Search Index with : %s\n" , viewed_user.NameString )
+// 	search_index.Index( new_user.UUID , search_item )
 
-	log.PrintlnConsole( "Created New User :" , viewed_user.NameString )
+// 	log.PrintlnConsole( "Created New User :" , viewed_user.NameString )
 
-	context.Cookie(
-		&fiber.Cookie{
-			Name: "the-masters-closet-user" ,
-			Value: encryption.SecretBoxEncrypt( GlobalConfig.BoltDBEncryptionKey , viewed_user.UUID ) ,
-			Secure: true ,
-			Path: "/" ,
-			// Domain: "blah.ngrok.io" , // probably should set this for webkit
-			HTTPOnly: true ,
-			SameSite: "Lax" ,
-			Expires: time.Now().AddDate( 10 , 0 , 0 ) , // aka 10 years from now
-		} ,
-	)
+// 	context.Cookie(
+// 		&fiber.Cookie{
+// 			Name: "the-masters-closet-user" ,
+// 			Value: encryption.SecretBoxEncrypt( GlobalConfig.BoltDBEncryptionKey , viewed_user.UUID ) ,
+// 			Secure: true ,
+// 			Path: "/" ,
+// 			// Domain: "blah.ngrok.io" , // probably should set this for webkit
+// 			HTTPOnly: true ,
+// 			SameSite: "Lax" ,
+// 			Expires: time.Now().AddDate( 10 , 0 , 0 ) , // aka 10 years from now
+// 		} ,
+// 	)
 
-	// viewed_user.Save();
-	return context.JSON( fiber.Map{
-		"route": "/user/new" ,
-		"result": viewed_user.UUID ,
-	})
-}
+// 	// viewed_user.Save();
+// 	return context.JSON( fiber.Map{
+// 		"route": "/user/new" ,
+// 		"result": viewed_user.UUID ,
+// 	})
+// }

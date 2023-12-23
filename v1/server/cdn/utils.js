@@ -4,6 +4,69 @@ const barcode_regex = /^\d+$/;
 function is_barcode( str ) { return barcode_regex.test( str ); }
 function sleep( ms ) { return new Promise( resolve => setTimeout( resolve , ms ) ); }
 
+const USER_PROTO = `package user;
+syntax = "proto3";
+
+message Address {
+	string street_number = 1;
+	string street_name = 2;
+	string address_two = 3;
+	string city = 4;
+	string state = 5;
+	string zipcode = 8;
+}
+
+message DOB {
+	int32 day = 1;
+	string month = 2;
+	int32 year = 3;
+}
+
+message Identity {
+	string first_name = 1;
+	string middle_name = 2;
+	string last_name = 3;
+	Address address = 4;
+	DOB date_of_birth = 5;
+}
+
+message FamilyMember {
+	int32 age = 1;
+	string sex = 2;
+	bool spouse = 3;
+}
+
+message User {
+	Identity identity = 1;
+	repeated FamilyMember family_members = 2;
+	string email_address = 3;
+	string phone_number = 4;
+	bool spanish = 5;
+}`;
+
+const BASE_64_REGEX = /^(?:[A-Za-z0-9+/]{4})*?(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+function is_proto_message( message ) {
+	let b64_test = BASE_64_REGEX.test( message );
+	if ( !b64_test ) { return false; }
+	let proto_message = atob( message );
+
+	console.log( proto_message );
+
+	let proto_message_buffer = new Uint8Array( proto_message.length );
+	for ( let i = 0; i < proto_message.length; i++ ) {
+		proto_message_buffer[ i ] = proto_message.charCodeAt( i );
+	}
+	console.log( proto_message_buffer );
+
+	var root = new protobuf.Root();
+	protobuf.parse( USER_PROTO , root , { keepCase: true , alternateCommentMode: false , preferTrailingComment: false } );
+	root.resolveAll();
+	var UserMessage = root.lookupType( "user.User" );
+	var decoded_message = UserMessage.decode( proto_message_buffer );
+
+	console.log( "is_proto_message()" , decoded_message );
+}
+
 function title_case( str ) {
 	if ( !str ) { return ""; }
 	return str.toLowerCase().split( " " ).map( x => {

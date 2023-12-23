@@ -11,6 +11,7 @@
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.min.css">
 		<script src="https://cdn.jsdelivr.net/npm/ulid@2.3.0/dist/index.umd.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/protobufjs/dist/protobuf.min.js" integrity="sha256-6Jvh/v55qp1JJygkmb9X/iE/Qo1L7zD6WvjsdDHBGwU=" crossorigin="anonymous"></script>
 		<script src="/cdn/utils.js" crossorigin="anonymous"></script>
 		<script src="/cdn/ui.js" crossorigin="anonymous"></script>
 		<link rel="stylesheet" type="text/css" href="/cdn/ui.css" crossorigin="anonymous">
@@ -564,6 +565,10 @@
 						}
 					}
 					return;
+				}
+				let valid_proto_message = is_proto_message( typed_input );
+				if ( valid_proto_message ) {
+					console.log( "recieved proto message from qrcode" );
 				}
 				console.log( `Not a UUID , Not a Barcode , Searching : ${typed_input}` );
 				let search_results = await api_fuzzy_search_username( typed_input );

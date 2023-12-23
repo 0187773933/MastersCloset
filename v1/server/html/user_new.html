@@ -12,7 +12,9 @@
 		<script src="https://cdn.jsdelivr.net/npm/ulid@2.3.0/dist/index.umd.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
 		<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/dist/modules/libsodium-wrappers.min.js" async></script>
+		<!-- <script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/dist/modules/libsodium-wrappers.min.js" async></script> -->
+		<!-- <script src="/cdn/sodium.js" crossorigin="anonymous"></script> -->
+		<script src="https://cdn.jsdelivr.net/npm/protobufjs/dist/protobuf.min.js" integrity="sha256-6Jvh/v55qp1JJygkmb9X/iE/Qo1L7zD6WvjsdDHBGwU=" crossorigin="anonymous"></script>
 		<script src="/cdn/utils.js" crossorigin="anonymous"></script>
 		<script src="/cdn/ui.js" crossorigin="anonymous"></script>
 		<link rel="stylesheet" type="text/css" href="/cdn/ui.css" crossorigin="anonymous">
@@ -34,70 +36,115 @@
 			<br>
 			<div id="main-row"></div>
 			<div id="extras-row"></div>
+			<br>
+<!-- 			<div class="row">
+				<div class="col-sm">
+					<center id="qrcode-image"></center>
+				</div>
+			</div> -->
+			<div id="user-data-row"></div>
 		</div>
 		<script>
-			function format_user_data() {
-				const user = window.USER;
-				const familyMembers = window.FAMILY_MEMBERS;
 
-				// Format identity
-				const identity = [
-					user.identity.first_name || '',
-					user.identity.middle_name || '',
-					user.identity.last_name || ''
-				].join('||');
-
-				// Format email and phone number
-				const emailPhone = [
-					user.email_address || '',
-					user.phone_number || ''
-				].join('||');
-
-				// Check and format address if available
-				let address = '';
-				if (user.identity && user.identity.address) {
-					address = [
-						user.identity.address.street_number || '',
-						user.identity.address.street_name || '',
-						user.identity.address.address_two || '',
-						user.identity.address.city || '',
-						user.identity.address.zipcode || ''
-					].join('||');
-				}
-
-				// Check and format date of birth if available
-				let dob = '';
-				if (user.identity && user.identity.date_of_birth) {
-					dob = [
-						user.identity.date_of_birth.day || '',
-						user.identity.date_of_birth.month || '',
-						user.identity.date_of_birth.year || ''
-					].join('||');
-				}
-
-				// Format family members
-				let fmData = '';
-				if (familyMembers) {
-					fmData = Object.values(familyMembers).map(fm => {
-						const age = fm.age || '';
-						const sex = (fm.sex && fm.sex.toUpperCase().charAt(0)) || '';
-						const spouse = fm.spouse ? '1' : '0';
-						return `${age}${sex}S-${spouse}`;
-					}).join('-');
-				}
-
-				// Combine all data
-				const combinedData = [
-					identity,
-					emailPhone,
-					address,
-					dob,
-					fmData,
-					user.spanish ? 'T' : 'F'
-				].join('||');
-
-				return combinedData;
+			function concat_uint_8_arrays( array1 , array2 ) {
+				let combined_array = new Uint8Array( array1.length + array2.length );
+				combined_array.set( array1 );
+				combined_array.set( array2 , array1.length );
+				return combined_array;
 			}
+
+			function sodium_secretbox_encrypt( message , key ) {
+				let nonce = sodium.randombytes_buf( sodium.crypto_secretbox_NONCEBYTES );
+				let encrypted_message = sodium.crypto_secretbox_easy( message , nonce , key );
+				return concat_uint_8_arrays( nonce , encrypted_message );
+			}
+
+			function sodium_secretbox_decrypt( encrypted_message , key ) {
+				let nonce = encrypted_message.slice( 0 , sodium.crypto_secretbox_NONCEBYTES );
+				let ciphertext = encrypted_message.slice( sodium.crypto_secretbox_NONCEBYTES );
+				return sodium.crypto_secretbox_open_easy( ciphertext , nonce , key );
+			}
+
+			function show_user_data_qrcode_modal( user_data ) {
+				let user_qrcode = new QRCode( document.getElementById( "user-data-qr-code" ) , {
+					text: user_data ,
+					width: 256 ,
+					height: 256 ,
+					colorDark : "#000000" ,
+					colorLight : "#ffffff" ,
+					correctLevel : QRCode.CorrectLevel.H
+				});
+				let user_data_qrcode_modal = new bootstrap.Modal( "#user-data-modal" , {
+					backdrop: "static" ,
+					focus: true ,
+					keyboard: true
+				});
+				user_data_qrcode_modal.show();
+			}
+
+
+			// function format_user_data() {
+			// 	const user = window.USER;
+			// 	const familyMembers = window.FAMILY_MEMBERS;
+
+			// 	// Format identity
+			// 	const identity = [
+			// 		user.identity.first_name || '',
+			// 		user.identity.middle_name || '',
+			// 		user.identity.last_name || ''
+			// 	].join('||');
+
+			// 	// Format email and phone number
+			// 	const emailPhone = [
+			// 		user.email_address || '',
+			// 		user.phone_number || ''
+			// 	].join('||');
+
+			// 	// Check and format address if available
+			// 	let address = '';
+			// 	if (user.identity && user.identity.address) {
+			// 		address = [
+			// 			user.identity.address.street_number || '',
+			// 			user.identity.address.street_name || '',
+			// 			user.identity.address.address_two || '',
+			// 			user.identity.address.city || '',
+			// 			user.identity.address.zipcode || ''
+			// 		].join('||');
+			// 	}
+
+			// 	// Check and format date of birth if available
+			// 	let dob = '';
+			// 	if (user.identity && user.identity.date_of_birth) {
+			// 		dob = [
+			// 			user.identity.date_of_birth.day || '',
+			// 			user.identity.date_of_birth.month || '',
+			// 			user.identity.date_of_birth.year || ''
+			// 		].join('||');
+			// 	}
+
+			// 	// Format family members
+			// 	let fmData = '';
+			// 	if (familyMembers) {
+			// 		fmData = Object.values(familyMembers).map(fm => {
+			// 			const age = fm.age || '';
+			// 			const sex = (fm.sex && fm.sex.toUpperCase().charAt(0)) || '';
+			// 			const spouse = fm.spouse ? '1' : '0';
+			// 			return `${age}${sex}S-${spouse}`;
+			// 		}).join('-');
+			// 	}
+
+			// 	// Combine all data
+			// 	const combinedData = [
+			// 		identity,
+			// 		emailPhone,
+			// 		address,
+			// 		dob,
+			// 		fmData,
+			// 		user.spanish ? 'T' : 'F'
+			// 	].join('||');
+
+			// 	return combinedData;
+			// }
 
 
 			class MCT_UI {
@@ -228,8 +275,8 @@
 				console.log( "on_new_save_button_click()" );
 				if ( event ) { event.preventDefault(); }
 				// update dynamic form stuff
-				window.USER.barcodes = Object.values( window.BARCODES );
-				window.USER.barcodes = window.USER.barcodes.filter( ( x ) => { return x !== ""; } );
+				// window.USER.barcodes = Object.values( window.BARCODES );
+				// window.USER.barcodes = window.USER.barcodes.filter( ( x ) => { return x !== ""; } );
 
 				let x_family_members = Object.values( window.FAMILY_MEMBERS );
 				x_family_members = x_family_members.filter( ( x ) => { return x.age > -1; } );
@@ -243,16 +290,62 @@
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
 				}
 
-				let user_data = format_user_data();
-				console.log( user_data );
-				const buf = fflate.strToU8( user_data );
+				// let user_data = format_user_data();
+
+				let x_user = window.USER;
+				x_user[ "family_members" ] = Object.values( window.FAMILY_MEMBERS );
+				console.log( x_user );
+
+				var root = new protobuf.Root();
+				protobuf.parse( USER_PROTO , root , { keepCase: true , alternateCommentMode: false , preferTrailingComment: false } );
+				root.resolveAll();
+				var UserMessage = root.lookupType( "user.User" );
+				let user_message_buffer = UserMessage.encode( x_user ).finish();
+				console.log( user_message_buffer );
+				let user_message_string = String.fromCharCode.apply( null , user_message_buffer );
+				console.log( user_message_string );
+
+				// let user_message_hex = Array.from( user_message_buffer ).map( b => b.toString( 16 ).padStart( 2 , "0" ) ).join( "" );
+				// console.log( user_message_hex );
+
+				let user_message_b64 = btoa( user_message_string );
+				console.log( user_message_b64.length , user_message_b64 );
+				// generate_qr_code( user_message_string );
+
+				$( "#user-data-row" ).html( get_ui_user_data_qr_code_display() );
+				show_user_data_qrcode_modal( user_message_b64 );
+
+				// const buf = fflate.strToU8( user_data );
+
 				// The default compression method is gzip
 				// Increasing mem may increase performance at the cost of memory
 				// The mem ranges from 0 to 12, where 4 is the default
-				const compressed = fflate.compressSync( buf , { level: 6 , mem: 8 } );
-				console.log( Array.from( compressed ).join( " " ) );
-				const compressed_base64_string = btoa( String.fromCharCode.apply( null , compressed ) );
-				console.log( compressed_base64_string );
+
+
+				// const compressed = fflate.compressSync( buf , { level: 6 , mem: 8 } );
+				// console.log( "compressed" , Array.from( compressed ).join( " " ) );
+				// const b64_compressed = btoa( String.fromCharCode.apply( null , compressed ) );
+				// console.log( "b64 compressed" , b64_compressed );
+
+				// const LIBSODIUM_KEY = sodium.crypto_secretbox_keygen();
+				// let encrypted_compressed = sodium_secretbox_encrypt( compressed , LIBSODIUM_KEY );
+				// encrypted_compressed = concat_uint_8_arrays( LIBSODIUM_KEY , encrypted_compressed );
+				// console.log( "encrypted compressed" , encrypted_compressed.length , encrypted_compressed );
+
+				// const base64_encrypted_compressed = btoa( String.fromCharCode.apply( null , encrypted_compressed ) );
+				// console.log( "b64 encrypted compressed" , base64_encrypted_compressed );
+
+
+
+
+				// let y = sodium_secretbox_decrypt( x , LIBSODIUM_KEY );
+
+				// let decoder = new TextDecoder( "utf-8" );
+				// let string = decoder.decode( y );
+				// console.log(string);
+
+
+
 				// const compressedString = fflate.strFromU8( fflate.compressSync( buf ) , true );
 				// console.log( compressedString );
 				// console.log( btoa( compressedString ) );
@@ -266,7 +359,9 @@
 				// if ( !new_user_result.result?.uuid ) { window.location.hfref = "/"; return; }
 				// window.USER = new_user_result.result;
 				// console.log( window.USER );
-				window.location.href = `/join/display?u=${compressed_base64_string}`;
+				// window.location.href = `/join/display?u=${compressed}`;
+
+				//window.location.href = `/join/display?u=asdf`;
 
 				// show_user_handoff_qrcode();
 				// window.UI.render_active_user();

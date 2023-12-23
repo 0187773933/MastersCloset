@@ -1,0 +1,39 @@
+package user
+syntax = "proto3";
+
+message Address {
+	string street_number = 1;
+	string street_name = 2;
+	string address_two = 3;
+	string city = 4;
+	string state = 5;
+	string zipcode = 8;
+}
+
+message DOB {
+	int32 day = 1;
+	string mont = 2;
+	int32 year = 3;
+}
+
+message Identity {
+	string first_name = 1;
+	string middle_name = 2;
+	string last_name = 3;
+	Address address = 4;
+	DOB date_of_birth = 5;
+}
+
+message FamilyMember {
+	string age = 1;
+	string sex = 2;
+	bool spouse = 3;
+}
+
+message User {
+	Identity identity = 1;
+	repeated FamilyMember family_members = 2;
+	string email_address = 3;
+	string phone_number = 4;
+	bool spanish = 5;
+}
