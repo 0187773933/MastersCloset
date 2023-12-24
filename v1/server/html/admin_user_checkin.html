@@ -446,6 +446,27 @@
 							break;
 					}
 				});
+
+				// FailFish
+				let deselected = document.querySelectorAll( '[id^="user_family_member_label_"][selected="false"]' );
+				for ( let i = 0; i < deselected.length; ++i ) {
+					let gender_text = deselected[ i ].parentElement.parentElement.querySelector('[id$="_gender_text"]').innerText;
+					switch( gender_text ) {
+						case "Boy":
+							boys = ( boys - 1 );
+							break;
+						case "Girl":
+							girls = ( girls - 1 );
+							break;
+						case "Male":
+							men = ( men - 1 );
+							break;
+						case "Female":
+							women = ( women - 1 );
+							break;
+					}
+				}
+
 				let form_data = {
 					"uuid": window.USER.uuid ,
 					"shopping_for": shopping_for ,
@@ -455,7 +476,7 @@
 				for ( let i = 0; i < balance_inputs.length; ++i ) {
 					form_data[ balance_inputs[ i ].id ] = parseInt( balance_inputs[ i ].value );
 				}
-				console.log( "new hola" , form_data );
+				console.log( "printing ticket:" , form_data );
 				let valid_check_in = await api_check_in_uuid( window.USER.uuid , form_data );
 				console.log( `${window.USER.uuid} === Checked In === ${valid_check_in}` );
 				window.UI.clear();

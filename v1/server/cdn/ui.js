@@ -823,9 +823,11 @@ function on_add_family_member_display( event ) {
 		if ( event.target.classList.contains( "btn-primary" ) ) {
 			event.target.classList.remove( "btn-primary" );
 			event.target.classList.add( "btn-light" );
+			event.target.setAttribute( "selected" , "false" );
 		} else {
 			event.target.classList.remove( "btn-light" );
 			event.target.classList.add( "btn-primary" );
+			event.target.setAttribute( "selected" , "true" );
 		}
 		let shopping_for = document.querySelectorAll( ".user-family-member.btn-primary" ).length;
 		populate_user_balance_table( shopping_for , window.USER.balance , window.BALANCE_CONFIG );
