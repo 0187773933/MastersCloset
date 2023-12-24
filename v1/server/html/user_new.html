@@ -11,6 +11,7 @@
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.min.css">
 		<script src="https://cdn.jsdelivr.net/npm/ulid@2.3.0/dist/index.umd.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
+
 		<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
 		<!-- <script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/dist/modules/libsodium-wrappers.min.js" async></script> -->
 		<!-- <script src="/cdn/sodium.js" crossorigin="anonymous"></script> -->
@@ -81,71 +82,6 @@
 				});
 				user_data_qrcode_modal.show();
 			}
-
-
-			// function format_user_data() {
-			// 	const user = window.USER;
-			// 	const familyMembers = window.FAMILY_MEMBERS;
-
-			// 	// Format identity
-			// 	const identity = [
-			// 		user.identity.first_name || '',
-			// 		user.identity.middle_name || '',
-			// 		user.identity.last_name || ''
-			// 	].join('||');
-
-			// 	// Format email and phone number
-			// 	const emailPhone = [
-			// 		user.email_address || '',
-			// 		user.phone_number || ''
-			// 	].join('||');
-
-			// 	// Check and format address if available
-			// 	let address = '';
-			// 	if (user.identity && user.identity.address) {
-			// 		address = [
-			// 			user.identity.address.street_number || '',
-			// 			user.identity.address.street_name || '',
-			// 			user.identity.address.address_two || '',
-			// 			user.identity.address.city || '',
-			// 			user.identity.address.zipcode || ''
-			// 		].join('||');
-			// 	}
-
-			// 	// Check and format date of birth if available
-			// 	let dob = '';
-			// 	if (user.identity && user.identity.date_of_birth) {
-			// 		dob = [
-			// 			user.identity.date_of_birth.day || '',
-			// 			user.identity.date_of_birth.month || '',
-			// 			user.identity.date_of_birth.year || ''
-			// 		].join('||');
-			// 	}
-
-			// 	// Format family members
-			// 	let fmData = '';
-			// 	if (familyMembers) {
-			// 		fmData = Object.values(familyMembers).map(fm => {
-			// 			const age = fm.age || '';
-			// 			const sex = (fm.sex && fm.sex.toUpperCase().charAt(0)) || '';
-			// 			const spouse = fm.spouse ? '1' : '0';
-			// 			return `${age}${sex}S-${spouse}`;
-			// 		}).join('-');
-			// 	}
-
-			// 	// Combine all data
-			// 	const combinedData = [
-			// 		identity,
-			// 		emailPhone,
-			// 		address,
-			// 		dob,
-			// 		fmData,
-			// 		user.spanish ? 'T' : 'F'
-			// 	].join('||');
-
-			// 	return combinedData;
-			// }
-
 
 			class MCT_UI {
 				constructor( options={} ) {

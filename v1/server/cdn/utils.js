@@ -122,6 +122,31 @@ function set_nested_property( obj , keys , value ) {
 	}
 }
 
+
+// function imgQR(qrCanvas, centerImage, factor) {
+//     var h = qrCanvas.height;
+//     //Center size
+//     var cs = h * factor;
+//     //Center offset
+//     var co = (h - cs) / 2;
+//     var ctx = qrCanvas.getContext("2d");
+//     ctx.drawImage(centerImage, 0, 0, centerImage.width, centerImage.height, co, co, cs, cs);
+//   }
+//   const icon = new Image();
+//   icon.onload = function () {
+//     var qrcode = new QRCode(document.getElementById("qrcode"), {
+//       text: "https://docs.apipost.cn/preview/c1965f884871c5e8/022649a12cdf1ad7",
+//       width: 200,
+//       height: 200,
+//       colorDark: "#000000",
+//       colorLight: "#ffffff",
+//       correctLevel: QRCode.CorrectLevel.H
+//     });
+//     imgQR(qrcode._oDrawing._elCanvas, this, 0.2)
+//   }
+//   icon.src = './success.png';
+
+// https://github.com/kozakdenys/qr-code-styling
 function add_qr_code( text , element_id ) {
 	let x_element = document.getElementById( element_id );
 	x_element.innerHTML = "";
@@ -133,6 +158,18 @@ function add_qr_code( text , element_id ) {
 		colorLight : "#ffffff" ,
 		correctLevel : QRCode.CorrectLevel.H
 	});
+
+	// https://www.jsdelivr.com/package/npm/qrcode
+	// toDataURL(text, [options], [cb(error, url)])
+	// // Uint8ClampedArray example
+	// const QRCode = require('qrcode')
+
+	// QRCode.toFile(
+	// 'foo.png',
+	// [{ data: new Uint8ClampedArray([253,254,255]), mode: 'byte' }],
+	// ...options...,
+	// ...callback...
+	// )
 }
 
 function set_url( new_url ) {
