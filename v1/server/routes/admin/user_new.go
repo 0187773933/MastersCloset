@@ -130,6 +130,7 @@ func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 	viewed_user.UUID = new_user.UUID
 	viewed_user.CreatedDate = new_user.CreatedDate
 	viewed_user.CreatedTime = new_user.CreatedTime
+	viewed_user.Verified = new_user.Verified
 	viewed_user.Save()
 
 	if viewed_user.ULID != "" {

@@ -138,12 +138,6 @@ func New( username string , config *types.ConfigFile ) ( new_user User ) {
 		// holomorphic search ?
 		usernames_bucket.Put( []byte( username ) , []byte( new_user.UUID ) )
 
-		if new_user.ULID != "" {
-			fmt.Println( "ulid was present" )
-			ulid_uuid_bucket , _ := tx.CreateBucketIfNotExists( []byte( "ulid-uuid" ) )
-			ulid_uuid_bucket.Put( []byte( new_user.ULID ) , []byte( new_user.UUID ) )
-		}
-
 		return nil
 	})
 	db.Close()
