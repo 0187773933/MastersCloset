@@ -73,6 +73,23 @@ function api_check_in_uuid_test( uuid ) {
 	});
 }
 
+function api_get_user_from_ulid( x_ulid ) {
+	return new Promise( async function( resolve , reject ) {
+		try {
+			let _url = `${ServerBaseURL}/admin/user/get/ulid/${x_ulid}`;
+			let _response = await fetch( _url , {
+				method: "GET" ,
+				headers: { "Content-Type": "application/json" , "key": ServerAPIKey }
+			});
+			let response_json = await _response.json();
+			let user = response_json[ "result" ];
+			resolve( user );
+			return;
+		}
+		catch( error ) { console.log( error ); resolve( false ); return; }
+	});
+}
+
 function api_get_user_from_barcode( barcode ) {
 	return new Promise( async function( resolve , reject ) {
 		try {

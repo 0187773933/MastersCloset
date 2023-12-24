@@ -17,6 +17,7 @@ import (
 	// bolt_api "github.com/boltdb/bolt"
 	user "github.com/0187773933/MastersCloset/v1/user"
 	// encryption "github.com/0187773933/MastersCloset/v1/encryption"
+	bolt "github.com/boltdb/bolt"
 	bleve "github.com/blevesearch/bleve/v2"
 	utils "github.com/0187773933/MastersCloset/v1/utils"
 	log "github.com/0187773933/MastersCloset/v1/log"
@@ -120,19 +121,27 @@ func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 		viewed_user.Identity.LastName = fmt.Sprintf( "%v%v%v%v%v%v" , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) , rand.Intn( 9 ) )
 	}
 
-
-
-
-
 	viewed_user.FormatUsername()
 
 	new_user := user.New( viewed_user.Username , GlobalConfig )
+
 	log.Println( new_user )
 
 	viewed_user.UUID = new_user.UUID
 	viewed_user.CreatedDate = new_user.CreatedDate
 	viewed_user.CreatedTime = new_user.CreatedTime
 	viewed_user.Save()
+
+	if viewed_user.ULID != "" {
+		fmt.Println( "ulid was present" )
+		db , _ := bolt.Open( GlobalConfig.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
+		defer db.Close()
+		db.Update( func( tx *bolt.Tx ) error {
+			ulid_uuid_bucket , _ := tx.CreateBucketIfNotExists( []byte( "ulid-uuid" ) )
+			ulid_uuid_bucket.Put( []byte( viewed_user.ULID ) , []byte( viewed_user.UUID ) )
+			return nil
+		})
+	}
 
 	// add to search index
 	search_index , _ := bleve.Open( GlobalConfig.BleveSearchPath )

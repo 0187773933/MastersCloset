@@ -73,6 +73,7 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	admin_route_group.Get( "/user/get/all/barcodes" , GetAllBarcodes )
 	admin_route_group.Get( "/user/get/:uuid" , GetUser )
 	admin_route_group.Get( "/user/get/barcode/:barcode" , GetUserViaBarcode )
+	admin_route_group.Get( "/user/get/ulid/:ulid" , GetUserViaULID )
 	// admin_route_group.Get( "/user/get/checkins/:date" , GetCheckinsDate )
 
 

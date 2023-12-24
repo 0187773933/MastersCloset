@@ -50,6 +50,29 @@ func GetUserViaBarcode( context *fiber.Ctx ) ( error ) {
 	})
 }
 
+func GetUserViaULID( context *fiber.Ctx ) ( error ) {
+	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
+	defer db.Close()
+	x_ulid := context.Params( "ulid" )
+	var viewed_user user.User
+	db.View( func( tx *bolt_api.Tx ) error {
+		ulid_uuid_bucket := tx.Bucket( []byte( "ulid-uuid" ) )
+		x_uuid := ulid_uuid_bucket.Get( []byte( x_ulid ) )
+		if x_uuid == nil { return nil }
+		log.Printf( "ULID : %s || UUID : %s\n" , x_ulid , x_uuid )
+		user_bucket := tx.Bucket( []byte( "users" ) )
+		x_user := user_bucket.Get( []byte( x_uuid ) )
+		decrypted_user := encryption.ChaChaDecryptBytes( GlobalConfig.BoltDBEncryptionKey , x_user )
+		json.Unmarshal( decrypted_user , &viewed_user )
+		return nil
+	})
+	return context.JSON( fiber.Map{
+		"route": "/admin/user/get/ulid" ,
+		"result": viewed_user ,
+	})
+}
+
 func GetAllUsers( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 

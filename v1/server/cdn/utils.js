@@ -65,6 +65,13 @@ function is_proto_message( message ) {
 	return decoded_message
 }
 
+const ULID_REGEX = /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$/i;
+function is_ulid( message ) {
+	let result = ULID_REGEX.test( message );
+	console.log( "is_ulid()" , message , result );
+	return result;
+}
+
 function set_cookie( name , value , days=3650 ) {
 	let expires = "";
 	let date = new Date();
