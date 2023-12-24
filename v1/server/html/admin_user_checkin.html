@@ -343,17 +343,31 @@
 				window.USER.barcodes = window.USER.barcodes.filter( ( x ) => { return x !== ""; } );
 
 				let x_family_members = Object.values( window.FAMILY_MEMBERS );
-				console.log( x_family_members );
+				// console.log( x_family_members );
 				x_family_members = x_family_members.filter( ( x ) => { return x.age > -1; } );
 				x_family_members.forEach( ( x ) => { x.age = parseInt( x.age ); } )
 				window.USER.family_members = x_family_members;
-				console.log( window.USER.family_members );
+				// console.log( window.USER.family_members );
 
 				if ( window?.USER?.identity?.date_of_birth?.day ) {
 					window.USER.identity.date_of_birth.day = parseInt( window.USER.identity.date_of_birth.day );
 				}
 				if ( window?.USER?.identity?.date_of_birth?.year ) {
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
+				}
+
+				if ( window.USER.ulid ) {
+					console.log( "saving new user from qr code handoff" );
+					let x_new_user = await api_new_user( window.USER );
+
+					window.UI.clear();
+					window.USER = x_new_user.result;
+					document.getElementById( "user-search-input" ).value = window.USER.uuid;
+					console.log( window.USER );
+
+					// window.UI.render_active_user();
+					window.UI.render_edit_form();
+					return;
 				}
 
 				// save
