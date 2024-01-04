@@ -63,6 +63,7 @@
 					this.buttons_stack = options.buttons_stack;
 					this.buttons = options.buttons;
 					this.ids = {};
+					// this.RENDER_LOCKED = false;
 					for ( let key in this.options.ids ) {
 						this.ids[ key ] = {
 							name: key ,
@@ -84,6 +85,7 @@
 					window.USER = {};
 					window.BARCODES = {};
 					window.FAMILY_MEMBERS = {};
+					window.UI.RENDER_LOCKED = false;
 					// $( this.options.buttons_anchor ).html( "" );
 					this.buttons_stack = this.options.buttons_stack;
 					this.render_buttons();
@@ -634,9 +636,9 @@
 				if ( valid_proto_message ) {
 					console.log( "received proto message from qrcode" );
 					console.log( valid_proto_message );
-					await sleep( 500 );
+					await sleep( 1000 );
 					window.UI.clear();
-					await sleep( 500 );
+					// window.UI.RENDER_LOCKED = true;
 					window.USER = valid_proto_message;
 					document.getElementById( "user-search-input" ).value = "mobile phone - unsaved"
 					window.UI.render_unverified_button();
@@ -657,17 +659,28 @@
 				window.UI.render_search_table( search_results )
 			}
 			let timeout_id;
-			const debounce_time = 200;
+			const debounce_time = 200; // time in ms
+			const scanner_threshold_time = 100; // time in ms, adjust based on your scanner speed
+			let last_input_time = Date.now();
 			async function on_check_in_input_change( event ) {
 				if ( event ) { event.preventDefault(); }
-				// clearTimeout( timeout_id );
-				let typed_input = event?.target?.value;
-				if ( !typed_input ) { typed_input = document.getElementById( "user-search-input" ).value; }
-				_on_check_in_input_change( typed_input );
-				// if ( typed_input.length < 2 ) { return; }
-				// timeout_id = setTimeout( () => {
-				// 	_on_check_in_input_change( typed_input );
-				// } , debounce_time );
+				// if ( window.UI.RENDER_LOCKED ) { return; }
+				let now = Date.now();
+				let typed_input = event?.target?.value || document.getElementById( "user-search-input" ).value;
+				if ( !typed_input ) return;
+				// Determine if this is likely a QR code scanner input
+				if ( ( now - last_input_time ) < scanner_threshold_time ) {
+					// Handle as scanner input; no debounce
+					clearTimeout( timeout_id );
+					_on_check_in_input_change( typed_input );
+				} else {
+					// Handle as human input; use debounce
+					clearTimeout( timeout_id );
+					timeout_id = setTimeout( () => {
+						_on_check_in_input_change( typed_input );
+					} , debounce_time );
+				}
+				last_input_time = now;
 			}
 			async function init() {
 				await load_api();
@@ -757,6 +770,7 @@
 				$( "#search-clear-button" ).on( "click" , on_clear_button_click );
 				$( "#verified-button" ).on( "click" , on_verified_button_click );
 
+				window.UI.clear();
 				let sent_state = user_checkin_detect_state();
 				window.STATE = sent_state;
 				if ( sent_state ) {
