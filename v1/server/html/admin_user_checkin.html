@@ -595,7 +595,7 @@
 					let user = await api_get_user_from_uuid( typed_input );
 					if ( user ) {
 						window.UI.clear();
-						this.RENDER_LOCKED = true;
+						window.UI.RENDER_LOCKED = true;
 						console.log( "UUID !" , typed_input );
 						// await sleep( 1000 );
 						window.USER = user;
@@ -610,7 +610,7 @@
 					if ( user ) {
 						if ( user.uuid ) {
 							window.UI.clear();
-							this.RENDER_LOCKED = true;
+							window.UI.RENDER_LOCKED = true;
 							console.log( "Barcode !" , typed_input );
 							console.log( user );
 							// await sleep( 1000 );
@@ -629,7 +629,7 @@
 					if ( user ) {
 						if ( user.uuid ) {
 							window.UI.clear();
-							this.RENDER_LOCKED = true;
+							window.UI.RENDER_LOCKED = true;
 							console.log( "ULID !" , typed_input );
 							console.log( user );
 							// await sleep( 1000 );
@@ -645,7 +645,7 @@
 
 				let valid_proto_message = is_proto_message( typed_input );
 				if ( valid_proto_message ) {
-					this.RENDER_LOCKED = true;
+					window.UI.RENDER_LOCKED = true;
 					window.UI.clear();
 					await sleep( 1000 );
 					console.log( "received proto message from qrcode" );
@@ -657,7 +657,8 @@
 					window.UI.render_edit_form();
 					return;
 				}
-				if ( this.RENDER_LOCKED === false ) {
+				console.log( "did we make it here ?" , window.UI.RENDER_LOCKED );
+				if ( window.UI.RENDER_LOCKED === false ) {
 					console.log( `Not a UUID , Not a Barcode , Searching : ${typed_input}` );
 					let search_results = await api_fuzzy_search_username( typed_input );
 					if ( !search_results ) {
@@ -668,7 +669,7 @@
 						// window.UI.clear();
 						return;
 					}
-					if ( this.RENDER_LOCKED === false ) {
+					if ( window.UI.RENDER_LOCKED === false ) {
 						window.UI.render_search_table( search_results );
 					}
 				}
