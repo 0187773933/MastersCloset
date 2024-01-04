@@ -10,7 +10,8 @@
 		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.min.css">
 		<script src="https://cdn.jsdelivr.net/npm/ulid@2.3.0/dist/index.umd.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
+		<!-- <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script> -->
+		<script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/protobufjs/dist/protobuf.min.js" integrity="sha256-6Jvh/v55qp1JJygkmb9X/iE/Qo1L7zD6WvjsdDHBGwU=" crossorigin="anonymous"></script>
 		<script src="/cdn/utils.js" crossorigin="anonymous"></script>
 		<script src="/cdn/ui.js" crossorigin="anonymous"></script>
@@ -63,7 +64,7 @@
 					this.buttons_stack = options.buttons_stack;
 					this.buttons = options.buttons;
 					this.ids = {};
-					// this.RENDER_LOCKED = false;
+					this.RENDER_LOCKED = false;
 					for ( let key in this.options.ids ) {
 						this.ids[ key ] = {
 							name: key ,
@@ -593,9 +594,13 @@
 				if ( valid_uuid ) {
 					let user = await api_get_user_from_uuid( typed_input );
 					if ( user ) {
+						window.UI.clear();
+						this.RENDER_LOCKED = true;
 						console.log( "UUID !" , typed_input );
+						// await sleep( 1000 );
 						window.USER = user;
 						window.UI.render_active_user();
+						return;
 					}
 					return;
 				}
@@ -604,13 +609,16 @@
 					let user = await api_get_user_from_barcode( typed_input );
 					if ( user ) {
 						if ( user.uuid ) {
+							window.UI.clear();
+							this.RENDER_LOCKED = true;
 							console.log( "Barcode !" , typed_input );
 							console.log( user );
-							window.UI.clear();
+							// await sleep( 1000 );
 							window.USER = user;
 							document.getElementById( "user-search-input" ).value = window.USER.uuid;
 							window.UI.render_verification_button();
 							window.UI.render_active_user();
+							return;
 						}
 					}
 					return;
@@ -620,13 +628,16 @@
 					let user = await api_get_user_from_ulid( typed_input );
 					if ( user ) {
 						if ( user.uuid ) {
+							window.UI.clear();
+							this.RENDER_LOCKED = true;
 							console.log( "ULID !" , typed_input );
 							console.log( user );
-							window.UI.clear();
+							// await sleep( 1000 );
 							window.USER = user;
 							document.getElementById( "user-search-input" ).value = window.USER.uuid;
 							window.UI.render_verification_button();
 							window.UI.render_active_user();
+							return;
 						}
 					}
 					return;
@@ -634,11 +645,11 @@
 
 				let valid_proto_message = is_proto_message( typed_input );
 				if ( valid_proto_message ) {
+					this.RENDER_LOCKED = true;
+					window.UI.clear();
+					await sleep( 1000 );
 					console.log( "received proto message from qrcode" );
 					console.log( valid_proto_message );
-					await sleep( 1000 );
-					window.UI.clear();
-					// window.UI.RENDER_LOCKED = true;
 					window.USER = valid_proto_message;
 					document.getElementById( "user-search-input" ).value = "mobile phone - unsaved"
 					window.UI.render_unverified_button();
@@ -646,41 +657,49 @@
 					window.UI.render_edit_form();
 					return;
 				}
-				console.log( `Not a UUID , Not a Barcode , Searching : ${typed_input}` );
-				let search_results = await api_fuzzy_search_username( typed_input );
-				if ( !search_results ) {
-					// window.UI.clear();
-					return;
+				if ( this.RENDER_LOCKED == false ) {
+					console.log( `Not a UUID , Not a Barcode , Searching : ${typed_input}` );
+					let search_results = await api_fuzzy_search_username( typed_input );
+					if ( !search_results ) {
+						// window.UI.clear();
+						return;
+					}
+					if ( search_results.length < 1 ) {
+						// window.UI.clear();
+						return;
+					}
+					if ( this.RENDER_LOCKED == false ) {
+						window.UI.render_search_table( search_results );
+					}
 				}
-				if ( search_results.length < 1 ) {
-					// window.UI.clear();
-					return;
-				}
-				window.UI.render_search_table( search_results )
 			}
+			// let timeout_id;
 			let timeout_id;
-			const debounce_time = 200; // time in ms
-			const scanner_threshold_time = 100; // time in ms, adjust based on your scanner speed
+			const scanner_threshold_time = 30; // Time in ms, adjust based on your scanner speed
 			let last_input_time = Date.now();
-			async function on_check_in_input_change( event ) {
-				if ( event ) { event.preventDefault(); }
-				// if ( window.UI.RENDER_LOCKED ) { return; }
+
+			async function on_check_in_input_change(event) {
+				if (event) { event.preventDefault(); }
 				let now = Date.now();
-				let typed_input = event?.target?.value || document.getElementById( "user-search-input" ).value;
-				if ( !typed_input ) return;
-				// Determine if this is likely a QR code scanner input
-				if ( ( now - last_input_time ) < scanner_threshold_time ) {
-					// Handle as scanner input; no debounce
-					clearTimeout( timeout_id );
-					_on_check_in_input_change( typed_input );
-				} else {
-					// Handle as human input; use debounce
-					clearTimeout( timeout_id );
-					timeout_id = setTimeout( () => {
-						_on_check_in_input_change( typed_input );
-					} , debounce_time );
-				}
+				let typed_input = event?.target?.value || document.getElementById("user-search-input").value;
+
+				if (!typed_input) return;
+
+				let time_since_last_input = now - last_input_time;
 				last_input_time = now;
+
+				// Clear any existing timeout to handle rapid scanner input
+				clearTimeout(timeout_id);
+
+				if (time_since_last_input < scanner_threshold_time) {
+					// Likely scanner input, buffer until stream ends
+					timeout_id = setTimeout(() => {
+						_on_check_in_input_change(typed_input);
+					}, scanner_threshold_time);
+				} else {
+					// Likely human input, process immediately
+					_on_check_in_input_change(typed_input);
+				}
 			}
 			async function init() {
 				await load_api();

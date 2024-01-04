@@ -226,7 +226,34 @@ function show_user_handoff_qrcode( x_uuid=false ) {
 
 function show_user_uuid_qrcode( x_uuid=false ) {
 	if ( !x_uuid ) { x_uuid = window.USER.uuid; }
-	add_qr_code( x_uuid , "user-handoff-qr-code" );
+	// add_qr_code( x_uuid , "user-handoff-qr-code" );
+
+	const user_qrcode = new QRCodeStyling({
+		width: 300 ,
+		height: 300 ,
+		type: "png" ,
+		data: x_uuid ,
+		image: "/cdn/verified.png" ,
+		dotsOptions: {
+			color: "#913C67" ,
+			type: "classy-rounded"
+		},
+		cornersSquareOptions: {
+			color: "#913C67" ,
+			type: "extra-rounded"
+		},
+		backgroundOptions: {
+			color: "#e9ebee" ,
+		},
+		imageOptions: {
+			crossOrigin: "anonymous" ,
+			margin: 4
+		}
+	});
+	let qr_code_container = document.getElementById( "user-handoff-qr-code" );
+	user_qrcode.append( qr_code_container );
+	qr_code_container.querySelector( "svg" ).classList = "figure-img img-fluid rounded";
+
 	let user_handoff_modal = new bootstrap.Modal( "#user-handoff-modal" , {
 		backdrop: "static" ,
 		focus: true ,
