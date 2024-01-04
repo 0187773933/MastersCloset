@@ -657,7 +657,7 @@
 					window.UI.render_edit_form();
 					return;
 				}
-				if ( this.RENDER_LOCKED == false ) {
+				if ( this.RENDER_LOCKED === false ) {
 					console.log( `Not a UUID , Not a Barcode , Searching : ${typed_input}` );
 					let search_results = await api_fuzzy_search_username( typed_input );
 					if ( !search_results ) {
@@ -668,7 +668,7 @@
 						// window.UI.clear();
 						return;
 					}
-					if ( this.RENDER_LOCKED == false ) {
+					if ( this.RENDER_LOCKED === false ) {
 						window.UI.render_search_table( search_results );
 					}
 				}
@@ -689,13 +689,13 @@
 				last_input_time = now;
 
 				// Clear any existing timeout to handle rapid scanner input
-				clearTimeout(timeout_id);
+				clearTimeout( timeout_id) ;
 
-				if (time_since_last_input < scanner_threshold_time) {
+				if ( time_since_last_input < scanner_threshold_time ) {
 					// Likely scanner input, buffer until stream ends
 					timeout_id = setTimeout(() => {
 						_on_check_in_input_change(typed_input);
-					}, scanner_threshold_time);
+					} , scanner_threshold_time);
 				} else {
 					// Likely human input, process immediately
 					_on_check_in_input_change(typed_input);
