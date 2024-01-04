@@ -10,7 +10,8 @@
 		<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.min.css">
 		<script src="https://cdn.jsdelivr.net/npm/ulid@2.3.0/dist/index.umd.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script>
+		<!-- <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script> -->
+		<script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.min.js"></script>
 
 		<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.min.js"></script>
 		<!-- <script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/dist/modules/libsodium-wrappers.min.js" async></script> -->
@@ -67,14 +68,41 @@
 			}
 
 			function show_user_data_qrcode_modal( user_data ) {
-				let user_qrcode = new QRCode( document.getElementById( "user-data-qr-code" ) , {
-					text: user_data ,
-					width: 256 ,
-					height: 256 ,
-					colorDark : "#000000" ,
-					colorLight : "#ffffff" ,
-					correctLevel : QRCode.CorrectLevel.H
+				// let user_qrcode = new QRCode( document.getElementById( "user-data-qr-code" ) , {
+				// 	text: user_data ,
+				// 	width: 256 ,
+				// 	height: 256 ,
+				// 	colorDark : "#000000" ,
+				// 	colorLight : "#ffffff" ,
+				// 	correctLevel : QRCode.CorrectLevel.H
+				// });
+
+				// https://github.com/kozakdenys/qr-code-styling/tree/master
+				const user_qrcode = new QRCodeStyling({
+					width: 300 ,
+					height: 300 ,
+					type: "png" ,
+					data: user_data ,
+					image: "/cdn/verified.png" ,
+					dotsOptions: {
+						color: "#913C67" ,
+						type: "classy-rounded"
+					},
+					cornersSquareOptions: {
+						color: "#913C67" ,
+						type: "extra-rounded"
+					},
+					backgroundOptions: {
+						color: "#e9ebee" ,
+					},
+					imageOptions: {
+						crossOrigin: "anonymous" ,
+						margin: 4
+					}
 				});
+				let qr_code_container = document.getElementById( "user-data-qr-code" );
+				user_qrcode.append( qr_code_container );
+				qr_code_container.querySelector( "svg" ).classList = "figure-img img-fluid rounded";
 				let user_data_qrcode_modal = new bootstrap.Modal( "#user-data-modal" , {
 					backdrop: "static" ,
 					focus: true ,

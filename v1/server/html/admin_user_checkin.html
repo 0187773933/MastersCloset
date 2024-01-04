@@ -634,7 +634,9 @@
 				if ( valid_proto_message ) {
 					console.log( "received proto message from qrcode" );
 					console.log( valid_proto_message );
+					await sleep( 500 );
 					window.UI.clear();
+					await sleep( 500 );
 					window.USER = valid_proto_message;
 					document.getElementById( "user-search-input" ).value = "mobile phone - unsaved"
 					window.UI.render_unverified_button();

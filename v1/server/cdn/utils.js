@@ -47,22 +47,26 @@ message User {
 
 const BASE_64_REGEX = /^(?:[A-Za-z0-9+/]{4})*?(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 function is_proto_message( message ) {
-	let b64_test = BASE_64_REGEX.test( message );
-	if ( !b64_test ) { return false; }
-	let proto_message = atob( message );
-	console.log( proto_message );
-	let proto_message_buffer = new Uint8Array( proto_message.length );
-	for ( let i = 0; i < proto_message.length; i++ ) {
-		proto_message_buffer[ i ] = proto_message.charCodeAt( i );
+	try {
+		let b64_test = BASE_64_REGEX.test( message );
+		if ( !b64_test ) { return false; }
+		let proto_message = atob( message );
+		console.log( proto_message );
+		let proto_message_buffer = new Uint8Array( proto_message.length );
+		for ( let i = 0; i < proto_message.length; i++ ) {
+			proto_message_buffer[ i ] = proto_message.charCodeAt( i );
+		}
+		console.log( proto_message_buffer );
+		var root = new protobuf.Root();
+		protobuf.parse( USER_PROTO , root , { keepCase: true , alternateCommentMode: false , preferTrailingComment: false } );
+		root.resolveAll();
+		var UserMessage = root.lookupType( "user.User" );
+		var decoded_message = UserMessage.decode( proto_message_buffer );
+		console.log( "is_proto_message()" , decoded_message );
+		return decoded_message
+	} catch {
+		return false;
 	}
-	console.log( proto_message_buffer );
-	var root = new protobuf.Root();
-	protobuf.parse( USER_PROTO , root , { keepCase: true , alternateCommentMode: false , preferTrailingComment: false } );
-	root.resolveAll();
-	var UserMessage = root.lookupType( "user.User" );
-	var decoded_message = UserMessage.decode( proto_message_buffer );
-	console.log( "is_proto_message()" , decoded_message );
-	return decoded_message
 }
 
 const ULID_REGEX = /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$/i;

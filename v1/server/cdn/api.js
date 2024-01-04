@@ -1,6 +1,6 @@
-const ServerAPIKey = "";
-const ServerBaseURL = "";
-const LocalHostURL = "";
+const ServerAPIKey = "58ea6301510ec321b450c8a6cc5fb522636e4a98dc";
+const ServerBaseURL = "http://localhost:5950";
+const LocalHostURL = "http://localhost:5950";
 
 function api_check_in_uuid( uuid , balance_form_data ) {
 	return new Promise( async function( resolve , reject ) {
