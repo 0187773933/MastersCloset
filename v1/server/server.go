@@ -13,6 +13,7 @@ import (
 	// "os"
 	utils "github.com/0187773933/MastersCloset/v1/utils"
 	log "github.com/0187773933/MastersCloset/v1/log"
+	logger "github.com/0187773933/MastersCloset/v1/logger"
 )
 
 var GlobalConfig *types.ConfigFile
@@ -30,6 +31,7 @@ func request_logging_middleware( context *fiber.Ctx ) ( error ) {
 	// log_message := fmt.Sprintf( "%s === %s" , context.Method() , context.Path() )
 	log_message := fmt.Sprintf( "%s === %s === %s" , ip_address , context.Method() , context.Path() );
 	log.Println( log_message )
+	logger.Log.Println( log_message )
 	return context.Next()
 }
 
@@ -52,7 +54,8 @@ func New( config types.ConfigFile ) ( server Server ) {
 
 	server.FiberApp.Use( fiber_cors.New( fiber_cors.Config{
 		AllowOrigins: fmt.Sprintf( "%s, %s" , "http://192.168.4.190:5950" , server.Config.ServerBaseUrl , server.Config.ServerLiveUrl ) ,
-		AllowHeaders:  "Origin, Content-Type, Accept, key",
+		AllowHeaders:  "Origin, Content-Type, Accept, key" ,
+		AllowCredentials: true ,
 	}))
 
 	server.SetupRoutes()

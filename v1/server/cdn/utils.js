@@ -81,7 +81,7 @@ function set_cookie( name , value , days=3650 ) {
 	let date = new Date();
 	date.setTime( date.getTime() + ( days * 24 * 60 * 60 * 1000 ) );
 	expires = "; expires=" + date.toUTCString();
-	document.cookie = name + "=" + ( value || "" ) + expires + "; path=/; SameSite=Lax; Secure";
+	document.cookie = name + "=" + ( value || "" ) + expires + "; path=/; SameSite=Lax; Secure;";
 }
 
 function get_cookie( name ) {
@@ -251,6 +251,7 @@ function show_user_uuid_qrcode( x_uuid=false ) {
 		}
 	});
 	let qr_code_container = document.getElementById( "user-handoff-qr-code" );
+	qr_code_container.innerHTML = "";
 	user_qrcode.append( qr_code_container );
 	qr_code_container.querySelector( "svg" ).classList = "figure-img img-fluid rounded";
 

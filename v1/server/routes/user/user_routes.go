@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	// "math/rand"
+	"strings"
 	// json "encoding/json"
 	// net_url "net/url"
 	fiber "github.com/gofiber/fiber/v2"
@@ -90,6 +91,22 @@ func check_if_user_cookie_exists( context *fiber.Ctx ) ( result bool ) {
 	return
 }
 
+func check_if_user_ulid_cookie_exists( context *fiber.Ctx ) ( result bool ) {
+	fmt.Println( "check_if_user_ulid_cookie_exists()" )
+	result = false
+    cookieHeader := string(context.Request().Header.Peek("Cookie"))
+    cookies := strings.Split(cookieHeader, "; ")
+    fmt.Println( cookies )
+	user_cookie := context.Cookies( "the-masters-closet-user-ulid=" )
+	fmt.Println( user_cookie )
+	if user_cookie == "" { return }
+	fmt.Println( user_cookie )
+	user_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , user_cookie )
+	fmt.Println( user_cookie_value )
+	if user_cookie_value != "" { result = true }
+	return
+}
+
 func check_if_admin_cookie_exists( context *fiber.Ctx ) ( result bool ) {
 	result = false
 	admin_cookie := context.Cookies( "the-masters-closet-admin" )
@@ -108,22 +125,35 @@ func serve_failed_check_in_attempt( context *fiber.Ctx ) ( error ) {
 }
 
 func RenderHomePage( context *fiber.Ctx ) ( error ) {
-	// fmt.Println( "RenderHomePage()" )
+	fmt.Println( "RenderHomePage()" )
 	context.Set( "Content-Type" , "text/html" )
+
 	admin_logged_in := check_if_admin_cookie_exists( context )
 	if admin_logged_in == true {
-		// fmt.Println( "RenderHomePage() --> Admin" )
+		fmt.Println( "RenderHomePage() --> Admin" )
 		return context.SendFile( "./v1/server/html/admin.html" )
 	}
+
 	user_logged_in := check_if_user_cookie_exists( context )
 	if user_logged_in == true {
-		// fmt.Println( "RenderHomePage() --> User" )
+		fmt.Println( "RenderHomePage() --> User UUID" )
 		user_cookie := context.Cookies( "the-masters-closet-user" )
 		user_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , user_cookie )
 		fmt.Println( "user logged in" , user_cookie_value )
 		return context.SendFile( "./v1/server/html/user_home.html" )
 	}
-	// fmt.Println( "RenderHomePage() --> Default" )
+
+	user_ulid_cookie_exists := check_if_user_ulid_cookie_exists( context )
+	if user_ulid_cookie_exists == true {
+		fmt.Println( "RenderHomePage() --> User ULID" )
+		user_ulid_cookie := context.Cookies( "the-masters-closet-user-ulid" )
+		fmt.Println( user_ulid_cookie )
+		user_ulid_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , user_ulid_cookie )
+		fmt.Println( user_ulid_cookie_value )
+		return context.SendFile( "./v1/server/html/user_home.html" )
+	}
+
+	fmt.Println( "RenderHomePage() --> Default" )
 	return context.SendFile( "./v1/server/html/home.html" )
 }
 
