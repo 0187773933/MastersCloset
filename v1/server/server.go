@@ -11,6 +11,7 @@ import (
 	user_routes "github.com/0187773933/MastersCloset/v1/server/routes/user"
 	admin_routes "github.com/0187773933/MastersCloset/v1/server/routes/admin"
 	// "os"
+	utils "github.com/0187773933/MastersCloset/v1/utils"
 	log "github.com/0187773933/MastersCloset/v1/log"
 )
 
@@ -66,6 +67,10 @@ func ( s *Server ) SetupRoutes() {
 
 func ( s *Server ) Start() {
 	fmt.Println( "\n" )
+	local_ips := utils.GetLocalIPAddresses()
+	for _ , x_ip := range local_ips {
+		log.PrintfConsole( "Listening on http://%s:%s\n" , x_ip , s.Config.ServerPort )
+	}
 	log.PrintfConsole( "Listening on http://localhost:%s\n" , s.Config.ServerPort )
 	fmt.Printf( "Admin Login @ http://localhost:%s/admin/login\n" , s.Config.ServerPort )
 	fmt.Printf( "Admin Login @ %s/admin/login\n" , s.Config.ServerLiveUrl )

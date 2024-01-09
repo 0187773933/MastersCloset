@@ -573,19 +573,19 @@ function on_add_family_member( event ) {
 	// 1.) Label Row
 	let label_row = make( "div" , {
 		id: `user_family_member_row_label_${family_member_ulid}` ,
-		class: "row g-2 mb-3 justify-content-center" ,
+		class: "row g-2 mb-3" ,
 	});
 	let label_col_left = make( "div" , {
-		class: "col-lg-2 col-md-2 col-sm-2 col-5"
+		class: "col-4"
 	});
 	let label_col_center = make( "div" , {
-		class: "col-lg-2 col-md-2 col-sm-2 col-2"
+		class: "col-4"
 	});
 	let label_col_right = make( "div" , {
-		class: "col-lg-2 col-md-2 col-sm-2 col-5"
+		class: "col-4"
 	});
 	let label = make( "span" , {
-		class: "badge rounded-pill text-bg-primary" ,
+		class: "badge rounded-pill btn-qrcode text-center" ,
 		text: `Family Member - ${(current_family_members.length + 1)}` ,
 		attributes: {
 			id: `user_family_member_label_${family_member_ulid}`

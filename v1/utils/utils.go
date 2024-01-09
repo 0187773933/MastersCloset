@@ -38,10 +38,14 @@ func ParseConfig( file_path string ) ( result types.ConfigFile ) {
 func GetLocalIPAddresses() ( ip_addresses []string ) {
 	host , _ := os.Hostname()
 	addrs , _ := net.LookupIP( host )
+	encountered := make( map[ string ]bool )
 	for _ , addr := range addrs {
 		if ipv4 := addr.To4(); ipv4 != nil {
-			// fmt.Println( "IPv4: " , ipv4 )
-			ip_addresses = append( ip_addresses , ipv4.String() )
+			ip := ipv4.String()
+            if !encountered[ ip ] {
+                encountered[ ip ] = true
+                ip_addresses = append( ip_addresses , ip )
+            }
 		}
 	}
 	return

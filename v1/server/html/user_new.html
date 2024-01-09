@@ -445,6 +445,9 @@
 					} ,
 				});
 				window.UI.render_new_form();
+				let form_rows = $( "#user-new-form" ).find( ".row" );
+				$( form_rows[ 2 ] ).hide();
+				$( form_rows[ 3 ] ).hide();
 				let test_cookie = get_cookie( "the-masters-closet-user-ulid" );
 				if ( test_cookie ) {
 					console.log( "we had a ulid cookie !!!" , test_cookie );
