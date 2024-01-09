@@ -333,6 +333,9 @@
 				if ( event ) { event.preventDefault(); }
 				// window.UI.render_active_user();
 				window.UI.render_new_form();
+				let form_rows = $( "#user-new-form" ).find( ".row" );
+				$( form_rows[ 2 ] ).hide();
+				$( form_rows[ 3 ] ).hide();
 			}
 
 			function on_show_handoff_qrc_button_click( event ) {
