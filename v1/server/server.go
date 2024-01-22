@@ -52,8 +52,10 @@ func New( config types.ConfigFile ) ( server Server ) {
 		Key: server.Config.ServerCookieSecret ,
 	}))
 
+	allow_origins_string := fmt.Sprintf( "%s, %s" , server.Config.ServerBaseUrl , server.Config.ServerLiveUrl )
+	fmt.Println( "Using Origins:" , allow_origins_string )
 	server.FiberApp.Use( fiber_cors.New( fiber_cors.Config{
-		AllowOrigins: fmt.Sprintf( "%s, %s" , "http://192.168.4.190:5950" , server.Config.ServerBaseUrl , server.Config.ServerLiveUrl ) ,
+		AllowOrigins: allow_origins_string ,
 		AllowHeaders:  "Origin, Content-Type, Accept, key" ,
 		AllowCredentials: true ,
 	}))
