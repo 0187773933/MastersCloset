@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"os/user"
+	"embed"
 	"runtime"
 	"bufio"
 	"time"
@@ -27,6 +28,10 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+//go:embed zoneinfo
+var ZoneInfoFS embed.FS
+
+
 func ParseConfig( file_path string ) ( result types.ConfigFile ) {
 	file_data , _ := ioutil.ReadFile( file_path )
 	err := json.Unmarshal( file_data , &result )
@@ -42,17 +47,28 @@ func GetLocalIPAddresses() ( ip_addresses []string ) {
 	for _ , addr := range addrs {
 		if ipv4 := addr.To4(); ipv4 != nil {
 			ip := ipv4.String()
-            if !encountered[ ip ] {
-                encountered[ ip ] = true
-                ip_addresses = append( ip_addresses , ip )
-            }
+			if !encountered[ ip ] {
+				encountered[ ip ] = true
+				ip_addresses = append( ip_addresses , ip )
+			}
 		}
 	}
 	return
 }
 
-var location , _ = time.LoadLocation( "America/New_York" )
+// https://stackoverflow.com/questions/48439363/missing-location-in-call-to-time-in
+// thanks bro
+func get_location( name string ) ( loc *time.Location ) {
+	bs , err := ZoneInfoFS.ReadFile( "zoneinfo/" + name )
+	if err != nil { panic( err ) }
+	loc , err = time.LoadLocationFromTZData( name , bs )
+	if err != nil { panic( err ) }
+	return loc
+}
+
 func FormatTime( input_time *time.Time ) ( result string ) {
+	// location , _ := time.LoadLocation( "America/New_York" )
+	location := get_location( "America/New_York" )
 	time_object := input_time.In( location )
 	month_name := strings.ToUpper( time_object.Format( "Jan" ) )
 	milliseconds := time_object.Format( ".000" )
@@ -63,6 +79,8 @@ func FormatTime( input_time *time.Time ) ( result string ) {
 }
 
 func GetFormattedTimeString() ( result string ) {
+	// location , _ := time.LoadLocation( "America/New_York" )
+	location := get_location( "America/New_York" )
 	time_object := time.Now().In( location )
 	month_name := strings.ToUpper( time_object.Format( "Jan" ) )
 	milliseconds := time_object.Format( ".000" )

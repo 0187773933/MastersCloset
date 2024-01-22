@@ -73,3 +73,8 @@
 - `sudo make install`
 
 - `sudo rsync -av /usr/local/Cellar/cups/$(brew list --versions cups | awk '{print $2}') ./cups`
+
+
+## Time Zone Data for Windows
+
+- https://stackoverflow.com/questions/48439363/missing-location-in-call-to-time-in
