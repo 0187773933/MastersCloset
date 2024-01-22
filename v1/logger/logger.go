@@ -6,8 +6,8 @@ import (
 	"strings"
 	"io"
 	// "encoding/json"
-	types "github.com/0187773933/FireC2Server/v1/types"
-	utils "github.com/0187773933/FireC2Server/v1/utils"
+	types "github.com/0187773933/MastersCloset/v1/types"
+	utils "github.com/0187773933/MastersCloset/v1/utils"
 	logrus "github.com/sirupsen/logrus"
 	// ulid "github.com/oklog/ulid/v2"
 )
