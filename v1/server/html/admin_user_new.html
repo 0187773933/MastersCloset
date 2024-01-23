@@ -296,11 +296,8 @@
 				// window.USER = edit_result.user;
 				// // alert( "User Info Saved !" );
 				// window.UI.render_active_user();
-				console.log( "??? 1 ???" );
 				if ( window.USER.ulid ) {
-					console.log( "??? 2 ???" );
 					if ( !window.USER.uuid ) {
-						console.log( "??? 3 ???" );
 						console.log( "saving new user from qr code handoff" );
 						// window.USER.verified = false;
 						// console.log( window.USER );
@@ -317,6 +314,8 @@
 						// window.UI.render_active_user();
 						// window.UI.render_edit_form();
 						// return;
+						show_user_uuid_qrcode();
+						return;
 					}
 				}
 
