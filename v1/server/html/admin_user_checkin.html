@@ -643,8 +643,8 @@
 					}
 					return;
 				}
-
 				let valid_proto_message = is_proto_message( typed_input );
+				console.log( "is_proto_message()" , typed_input , valid_proto_message );
 				if ( valid_proto_message ) {
 					window.UI.RENDER_LOCKED = true;
 					window.UI.clear();

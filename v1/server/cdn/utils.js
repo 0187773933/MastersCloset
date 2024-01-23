@@ -50,6 +50,7 @@ function is_proto_message( message ) {
 	try {
 		let b64_test = BASE_64_REGEX.test( message );
 		if ( !b64_test ) { return false; }
+		// let proto_message = atob( message ).trim();
 		let proto_message = atob( message );
 		console.log( proto_message );
 		let proto_message_buffer = new Uint8Array( proto_message.length );

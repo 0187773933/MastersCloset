@@ -12,6 +12,7 @@
 		<script src="https://cdn.jsdelivr.net/npm/ulid@2.3.0/dist/index.umd.min.js"></script>
 		<!-- <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" integrity="sha256-xUHvBjJ4hahBW8qN9gceFBibSFUzbe9PNttUvehITzY=" crossorigin="anonymous"></script> -->
 		<script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/protobufjs@7.2.5/dist/protobuf.min.js" integrity="sha256-6Jvh/v55qp1JJygkmb9X/iE/Qo1L7zD6WvjsdDHBGwU=" crossorigin="anonymous"></script>
 		<script src="/cdn/utils.js" crossorigin="anonymous"></script>
 		<script src="/cdn/ui.js" crossorigin="anonymous"></script>
 		<link rel="stylesheet" type="text/css" href="/cdn/ui.css" crossorigin="anonymous">
@@ -62,6 +63,7 @@
 					this.stack = options.stack;
 					this.buttons_stack = options.buttons_stack;
 					this.buttons = options.buttons;
+					this.RENDER_LOCKED = false;
 					this.ids = {};
 					for ( let key in this.options.ids ) {
 						this.ids[ key ] = {
@@ -289,11 +291,45 @@
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
 				}
 
+				// let edit_result = await api_edit_user( window.USER );
+				// console.log( edit_result );
+				// window.USER = edit_result.user;
+				// // alert( "User Info Saved !" );
+				// window.UI.render_active_user();
+				console.log( "??? 1 ???" );
+				if ( window.USER.ulid ) {
+					console.log( "??? 2 ???" );
+					if ( !window.USER.uuid ) {
+						console.log( "??? 3 ???" );
+						console.log( "saving new user from qr code handoff" );
+						// window.USER.verified = false;
+						// console.log( window.USER );
+						let x_new_user = await api_new_user( window.USER );
+						let c_user = window.USER;
+						console.log( window.USER );
+						window.USER = x_new_user.result;
+						window.USER.verified = c_user.verified;
+						// window.USER.verified = c_user.verified;
+						await api_edit_user( window.USER ); // extra because user.New( username ) only param really
+						document.getElementById( "user-search-input" ).value = window.USER.uuid;
+						console.log( window.USER );
+
+						// window.UI.render_active_user();
+						// window.UI.render_edit_form();
+						// return;
+					}
+				}
+
+				// save
 				let edit_result = await api_edit_user( window.USER );
 				console.log( edit_result );
 				window.USER = edit_result.user;
-				// alert( "User Info Saved !" );
-				window.UI.render_active_user();
+				// show_user_handoff_qrcode();
+				show_user_uuid_qrcode();
+				// window.UI.render_active_user();
+				return;
+
+
 			}
 
 			function on_edit_cancel_button_click( event ) {
@@ -365,15 +401,37 @@
 				if ( window?.USER?.identity?.date_of_birth?.year ) {
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
 				}
+				console.log( "??? 1 ???" );
+				if ( window.USER.ulid ) {
+					console.log( "??? 2 ???" );
+					if ( !window.USER.uuid ) {
+						console.log( "??? 3 ???" );
+						console.log( "saving new user from qr code handoff" );
+						// window.USER.verified = false;
+						// console.log( window.USER );
+						let x_new_user = await api_new_user( window.USER );
+						let c_user = window.USER;
+						console.log( window.USER );
+						window.USER = x_new_user.result;
+						window.USER.verified = c_user.verified;
+						// window.USER.verified = c_user.verified;
+						await api_edit_user( window.USER ); // extra because user.New( username ) only param really
+						document.getElementById( "user-search-input" ).value = window.USER.uuid;
+						console.log( window.USER );
 
-				let new_user_result = await api_new_user( window.USER );
-				console.log( window.USER );
-				if ( !new_user_result.result?.uuid ) { return false; }
-				window.USER = new_user_result.result;
-				console.log( window.USER );
-				document.getElementById( "user-search-input" ).value = window.USER.uuid;
+						// window.UI.render_active_user();
+						// window.UI.render_edit_form();
+						// return;
+					}
+				}
+
+				// save
+				let edit_result = await api_edit_user( window.USER );
+				console.log( edit_result );
+				window.USER = edit_result.user;
 				show_user_handoff_qrcode();
-				window.UI.render_active_user();
+				// window.UI.render_active_user();
+				return;
 			}
 
 			function on_new_cancel_button_click( event ) {
@@ -447,9 +505,13 @@
 				if ( valid_uuid ) {
 					let user = await api_get_user_from_uuid( typed_input );
 					if ( user ) {
+						window.UI.clear();
+						window.UI.RENDER_LOCKED = true;
 						console.log( "UUID !" , typed_input );
+						// await sleep( 1000 );
 						window.USER = user;
 						window.UI.render_active_user();
+						return;
 					}
 					return;
 				}
@@ -458,25 +520,70 @@
 					let user = await api_get_user_from_barcode( typed_input );
 					if ( user ) {
 						if ( user.uuid ) {
+							window.UI.clear();
+							window.UI.RENDER_LOCKED = true;
 							console.log( "Barcode !" , typed_input );
 							console.log( user );
+							// await sleep( 1000 );
 							window.USER = user;
+							document.getElementById( "user-search-input" ).value = window.USER.uuid;
+							window.UI.render_verification_button();
 							window.UI.render_active_user();
+							return;
 						}
 					}
 					return;
 				}
-				console.log( `Not a UUID , Not a Barcode , Searching : ${typed_input}` );
-				let search_results = await api_fuzzy_search_username( typed_input );
-				if ( !search_results ) {
-					// window.UI.clear();
+				let valid_ulid = is_ulid( typed_input );
+				if ( valid_ulid ) {
+					let user = await api_get_user_from_ulid( typed_input );
+					if ( user ) {
+						if ( user.uuid ) {
+							window.UI.clear();
+							window.UI.RENDER_LOCKED = true;
+							console.log( "ULID !" , typed_input );
+							console.log( user );
+							// await sleep( 1000 );
+							window.USER = user;
+							document.getElementById( "user-search-input" ).value = window.USER.uuid;
+							window.UI.render_verification_button();
+							window.UI.render_active_user();
+							return;
+						}
+					}
 					return;
 				}
-				if ( search_results.length < 1 ) {
-					// window.UI.clear();
+				let valid_proto_message = is_proto_message( typed_input );
+				console.log( "is_proto_message()" , typed_input , valid_proto_message );
+				if ( valid_proto_message ) {
+					window.UI.RENDER_LOCKED = true;
+					window.UI.clear();
+					await sleep( 1000 );
+					console.log( "received proto message from qrcode" );
+					console.log( valid_proto_message );
+					window.USER = valid_proto_message;
+					document.getElementById( "user-search-input" ).value = "mobile phone - unsaved"
+					// window.UI.render_unverified_button();
+					// todo , pre-save and get valide uuid
+					window.UI.render_edit_form();
 					return;
 				}
-				window.UI.render_search_table( search_results )
+				console.log( "did we make it here ?" , window.UI.RENDER_LOCKED );
+				if ( window.UI.RENDER_LOCKED === false ) {
+					console.log( `Not a UUID , Not a Barcode , Searching : ${typed_input}` );
+					let search_results = await api_fuzzy_search_username( typed_input );
+					if ( !search_results ) {
+						// window.UI.clear();
+						return;
+					}
+					if ( search_results.length < 1 ) {
+						// window.UI.clear();
+						return;
+					}
+					if ( window.UI.RENDER_LOCKED === false ) {
+						window.UI.render_search_table( search_results );
+					}
+				}
 			}
 			let timeout_id;
 			const debounce_time = 200;
