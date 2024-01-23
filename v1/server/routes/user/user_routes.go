@@ -65,6 +65,7 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	fiber_app.Get( "/cdn/verified.png" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/verified.png" ) } )
 	fiber_app.Get( "/favicon.ico" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/favicon.ico" ) } )
 	fiber_app.Get( "/cdn/sodium.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/sodium.js" ) } )
+	fiber_app.Get( "/cdn/protobuf.min.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/utils.js" ) } )
 
 	fiber_app.Get( "/join" , public_limiter , RenderJoinPage )
 	// fiber_app.Get( "/join/display" , public_limiter , CheckInDisplay )
