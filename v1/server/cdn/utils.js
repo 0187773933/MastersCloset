@@ -199,7 +199,29 @@ function user_checkin_detect_uuid() {
 	return x_uuid;
 }
 
+function user_new_get_uuid() {
+	if ( !window.location?.href ) { return false; }
+	let url_parts = window.location.href.split( "/new/" );
+	if ( url_parts.length < 2 ) { return false; }
+	return url_parts[ 1 ].split( "/" )[ 0 ];
+}
+
+
 function user_checkin_detect_state() {
+	let url = window.location.href;
+	if ( !url ) { return false; }
+	let url_parts = window.location.href.split( "/" );
+	if ( url_parts.length < 2 ) { return false; }
+	if ( window.location.href.indexOf( "edit" ) > -1 ) {
+		return "edit";
+	}
+	if ( window.location.href.indexOf( "new" ) > -1 ) {
+		return "new";
+	}
+	return false;
+}
+
+function user_new_detect_state() {
 	let url = window.location.href;
 	if ( !url ) { return false; }
 	let url_parts = window.location.href.split( "/" );

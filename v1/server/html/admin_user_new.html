@@ -188,6 +188,8 @@
 					}
 				}
 				render_edit_form() {
+					console.log( "render_edit_form()" );
+					window.STATE = "edit";
 					set_url( `/admin/user/new/${window.USER.uuid}/edit` );
 					this.buttons_stack = [ "edit-user-save-button" , "edit-user-cancel-button" , "edit-user-delete-button" , "show-handoff-qrc-button" , "sms-user-button" , "email-user-button" ];
 					this.render_buttons();
@@ -272,11 +274,6 @@
 				// update dynamic form thing ?
 				window.USER.barcodes = Object.values( window.BARCODES );
 				window.USER.barcodes = window.USER.barcodes.filter( ( x ) => { return x !== ""; } );
-
-				// OLD
-				// window.USER.family_members = Object.values( window.FAMILY_MEMBERS );
-				// window.USER.family_members = window.USER.family_members.filter( ( x ) => { return x !== ""; } );
-				// window.USER.family_members = window.USER.family_members.map( ( x ) => { return { "first_name": "" , "last_name": "" , "age": parseInt( x ) } } );
 				let x_family_members = Object.values( window.FAMILY_MEMBERS );
 				console.log( x_family_members );
 				x_family_members = x_family_members.filter( ( x ) => { return x.age > -1; } );
@@ -400,11 +397,8 @@
 				if ( window?.USER?.identity?.date_of_birth?.year ) {
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
 				}
-				console.log( "??? 1 ???" );
 				if ( window.USER.ulid ) {
-					console.log( "??? 2 ???" );
 					if ( !window.USER.uuid ) {
-						console.log( "??? 3 ???" );
 						console.log( "saving new user from qr code handoff" );
 						// window.USER.verified = false;
 						// console.log( window.USER );
@@ -555,16 +549,18 @@
 				let valid_proto_message = is_proto_message( typed_input );
 				console.log( "is_proto_message()" , typed_input , valid_proto_message );
 				if ( valid_proto_message ) {
-					window.UI.RENDER_LOCKED = true;
-					window.UI.clear();
-					await sleep( 1000 );
 					console.log( "received proto message from qrcode" );
 					console.log( valid_proto_message );
 					window.USER = valid_proto_message;
+					// console.log( window.USER );
+					window.UI.RENDER_LOCKED = true;
+					// window.UI.clear();
+					// await sleep( 1000 );
 					document.getElementById( "user-search-input" ).value = "mobile phone - unsaved"
 					// window.UI.render_unverified_button();
 					// todo , pre-save and get valide uuid
 					window.UI.render_edit_form();
+					set_url( "/admin/user/new/temp-mobile/edit" );
 					return;
 				}
 				console.log( "did we make it here ?" , window.UI.RENDER_LOCKED );
@@ -684,6 +680,19 @@
 				$( "#search-clear-button" ).on( "click" , on_clear_button_click );
 				$( "#verified-button" ).on( "click" , on_verified_button_click );
 
+				// let sent_state = user_new_detect_state();
+				// window.STATE = sent_state;
+				// console.log( "STATE ===" , window.STATE );
+				// if ( sent_state ) {
+				// 	switch( sent_state ) {
+				// 		case "edit":
+				// 			break;
+				// 		case "new":
+				// 			break;
+				// 	}
+				// } else {
+				// 	window.UI.render_new_form();
+				// }
 				window.UI.render_new_form();
 			}
 			document.addEventListener( "DOMContentLoaded" , init );
