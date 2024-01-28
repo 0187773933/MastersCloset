@@ -6,7 +6,7 @@ function get_ui_user_qr_code_display() {
 				<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" >
 					<div class="modal-content bg-success-subtle">
 						<div class="modal-header">
-							<h5 class="modal-title">Masters Closet Login</h5>
+							<h5 style="padding-left: 2.6em;" class="col-11 modal-title text-center">Masters Closet Login</h5>
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 						</div>
 						<div class="modal-body">

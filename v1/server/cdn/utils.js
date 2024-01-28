@@ -248,6 +248,7 @@ function show_user_handoff_qrcode( x_uuid=false ) {
 }
 
 function show_user_uuid_qrcode( x_uuid=false ) {
+	console.log( `show_user_uuid_qrcode( ${x_uuid} )` );
 	if ( !x_uuid ) { x_uuid = window.USER.uuid; }
 	// add_qr_code( x_uuid , "user-handoff-qr-code" );
 

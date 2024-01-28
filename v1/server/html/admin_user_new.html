@@ -399,6 +399,7 @@
 				}
 				if ( window.USER.ulid ) {
 					if ( !window.USER.uuid ) {
+						console.log( "should be un-reachable" );
 						console.log( "saving new user from qr code handoff" );
 						// window.USER.verified = false;
 						// console.log( window.USER );
@@ -411,6 +412,8 @@
 						await api_edit_user( window.USER ); // extra because user.New( username ) only param really
 						document.getElementById( "user-search-input" ).value = window.USER.uuid;
 						console.log( window.USER );
+						show_user_uuid_qrcode();
+						return;
 
 						// window.UI.render_active_user();
 						// window.UI.render_edit_form();
@@ -419,10 +422,16 @@
 				}
 
 				// save
+				let x_new_user = await api_new_user( window.USER );
+				let c_user = window.USER;
+				console.log( window.USER );
+				window.USER = x_new_user.result;
+				window.USER.verified = c_user.verified;
 				let edit_result = await api_edit_user( window.USER );
 				console.log( edit_result );
 				window.USER = edit_result.user;
-				show_user_handoff_qrcode();
+				// show_user_handoff_qrcode();
+				show_user_uuid_qrcode();
 				// window.UI.render_active_user();
 				return;
 			}
