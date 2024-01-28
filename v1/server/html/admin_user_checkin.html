@@ -94,6 +94,20 @@
 					$( "#verified-button" ).hide();
 					$( "#verified-img" ).hide();
 				}
+				clear_without_url_change() {
+					$( "#user-search-input" ).val( "" );
+					$( this.options.anchor ).html( "" );
+					$( "#user-search-input" ).focus();
+					window.USER = {};
+					window.BARCODES = {};
+					window.FAMILY_MEMBERS = {};
+					window.UI.RENDER_LOCKED = false;
+					// $( this.options.buttons_anchor ).html( "" );
+					this.buttons_stack = this.options.buttons_stack;
+					this.render_buttons();
+					$( "#verified-button" ).hide();
+					$( "#verified-img" ).hide();
+				}
 				render_buttons() {
 					if ( this.buttons_stack.length < 1 ) { return; }
 					$( this.options.buttons_anchor ).html( "" );
@@ -791,8 +805,9 @@
 				$( "#search-clear-button" ).on( "click" , on_clear_button_click );
 				$( "#verified-button" ).on( "click" , on_verified_button_click );
 
-				window.UI.clear();
+				window.UI.clear_without_url_change();
 				let sent_state = user_checkin_detect_state();
+				console.log( "Sent State ===" , sent_state );
 				window.STATE = sent_state;
 				if ( sent_state ) {
 					switch( sent_state ) {
@@ -813,6 +828,7 @@
 					}
 				} else {
 					let sent_uuid = user_checkin_detect_uuid();
+					console.log( "Sent UUID ===" , sent_uuid );
 					if ( !sent_uuid ) {
 						window.UI.clear();
 						return;
