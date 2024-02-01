@@ -7,6 +7,7 @@ import (
 	// "math/rand"
 	// "strings"
 	json "encoding/json"
+	distance "github.com/hbollon/go-edlib"
 	// uuid "github.com/satori/go.uuid"
 	// short_uuid "github.com/lithammer/shortuuid/v4"
 	// rid "github.com/solutionroute/rid"
@@ -20,32 +21,61 @@ import (
 	// bleve "github.com/blevesearch/bleve/v2"
 	// utils "github.com/0187773933/MastersCloset/v1/utils"
 	// log "github.com/0187773933/MastersCloset/v1/log"
+	// logger "github.com/0187773933/MastersCloset/v1/logger"
 )
 
-// lots of opinions on how to do this
-// haversine , euclidean , levenshtein , or just identical
+const LevenshteinDistanceThresold = 3
+
+// lots of weys
+// identical vs levenshtein
 func _user_similar_by_name( sent_user *user.User , compared_user *user.User ) ( result bool ) {
 	result = false
-	if sent_user.Identity.FirstName == "" { return }
-	if sent_user.Identity.LastName == "" { return }
-	if compared_user.Identity.FirstName == "" { return }
-	if compared_user.Identity.LastName == "" { return }
-	if sent_user.Identity.FirstName == compared_user.Identity.FirstName {
-		// if sent_user.Identity.MiddleName == compared_user.Identity.MiddleName {
-			if sent_user.Identity.LastName == compared_user.Identity.LastName {
-				result = true
-			}
-		// }
+	// if sent_user.Identity.FirstName == "" { return }
+	// if sent_user.Identity.LastName == "" { return }
+	// if compared_user.Identity.FirstName == "" { return }
+	// if compared_user.Identity.LastName == "" { return }
+	// if sent_user.Identity.FirstName == compared_user.Identity.FirstName {
+	// 	// if sent_user.Identity.MiddleName == compared_user.Identity.MiddleName {
+	// 		if sent_user.Identity.LastName == compared_user.Identity.LastName {
+	// 			result = true
+	// 		}
+	// 	// }
+	// }
+
+	first_name_match := false
+	// middle_name_match := false
+	last_name_match := false
+
+	if sent_user.Identity.FirstName != "" && compared_user.Identity.FirstName != "" {
+		d := distance.LevenshteinDistance( sent_user.Identity.FirstName , compared_user.Identity.FirstName )
+		if d < LevenshteinDistanceThresold {
+			// log.Debug( fmt.Sprintf( "Similar First Name Found : %s , %s , %d" , sent_user.Identity.FirstName , compared_user.Identity.FirstName , d ) )
+			first_name_match = true
+		}
 	}
+	if sent_user.Identity.LastName != "" && compared_user.Identity.LastName != "" {
+		d := distance.LevenshteinDistance( sent_user.Identity.LastName , compared_user.Identity.LastName )
+		if d < LevenshteinDistanceThresold {
+			// log.Debug( fmt.Sprintf( "Similar Last Name Found : %s , %s , %d" , sent_user.Identity.LastName , compared_user.Identity.LastName , d ) )
+			last_name_match = true
+		}
+	}
+
+	if first_name_match == true && last_name_match == true {
+		result = true
+	}
+
 	return
 }
 
 func _user_similar_by_email( sent_user *user.User , compared_user *user.User ) ( result bool ) {
 	result = false
-	if sent_user.EmailAddress == "" { return }
-	if compared_user.EmailAddress == "" { return }
-	if sent_user.EmailAddress == compared_user.EmailAddress {
-		result = true
+	if sent_user.EmailAddress != "" && compared_user.EmailAddress != "" {
+		d := distance.LevenshteinDistance( sent_user.Identity.LastName , compared_user.Identity.LastName )
+		if d < LevenshteinDistanceThresold {
+			// log.Debug( fmt.Sprintf( "Similar Email Address Found : %s , %s , %d" , sent_user.EmailAddress , compared_user.EmailAddress , d ) )
+			result = true
+		}
 	}
 	return
 }
@@ -62,15 +92,30 @@ func _user_similar_by_phone( sent_user *user.User , compared_user *user.User ) (
 
 func _user_similar_by_address( sent_user *user.User , compared_user *user.User ) ( result bool ) {
 	result = false
-	if sent_user.Identity.Address.StreetNumber == "" { return }
-	if sent_user.Identity.Address.StreetName == "" { return }
-	if compared_user.Identity.Address.StreetNumber == "" { return }
-	if compared_user.Identity.Address.StreetName == "" { return }
-	if sent_user.Identity.Address.StreetNumber == compared_user.Identity.Address.StreetNumber {
-		if sent_user.Identity.Address.StreetName == compared_user.Identity.Address.StreetName {
-			result = true
+
+	street_number_match := false
+	street_name_match := false
+
+	if sent_user.Identity.Address.StreetNumber != "" && compared_user.Identity.Address.StreetNumber != "" {
+		d := distance.LevenshteinDistance( sent_user.Identity.Address.StreetNumber , compared_user.Identity.Address.StreetNumber )
+		if d < LevenshteinDistanceThresold {
+			// log.Debug( fmt.Sprintf( "Similar Street Number Found : %s , %s , %d" , sent_user.Identity.Address.StreetNumber , compared_user.Identity.Address.StreetNumber , d ) )
+			street_number_match = true
 		}
 	}
+
+	if sent_user.Identity.Address.StreetName != "" && compared_user.Identity.Address.StreetName != "" {
+		d := distance.LevenshteinDistance( sent_user.Identity.Address.StreetName , compared_user.Identity.Address.StreetName )
+		if d < LevenshteinDistanceThresold {
+			// log.Debug( fmt.Sprintf( "Similar Street Number Found : %s , %s , %d" , sent_user.Identity.Address.StreetName , compared_user.Identity.Address.StreetNumber , d ) )
+			street_name_match = true
+		}
+	}
+
+	if street_number_match == true && street_name_match == true {
+		result = true
+	}
+
 	return
 }
 

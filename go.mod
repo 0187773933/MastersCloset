@@ -3,13 +3,12 @@ module github.com/0187773933/MastersCloset
 go 1.19
 
 require (
-	4d63.com/tz v1.2.0
-	github.com/0187773933/FireC2Server v1.0.39
 	github.com/0187773933/RedisManagerUtils v0.0.0-20201221200850-aecacb38bdeb
 	github.com/blevesearch/bleve/v2 v2.3.10
 	github.com/boltdb/bolt v1.3.2-0.20180302180052-fd01fc79c553
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofiber/fiber/v2 v2.51.0
+	github.com/hbollon/go-edlib v1.6.0
 	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/makiuchi-d/gozxing v0.1.1
 	github.com/manucorporat/try v0.0.0-20170609134256-2a0c6b941d52
@@ -26,7 +25,6 @@ require (
 )
 
 require (
-	4d63.com/embedfiles v0.0.0-20190311033909-995e0740726f // indirect
 	github.com/RoaringBitmap/roaring v1.2.3 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
@@ -80,5 +78,4 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.23.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
