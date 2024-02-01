@@ -16,7 +16,6 @@
 		<script src="/cdn/utils.js" crossorigin="anonymous"></script>
 		<script src="/cdn/ui.js" crossorigin="anonymous"></script>
 		<link rel="stylesheet" type="text/css" href="/cdn/ui.css" crossorigin="anonymous">
-
 	</head>
 	<body>
 		<a href="#" id="verified-button" class="btn floating-verified">
@@ -188,7 +187,7 @@
 					$( "#edit-user-button" ).on( "click" , on_edit_button_click );
 					$( "#new-user-button" ).on( "click" , on_new_button_click );
 					// this.stack = [ "active_user_info" , "shopping_for_selector" , "user_balance_table" ];
-					this.stack = [ "active_user_info" , "shopping_for_selector_advanced" , "user_balance_table" ];
+					this.stack = [ "active_user_info" , "shopping_for_selector_advanced" , "user_balance_table" , "user_qr_code" ];
 					this.render();
 					$( "#active-username" ).text( window.USER.name_string );
 
@@ -307,9 +306,24 @@
 					$( "#user_spanish" ).on( "change" , ( event ) => { window.USER.spanish = event.target.checked; });
 					this.render_verification_button();
 				}
+				should_check_for_existing_with_same_name() {
+					if ( window.USER.identity.first_name.length > 0 ) {
+						if ( window.USER.identity.last_name.length > 0 ) {
+							return true;
+						}
+					}
+					return false;
+				}
+				should_check_for_existing_with_email_address() {
+					if ( window.USER.email_address.length > 0 ) {
+						return true;
+					}
+					return false;
+				}
 				render_new_form() {
 					console.log( "render_new_form()" );
 					set_url( `/admin/user/checkin/new` );
+					window.STATE = "new";
 					this.buttons_stack = [ "new-user-save-button" , "new-user-cancel-button" ];
 					this.render_buttons();
 					this.stack = [ "user_new_form" , "user_qr_code" ];
@@ -321,7 +335,8 @@
 					window.USER = {};
 					window.BARCODES = {};
 					window.FAMILY_MEMBERS = {};
-					$( "#user_first_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); set_nested_property( window.USER , [ "identity" , "first_name" ] , event.target.value ); });
+					$( "#user_first_name" ).on( "change" , ( event ) => {
+						event.target.value = title_case( event.target.value ); set_nested_property( window.USER , [ "identity" , "first_name" ] , event.target.value ); });
 					$( "#user_middle_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); set_nested_property( window.USER , [ "identity" , "middle_name" ] , event.target.value ); });
 					$( "#user_last_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); set_nested_property( window.USER , [ "identity" , "last_name" ] , event.target.value ); });
 					$( "#user_email" ).on( "change" , ( event ) => { window.USER.email_address = event.target.value });
@@ -468,7 +483,7 @@
 				// FailFish
 				let deselected = document.querySelectorAll( '[id^="user_family_member_label_"][selected="false"]' );
 				for ( let i = 0; i < deselected.length; ++i ) {
-					let gender_text = deselected[ i ].parentElement.parentElement.querySelector('[id$="_gender_text"]').innerText;
+					let gender_text = deselected[ i ].parentElement.parentElement.querySelector( '[id$="_gender_text"]' ).innerText;
 					switch( gender_text ) {
 						case "Boy":
 							boys = ( boys - 1 );
@@ -528,13 +543,21 @@
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
 				}
 
+				// NEW : Run Server Side Check for Uniqueness
+				let similar_users = await api_similar_user( window.USER );
+				console.log( "SIMILAR USERS" , similar_users );
+				// TODO : Present PopUp if similar users found
+				// merge option
+				// delete others option
+
 				let new_user_result = await api_new_user( window.USER );
 				if ( !new_user_result.result?.uuid ) { return false; }
 				window.USER = new_user_result.result;
 				console.log( window.USER );
 				document.getElementById( "user-search-input" ).value = window.USER.uuid;
-				show_user_handoff_qrcode();
+				// show_user_handoff_qrcode();
 				window.UI.render_active_user();
+				show_user_uuid_qrcode( window.USER.uuid );
 			}
 
 			function on_new_cancel_button_click( event ) {
@@ -603,6 +626,7 @@
 				}
 			}
 
+			// ON SCAN
 			async function _on_check_in_input_change( typed_input="" ) {
 				console.log( "_on_check_in_input_change()" , typed_input );
 				let valid_uuid = is_uuid( typed_input );

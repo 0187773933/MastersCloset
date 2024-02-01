@@ -289,6 +289,22 @@ function api_new_user( user_info ) {
 	});
 }
 
+function api_similar_user( user_info ) {
+	return new Promise( async function( resolve , reject ) {
+		try {
+			let response = await fetch( `${ServerBaseURL}/admin/user/similar` , {
+				method: "POST" ,
+				body: JSON.stringify( user_info ) ,
+				headers: { "key": ServerAPIKey }
+			});
+			let response_json = await response.json();
+			resolve( response_json );
+			return;
+		}
+		catch( error ) { console.log( error ); resolve( false ); return; }
+	});
+}
+
 function api_delete_user( uuid ) {
 	return new Promise( async function( resolve , reject ) {
 		try {

@@ -17,43 +17,34 @@
 ---
 
 ## TODO
-1. fix shopping for text after "shopping for" selection/de-selection
-2. fix mobile user sign-up flow
-	- detect "the-masters-closet-user-ulid" cookie
-		- redirect to `"/join/display/:ulid"`
-3. update user_new.html with new changes
-	- find max length eyoyo can scan qrc or aztec codes
-	```
-	Blah Blah Blah Blah Blah
-	blahasdfasdfhsadfhsasdfasdfsadf@sadfasdfsadfsadfa.com
-	+1937-535-3982
-	99MS-99FS-99MS-99FS-99MS
-	6135-asdfasdfasdfasdfasdfasdfasdf-asdfsadfasdfsadfasdfasdfasdfasdf
-	asdfasdfasdfasdfasdfasdfsadfasdfa-OH-45424
-	99-12-1969
-	T
-	```
-4. Just let a barcode check-in a user. Avoids an extra call
+1. add similar user lookup :
+	- after first , middle , or last name edits.
+	- after email address changes
+	- after phone number changes
+	- after address changes
+2. cache stuff in production :
+	- https://docs.gofiber.io/api/middleware/cache
+3. Just let a barcode check-in a user. Avoids an extra call
 	- GET /admin/user/get/barcode/:barcode
 	- GET /admin/user/checkin/test/:uuid
 	- GET /admin/user/checkin/:uuid
-5. Add Admin Manual Override Routes
+4. Add Admin Manual Override Routes
 	- Override Check-In Too Soon
 	- User forgot phone
 	- User has new phone
 	- option to text hand-off link if user can't scan qrcode for some reason
-6. Fix User Fields :
+5. Fix User Fields :
 	- Authorized Aliases
-7. Fix Docker
-8. Use time functions
+6. Fix Docker
+7. Use time functions
 	- `time.Now().After(lastFetched.Add(CachePeriod))` ?
-9. Change "usernames" DB bucket for key=${uuid}_username , value=Username
+8. Change "usernames" DB bucket for key=${uuid}_username , value=Username
 	- keeps only uuids as keys
-10. Make config editable via html
-11. Fix ui.js#793
+9. Make config editable via html
+10. Fix ui.js#793
 	- `document.getElementById( barcode_id ).focus();`
 	- make this optional , so that the edit page doesn't use this
-12. Fix Username/NameString to be Title Case
+11. Fix Username/NameString to be Title Case
 
 ## Misc
 
@@ -73,7 +64,6 @@
 - `sudo make install`
 
 - `sudo rsync -av /usr/local/Cellar/cups/$(brew list --versions cups | awk '{print $2}') ./cups`
-
 
 ## Time Zone Data for Windows
 

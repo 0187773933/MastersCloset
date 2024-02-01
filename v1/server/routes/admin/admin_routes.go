@@ -48,7 +48,6 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 		return context.SendFile( "./v1/server/cdn/api.js" )
 	})
 
-	// API Routes
 	admin_route_group.Get( "/logout" , Logout )
 	admin_route_group.Post( "/login" , HandleLogin )
 	admin_route_group.Get( "/logs/get/log-file-names" , GetLogFileNames )
@@ -60,6 +59,7 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	admin_route_group.Post( "/checkins/edit/:uuid/:ulid" , EditCheckIn )
 
 	admin_route_group.Post( "/user/new" , HandleNewUserJoin )
+	admin_route_group.Post( "/user/similar" , HandleUserSimilar ) // finds similar users
 	admin_route_group.Post( "/user/edit" , HandleUserEdit )
 	admin_route_group.Get( "/user/delete/:uuid" , DeleteUser )
 	// admin_route_group.Get( "/user/check/username" , CheckIfFirstNameLastNameAlreadyExists )
@@ -78,7 +78,6 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	admin_route_group.Get( "/user/get/ulid/:ulid" , GetUserViaULID )
 	// admin_route_group.Get( "/user/get/checkins/:date" , GetCheckinsDate )
 
-
 	admin_route_group.Get( "/user/search/username/:username" , UserSearch )
 	admin_route_group.Get( "/user/search/username/fuzzy/:username" , UserSearchFuzzy )
 	admin_route_group.Get( "/print-test" , PrintTest )
@@ -92,6 +91,5 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	admin_route_group.Post( "/user/sms/all" , SMSAllUsers )
 	admin_route_group.Post( "/user/email/all" , EmailAllUsers )
 	admin_route_group.Post( "/user/email" , EmailUser )
-
 
 }

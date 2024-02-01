@@ -505,18 +505,18 @@ function get_ui_user_edit_form() {
 	</div>`;
 }
 
-function add_qr_code( text , element_id ) {
-	let x_element = document.getElementById( element_id );
-	x_element.innerHTML = "";
-	let user_qrcode = new QRCode( x_element , {
-		text: text ,
-		width: 256 ,
-		height: 256 ,
-		colorDark : "#000000" ,
-		colorLight : "#ffffff" ,
-		correctLevel : QRCode.CorrectLevel.H
-	});
-}
+// function add_qr_code( text , element_id ) {
+// 	// let x_element = document.getElementById( element_id );
+// 	// x_element.innerHTML = "";
+// 	// let user_qrcode = new QRCode( x_element , {
+// 	// 	text: text ,
+// 	// 	width: 256 ,
+// 	// 	height: 256 ,
+// 	// 	colorDark : "#000000" ,
+// 	// 	colorLight : "#ffffff" ,
+// 	// 	correctLevel : QRCode.CorrectLevel.H
+// 	// });
+// }
 function show_user_exists_modal( uuid ) {
 	let qr_code_link = `${window.location.protocol}//${window.location.host}/user/login/fresh/${uuid}`;
 	add_qr_code( qr_code_link , "user-exists-qr-code" );
