@@ -544,7 +544,7 @@
 				}
 
 				// NEW : Run Server Side Check for Uniqueness
-				let similar_users = await api_similar_user( window.USER );
+				let similar_users = await api_similar_users( window.USER );
 				console.log( "SIMILAR USERS" , similar_users );
 				// TODO : Present PopUp if similar users found
 				// merge option

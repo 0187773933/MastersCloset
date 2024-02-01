@@ -289,7 +289,7 @@ function api_new_user( user_info ) {
 	});
 }
 
-function api_similar_user( user_info ) {
+function api_similar_users( user_info ) {
 	return new Promise( async function( resolve , reject ) {
 		try {
 			let response = await fetch( `${ServerBaseURL}/admin/user/similar` , {
