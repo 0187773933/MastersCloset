@@ -1,7 +1,7 @@
 package adminroutes
 
 import (
-	// "fmt"
+	"fmt"
 	"time"
 	"bytes"
 	"strconv"
@@ -13,7 +13,7 @@ import (
 	bolt_api "github.com/boltdb/bolt"
 	user "github.com/0187773933/MastersCloset/v1/user"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
-	log "github.com/0187773933/MastersCloset/v1/log"
+	// log "github.com/0187773933/MastersCloset/v1/log"
 )
 
 // https://mailchimp.com/help/import-contacts-mailchimp/
@@ -48,10 +48,12 @@ func GetReportMailChimp( context *fiber.Ctx ) ( error ) {
 	}
 	writer.Flush()
 	csv_bytes := csv_buffer.Bytes()
+	csv_byte_length_string := strconv.Itoa( len( csv_bytes ) )
 	context.Set( "Content-Type", "text/csv" )
 	context.Set( "Content-Disposition", "attachment;filename=masters_closet_contacts_mail_chimp.csv" )
-	context.Set( "Content-Length", strconv.Itoa( len( csv_bytes ) ) )
-	log.PrintlnConsole( "Downloaded Report-MailChimp" , strconv.Itoa( len( csv_bytes ) ) )
+	context.Set( "Content-Length" , csv_byte_length_string )
+
+	log.Debug( fmt.Sprintf( "Downloaded Report-MailChimp , %s bytes" , csv_byte_length_string ) )
 	return context.Send( csv_bytes )
 
 }
@@ -137,10 +139,11 @@ func GetReportMain( context *fiber.Ctx ) ( error ) {
 	}
 	writer.Flush()
 	csv_bytes := csv_buffer.Bytes()
+	csv_byte_length_string := strconv.Itoa( len( csv_bytes ) )
 	context.Set( "Content-Type", "text/csv" )
 	context.Set( "Content-Disposition", "attachment;filename=masters_closet_users.csv" )
-	context.Set( "Content-Length", strconv.Itoa( len( csv_bytes ) ) )
-	log.PrintlnConsole( "Downloaded Report-Main" , strconv.Itoa( len( csv_bytes ) ) )
+	context.Set( "Content-Length" , csv_byte_length_string )
+	log.Debug( fmt.Sprintf( "Downloaded Report-Main , %s bytes" , csv_byte_length_string ) )
 	return context.Send( csv_bytes )
 
 }

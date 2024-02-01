@@ -8,7 +8,7 @@ import (
 	bleve "github.com/blevesearch/bleve/v2"
 	bolt_api "github.com/boltdb/bolt"
 	user "github.com/0187773933/MastersCloset/v1/user"
-	log "github.com/0187773933/MastersCloset/v1/log"
+	// log "github.com/0187773933/MastersCloset/v1/log"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
 )
 
@@ -30,7 +30,7 @@ func DeleteUser( context *fiber.Ctx ) ( error ) {
 		usernames_bucket.Delete( []byte( viewed_user.Username ) )
 		return nil
 	})
-	log.PrintlnConsole( viewed_user.UUID , "===" , "Deleted" )
+	log.Info( fmt.Sprintf( "%s === Deleted" , viewed_user.UUID ) )
 	return context.JSON( fiber.Map{
 		"route": "/admin/user/delete/:uuid" ,
 		"result": "deleted" ,
@@ -55,7 +55,7 @@ func DeleteCheckIn( context *fiber.Ctx ) ( error ) {
 		for i , check_in := range viewed_user.CheckIns {
 			if check_in.ULID == check_in_ulid {
 				viewed_user.CheckIns = append( viewed_user.CheckIns[ :i ] , viewed_user.CheckIns[ i+1 : ]... )
-				log.PrintlnConsole( viewed_user.UUID , "===" , check_in_ulid , "===" , "Deleted" )
+				log.Info( fmt.Sprintf( "%s === %s === Deleted" , viewed_user.UUID , check_in_ulid ) )
 				break;
 			}
 		}

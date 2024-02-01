@@ -317,3 +317,28 @@ func FingerPrint( config *types.ConfigFile  ) ( result string ) {
 	result = x_finger_print.UUID
 	return
 }
+
+func GetLogFileNames() ( result []string ) {
+	files , _ := ioutil.ReadDir( "./logs" )
+	for _ , file := range files {
+		if file.IsDir() { continue; }
+		file_name := file.Name()
+		if strings.HasSuffix( file_name , ".log" ) {
+			// fmt.Println( file_name )
+			// result = append( result , strings.Split( file_name , "-" )[ 0 ] )
+			result = append( result , file_name )
+		}
+	}
+	sort.Strings( result )
+	return
+}
+
+func GetLogFile( file_path string ) ( result []string ) {
+	file , _ := os.Open( fmt.Sprintf( "./logs/%s" , file_path ) )
+	defer file.Close()
+	scanner := bufio.NewScanner( file )
+	for scanner.Scan() {
+		result = append( result , scanner.Text() )
+	}
+	return result
+}

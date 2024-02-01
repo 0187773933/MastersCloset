@@ -20,7 +20,7 @@ import (
 	bolt "github.com/boltdb/bolt"
 	bleve "github.com/blevesearch/bleve/v2"
 	utils "github.com/0187773933/MastersCloset/v1/utils"
-	log "github.com/0187773933/MastersCloset/v1/log"
+	// log "github.com/0187773933/MastersCloset/v1/log"
 )
 
 func ProcessNewUserForm( context *fiber.Ctx ) ( new_user user.User ) {
@@ -125,7 +125,7 @@ func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 
 	new_user := user.New( viewed_user.Username , GlobalConfig )
 
-	log.Println( new_user )
+	log.Info( new_user )
 
 	viewed_user.UUID = new_user.UUID
 	viewed_user.CreatedDate = new_user.CreatedDate
@@ -151,10 +151,10 @@ func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 		UUID: new_user.UUID ,
 		Name: viewed_user.NameString ,
 	}
-	log.Printf( "Updating Search Index with : %s\n" , viewed_user.NameString )
+	log.Debug( fmt.Sprintf( "Updating Search Index with : %s\n" , viewed_user.NameString ) )
 	search_index.Index( new_user.UUID , search_item )
 
-	log.PrintlnConsole( "Created New User :" , viewed_user.NameString )
+	log.Debug( fmt.Sprintf( "Created New User : %s" , viewed_user.NameString ) )
 
 	// viewed_user.Save();
 	return context.JSON( fiber.Map{

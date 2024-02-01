@@ -9,7 +9,7 @@ import (
 	bolt_api "github.com/boltdb/bolt"
 	user "github.com/0187773933/MastersCloset/v1/user"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
-	log "github.com/0187773933/MastersCloset/v1/log"
+	// log "github.com/0187773933/MastersCloset/v1/log"
 	try "github.com/manucorporat/try"
 )
 
@@ -28,6 +28,7 @@ func send_email( to string , subject string , body string ) ( result bool ) {
 		} else { result = true }
 	}).Catch(func(e try.E) {
 		// log.PrintfConsole( "Failed to Email === %s\n" , to )
+		log.Info( fmt.Sprintf( "Failed to Email === %s\n" , to ) )
 		fmt.Println( e )
 	})
 	return
@@ -41,7 +42,7 @@ func EmailUser( context *fiber.Ctx ) ( error ) {
 	email_message := context.FormValue( "email-message" )
 
 	email_result := send_email( email_address , email_subject , email_message )
-	log.PrintlnConsole( email_address , fmt.Sprintf( "%t" , email_result ) )
+	log.Info( fmt.Sprintf( "%s === %t" , email_address , email_result ) )
 	return context.JSON( fiber.Map{
 		"route": "/admin/user/email" ,
 		"to": email_address ,
@@ -71,7 +72,7 @@ func EmailAllUsers( context *fiber.Ctx ) ( error ) {
 			// fmt.Println( viewed_user.EmailAddress , email_subject , email_message )
 			email_result := send_email( viewed_user.EmailAddress , email_subject , email_message )
 			if email_result == false { result = false }
-			log.PrintlnConsole( viewed_user.EmailAddress , fmt.Sprintf( "%t" , email_result ) )
+			log.Info( fmt.Sprintf( "%s === %t" , viewed_user.EmailAddress , email_result ) )
 			return nil
 		})
 		return nil

@@ -15,11 +15,13 @@ import (
 	bolt_api "github.com/boltdb/bolt"
 	user "github.com/0187773933/MastersCloset/v1/user"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
-	log "github.com/0187773933/MastersCloset/v1/log"
+	logger "github.com/0187773933/MastersCloset/v1/logger"
+	// log "github.com/0187773933/MastersCloset/v1/log"
 	// bleve "github.com/blevesearch/bleve/v2"
 )
 
 var GlobalConfig *types.ConfigFile
+var log = logger.GetLogger()
 
 var public_limiter = rate_limiter.New(rate_limiter.Config{
 	Max:        30, // set a different rate limit for this route
@@ -31,7 +33,7 @@ var public_limiter = rate_limiter.New(rate_limiter.Config{
 	LimitReached: func(c *fiber.Ctx) error {
 		ip_address := c.IP()
 		log_message := fmt.Sprintf( "%s === %s === %s === PUBLIC RATE LIMIT REACHED !!!" , ip_address , c.Method() , c.Path() );
-		log.PrintlnConsole( log_message )
+		log.Info( log_message )
 		c.Set( "Content-Type" , "text/html" )
 		return c.SendString( "<html><h1>loading ...</h1><script>setTimeout(function(){ window.location.reload(1); }, 6);</script></html>" )
 	} ,
@@ -47,7 +49,7 @@ var user_creation_limiter = rate_limiter.New(rate_limiter.Config{
 	LimitReached: func(c *fiber.Ctx) error {
 		ip_address := c.IP()
 		log_message := fmt.Sprintf( "%s === %s === %s === PUBLIC USER CREATION RATE LIMIT REACHED !!!" , ip_address , c.Method() , c.Path() );
-		log.PrintlnConsole( log_message )
+		log.Info( log_message )
 		c.Set("Content-Type", "text/html")
 		return c.SendString("<html><h1>loading ...</h1><script>setTimeout(function(){ window.location.reload(1); }, 6);</script></html>")
 	},

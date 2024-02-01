@@ -9,7 +9,7 @@ import (
 	user "github.com/0187773933/MastersCloset/v1/user"
 	// pp "github.com/k0kubun/pp/v3"
 	// pp.Println( viewed_user )
-	log "github.com/0187773933/MastersCloset/v1/log"
+	// log "github.com/0187773933/MastersCloset/v1/log"
 
 	bolt_api "github.com/boltdb/bolt"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
@@ -22,7 +22,7 @@ func HandleUserEdit( context *fiber.Ctx ) ( error ) {
 	json.Unmarshal( context.Body() , &viewed_user )
 	viewed_user.Config = GlobalConfig
 	viewed_user.Save();
-	log.PrintlnConsole( viewed_user.UUID , "===" , "Updated" )
+	log.Info( fmt.Sprintf( "%s === Updated" , viewed_user.UUID ) )
 	return context.JSON( fiber.Map{
 		"route": "/admin/user/edit" ,
 		"result": true ,

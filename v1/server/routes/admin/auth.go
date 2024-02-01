@@ -6,7 +6,7 @@ import (
 	fiber "github.com/gofiber/fiber/v2"
 	bcrypt "golang.org/x/crypto/bcrypt"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
-	log "github.com/0187773933/MastersCloset/v1/log"
+	// log "github.com/0187773933/MastersCloset/v1/log"
 )
 
 func validate_login_credentials( context *fiber.Ctx ) ( result bool ) {
@@ -56,9 +56,9 @@ func HandleLogin( context *fiber.Ctx ) ( error ) {
 func validate_admin_cookie( context *fiber.Ctx ) ( result bool ) {
 	result = false
 	admin_cookie := context.Cookies( "the-masters-closet-admin" )
-	if admin_cookie == "" { log.Println( "admin cookie was blank" ); return }
+	if admin_cookie == "" { log.Debug( "admin cookie was blank" ); return }
 	admin_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , admin_cookie )
-	if admin_cookie_value != GlobalConfig.ServerCookieAdminSecretMessage { log.Println( "admin cookie secret message was not equal" ); return }
+	if admin_cookie_value != GlobalConfig.ServerCookieAdminSecretMessage { log.Debug( "admin cookie secret message was not equal" ); return }
 	result = true
 	return
 }

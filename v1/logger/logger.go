@@ -3,8 +3,10 @@ package logger
 import (
 	"os"
 	"fmt"
+	"time"
 	"strings"
-	"io"
+	"sync"
+	// "io"
 	// "encoding/json"
 	types "github.com/0187773933/MastersCloset/v1/types"
 	utils "github.com/0187773933/MastersCloset/v1/utils"
@@ -12,8 +14,12 @@ import (
 	// ulid "github.com/oklog/ulid/v2"
 )
 
+const PACKAGE_NAME = "github.com/0187773933/MastersCloset/v1/"
+
 var Log *logrus.Logger
 var config *types.ConfigFile
+var LogOutputFilePath string = fmt.Sprintf( "./logs/%s.log" , time.Now().Format( "20060102" ) )
+var LogOutputFile *os.File
 
 type CustomTextFormatter struct {
 	logrus.TextFormatter
@@ -28,7 +34,7 @@ func ( f *CustomTextFormatter ) Format( entry *logrus.Entry ) ( result_bytes []b
 	var result_string string
 	if entry.Caller != nil {
 		var caller_function string
-		test_parts := strings.Split( entry.Caller.Function, "github.com/0187773933/MastersCloset/v1/" )
+		test_parts := strings.Split( entry.Caller.Function , PACKAGE_NAME )
 		if len( test_parts ) > 1 {
 			caller_function = test_parts[ 1 ]
 		} else {
@@ -75,13 +81,32 @@ func ( f *CustomTextFormatter ) Format( entry *logrus.Entry ) ( result_bytes []b
 }
 
 type CustomLogrusWriter struct {
-	io.Writer
+	// io.Writer
+	mu sync.Mutex // Ensure thread-safe access
 }
 
 func ( w *CustomLogrusWriter ) Write( p []byte ) ( n int , err error ) {
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	message := string( p )
 	n , err = fmt.Fprint( os.Stdout , message )
+
+	// New
+	// prepended_timestamp := time.Now().Format( "20060102" )
+	LogOutputFile.Write( p )
+
 	return n , err
+}
+
+func ( w *CustomLogrusWriter ) Close() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if LogOutputFile != nil {
+		return LogOutputFile.Close()
+	}
+	return nil
 }
 
 type CustomJSONFormatter struct {
@@ -111,6 +136,7 @@ func Init() {
 	Log = logrus.New()
 	log_level := os.Getenv( "LOG_LEVEL" )
 	fmt.Printf( "LOG_LEVEL=%s\n" , log_level )
+	LogOutputFile , _ = os.OpenFile( LogOutputFilePath , os.O_APPEND | os.O_CREATE | os.O_WRONLY , 0644 )
 	switch log_level {
 		case "debug":
 			Log.SetReportCaller( true )
@@ -129,5 +155,7 @@ func Init() {
 	// })
 
 	// log.SetOutput( os.Stdout )
-	Log.SetOutput( &CustomLogrusWriter{} )
+	// Log.SetOutput( &CustomLogrusWriter{} )
+	custom_writer := &CustomLogrusWriter{}
+	Log.SetOutput( custom_writer )
 }

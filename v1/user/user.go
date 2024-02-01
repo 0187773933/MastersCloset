@@ -13,9 +13,12 @@ import (
 	uuid "github.com/satori/go.uuid"
 	encrypt "github.com/0187773933/MastersCloset/v1/encryption"
 	types "github.com/0187773933/MastersCloset/v1/types"
-	log "github.com/0187773933/MastersCloset/v1/log"
+	// log "github.com/0187773933/MastersCloset/v1/log"
+	logger "github.com/0187773933/MastersCloset/v1/logger"
 	printer "github.com/0187773933/MastersCloset/v1/printer"
 )
+
+var log = logger.GetLogger()
 
 type CheckIn struct {
 	UUID string `json:"uuid"`
@@ -266,7 +269,7 @@ func (u *User) FormatUsername() {
 		u.Identity.LastName = strings.Title( strings.ToLower( strings.TrimSpace( u.Identity.LastName ) ) )
 		username_parts = append( username_parts , u.Identity.LastName )
 	}
-	if len(username_parts) > 0 {
+	if len( username_parts ) > 0 {
 		u.Username = strings.Join( username_parts , "-" )
 		u.NameString = strings.Join( username_parts , " " )
 	}
@@ -328,8 +331,7 @@ func ( u *User ) CheckInTest() ( check_in CheckIn ) {
 	}
 	u.TimeRemaining = time_remaining
 	u.AllowedToCheckIn = check_in.Result
-	// log.PrintlnConsole( u.NameString , "===" , "Allowed To Check In ===" , check_in.Result , lockout_message )
-	log.PrintlnConsole( u.UUID , "===" , "Allowed To Check In ===" , check_in.Result , lockout_message )
+	log.Info( fmt.Sprintf( "%s === Allowed To Check In === %t === %s" , u.UUID , check_in.Result , lockout_message ) )
 	check_in.Date = strings.ToUpper( check_in.Date )
 	check_in.TimeRemaining = time_remaining
 	return
@@ -348,7 +350,7 @@ func ( u *User ) CheckIn() ( check_in CheckIn ) {
 		check_in.Type = "new"
 		u.CheckIns = append( u.CheckIns , check_in )
 	} else {
-		log.Debug( "time remaining ===" , check_in.TimeRemaining )
+		log.Debug( fmt.Sprintf( "time remaining === %" , check_in.TimeRemaining ) )
 	}
 	u.Save()
 	return
@@ -502,21 +504,21 @@ func CheckInTest( user_uuid string , db *bolt.DB , encryption_key string , cool_
 		// only comparing the dates , not the times
 		last_check_in := viewed_user.CheckIns[ len( viewed_user.CheckIns ) - 1 ]
 		last_check_in_date , _ := time.ParseInLocation( "02Jan2006" , last_check_in.Date , now_time_zone )
-		log.Debug( "Now ===" , now )
-		log.Debug( "Last ===" , last_check_in_date )
+		log.Debug( fmt.Sprintf( "Now === %v" , now ) )
+		log.Debug( fmt.Sprintf( "Last === %v" , last_check_in_date ) )
 
 		cool_off_hours := ( 24 * cool_off_days )
 		log.Debug( "Cooloff Hours ===" , cool_off_hours )
 		cool_off_duration , _ := time.ParseDuration( fmt.Sprintf( "%dh" , cool_off_hours ) )
-		log.Debug( "Cooloff Duration ===" , cool_off_duration )
+		log.Debug( fmt.Sprintf( "Cooloff Duration === %v" , cool_off_duration ) )
 
 		check_in_date_difference := now.Sub( last_check_in_date )
-		log.Debug( "Difference ===" , check_in_date_difference )
+		log.Debug( fmt.Sprintf( "Difference === %v" , check_in_date_difference ) )
 
 		// Negative Values Mean The User Has Waited Long Enough
 		// Positive Values Mean the User Still has to wait
 		time_remaining_duration := ( cool_off_duration - check_in_date_difference )
-		log.Debug( "Time Remaining ===" , time_remaining_duration )
+		log.Debug( fmt.Sprintf( "Time Remaining === %d" , time_remaining_duration ) )
 
 		if time_remaining_duration < 0 {
 			// "the user waited long enough before checking in again"
@@ -526,7 +528,7 @@ func CheckInTest( user_uuid string , db *bolt.DB , encryption_key string , cool_
 
 			days_remaining := int( time_remaining_duration.Hours() / 24 )
 			time_remaining_string := time_remaining_duration.String()
-			fmt.Printf( "the user did NOT wait long enough before checking in again , has to wait : %d days , or %s\n" , days_remaining , time_remaining_string )
+			log.Debug( fmt.Sprintf( "the user did NOT wait long enough before checking in again , has to wait : %d days , or %s\n" , days_remaining , time_remaining_string ) )
 
 			result = false
 			time_remaining = int( time_remaining_duration.Milliseconds() )
@@ -571,21 +573,21 @@ func CheckInUser( user_uuid string , db *bolt.DB , encryption_key string , cool_
 		// only comparing the dates , not the times
 		last_check_in := viewed_user.CheckIns[ len( viewed_user.CheckIns ) - 1 ]
 		last_check_in_date , _ := time.ParseInLocation( "02Jan2006" , last_check_in.Date , now_time_zone )
-		log.Debug( "Now/New ===" , now )
-		log.Debug( "Last ===" , last_check_in_date )
+		log.Debug( fmt.Sprintf( "Now/New === %v" , now ) )
+		log.Debug( fmt.Sprintf( "Last === %v" , last_check_in_date ) )
 
 		cool_off_hours := ( 24 * cool_off_days )
-		log.Debug( "Cooloff Hours ===" , cool_off_hours )
+		log.Debug( fmt.Sprintf( "Cooloff Hours === %v" , cool_off_hours ) )
 		cool_off_duration , _ := time.ParseDuration( fmt.Sprintf( "%dh" , cool_off_hours ) )
-		log.Debug( "Cooloff Duration ===" , cool_off_duration )
+		log.Debug( fmt.Sprintf( "Cooloff Duration === %v" , cool_off_duration ) )
 
 		check_in_date_difference := now.Sub( last_check_in_date )
-		log.Debug( "Difference ===" , check_in_date_difference )
+		log.Debug( fmt.Sprintf( "Difference === %v" , check_in_date_difference ) )
 
 		// Negative Values Mean The User Has Waited Long Enough
 		// Positive Values Mean the User Still has to wait
 		time_remaining_duration := ( cool_off_duration - check_in_date_difference )
-		log.Debug( "Time Remaining ===" , time_remaining_duration )
+		log.Debug( fmt.Sprintf( "Time Remaining === %v" , time_remaining_duration ) )
 
 		if time_remaining_duration < 0 {
 			// "the user waited long enough before checking in again"
@@ -597,7 +599,7 @@ func CheckInUser( user_uuid string , db *bolt.DB , encryption_key string , cool_
 
 			days_remaining := int( time_remaining_duration.Hours() / 24 )
 			time_remaining_string := time_remaining_duration.String()
-			fmt.Printf( "the user did NOT wait long enough before checking in again , has to wait : %d days , or %s\n" , days_remaining , time_remaining_string )
+			log.Debug( fmt.Sprintf( "the user did NOT wait long enough before checking in again , has to wait : %d days , or %s\n" , days_remaining , time_remaining_string ) )
 
 			time_remaining = int( time_remaining_duration.Milliseconds() )
 			new_check_in.TimeRemaining = time_remaining

@@ -11,7 +11,7 @@ import (
 	user "github.com/0187773933/MastersCloset/v1/user"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
 	twilio "github.com/sfreiberg/gotwilio"
-	log "github.com/0187773933/MastersCloset/v1/log"
+	// log "github.com/0187773933/MastersCloset/v1/log"
 	try "github.com/manucorporat/try"
 )
 
@@ -42,15 +42,15 @@ func SMSAllUsers( context *fiber.Ctx ) ( error ) {
 
 			validated_phone := validate_us_phone_number( viewed_user.PhoneNumber )
 			if validated_phone == "" {
-				log.PrintlnConsole( "%s Has an Invalid phone number: %s" , viewed_user.NameString , viewed_user.PhoneNumber )
+				log.Debug( fmt.Sprintf( "%s Has an Invalid phone number: %s" , viewed_user.NameString , viewed_user.PhoneNumber ) )
 				return nil
 			}
 			// https://github.com/sfreiberg/gotwilio/blob/master/sms.go#L12
 			try.This( func() {
 				result , _ , _ := twilio_client.SendSMS( GlobalConfig.TwilioSMSFromNumber , viewed_user.PhoneNumber , sms_message , "" , "" )
-				log.PrintfConsole( "Texting === %s === %s\n" , validated_phone , result.Status )
-			}).Catch(func(e try.E) {
-				log.PrintfConsole( "Failed to Text === %s === %s\n" , viewed_user.NameString , validated_phone )
+				log.Debug( fmt.Sprintf( "Texting === %s === %s\n" , validated_phone , result.Status ) )
+			}).Catch( func( e try.E ) {
+				log.Debug( fmt.Sprintf( "Failed to Text === %s === %s\n" , viewed_user.NameString , validated_phone ) )
 			})
 
 			return nil
@@ -76,7 +76,7 @@ func SMSUser( context *fiber.Ctx ) ( error ) {
 	twilio_client := twilio.NewTwilioClient( GlobalConfig.TwilioClientID , GlobalConfig.TwilioAuthToken )
 
 	if validated_phone == "" {
-		log.PrintlnConsole( "Invalid phone number: %s" , sms_number )
+		log.Debug( fmt.Sprintf( "Invalid phone number: %s" , sms_number ) )
 		return context.JSON( fiber.Map{
 			"route": "/admin/user/sms" ,
 			"sms_message": sms_message ,
@@ -87,9 +87,9 @@ func SMSUser( context *fiber.Ctx ) ( error ) {
 	// https://github.com/sfreiberg/gotwilio/blob/master/sms.go#L12
 	try.This( func() {
 		result , _ , _ := twilio_client.SendSMS( GlobalConfig.TwilioSMSFromNumber , sms_number , sms_message , "" , "" )
-		log.PrintfConsole( "Texting === %s === %s\n" , validated_phone , result.Status )
-	}).Catch(func(e try.E) {
-		log.PrintfConsole( "Failed to Text === %s\n" , validated_phone )
+		log.Debug( fmt.Sprintf( "Texting === %s === %s\n" , validated_phone , result.Status ) )
+	}).Catch(func( e try.E ) {
+		log.Debug( fmt.Sprintf( "Failed to Text === %s\n" , validated_phone ) )
 	})
 
 	return context.JSON( fiber.Map{

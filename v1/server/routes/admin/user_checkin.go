@@ -12,7 +12,7 @@ import (
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
 	user "github.com/0187773933/MastersCloset/v1/user"
 	printer "github.com/0187773933/MastersCloset/v1/printer"
-	log "github.com/0187773933/MastersCloset/v1/log"
+	// log "github.com/0187773933/MastersCloset/v1/log"
 	ulid "github.com/oklog/ulid/v2"
 )
 
@@ -142,7 +142,7 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 			vb_index = vb_index + 1
 
 			barcode_number = strconv.Itoa( vb_index )
-			log.PrintlnConsole( "Adding Virtual Barcode :" , barcode_number )
+			log.Info( fmt.Sprintf( "Adding Virtual Barcode : %s" , barcode_number ) )
 			misc_bucket.Put( []byte( "virtual-barcode-index" ) , []byte( barcode_number ) )
 			viewed_user.Barcodes = append( viewed_user.Barcodes , barcode_number )
 
@@ -184,7 +184,7 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 	viewed_user.CheckIns = append( viewed_user.CheckIns , new_check_in )
 
 	// if len( GlobalConfig.LocalHostUrl ) > 3 {
-	// 	log.PrintlnConsole( "Printing Ticket :" , print_job )
+	// 	log.Info( "Printing Ticket :" , print_job )
 	// 	utils.PrettyPrint( print_job )
 	// 	printer.PrintTicket( GlobalConfig.Printer , print_job )
 	// }

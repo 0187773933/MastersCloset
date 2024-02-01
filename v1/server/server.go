@@ -30,8 +30,8 @@ func request_logging_middleware( context *fiber.Ctx ) ( error ) {
 	// log_message := fmt.Sprintf( "%s === %s === %s === %s" , time_string , GlobalConfig.FingerPrint , context.Method() , context.Path() )
 	// log_message := fmt.Sprintf( "%s === %s" , context.Method() , context.Path() )
 	log_message := fmt.Sprintf( "%s === %s === %s" , ip_address , context.Method() , context.Path() );
-	log.Println( log_message )
-	logger.Log.Println( log_message )
+	// log.Println( log_message )
+	logger.Log.Debug( log_message )
 	return context.Next()
 }
 

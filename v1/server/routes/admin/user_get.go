@@ -1,7 +1,7 @@
 package adminroutes
 
 import (
-	// "fmt"
+	"fmt"
 	"time"
 	// "strconv"
 	json "encoding/json"
@@ -10,7 +10,7 @@ import (
 	bolt_api "github.com/boltdb/bolt"
 	user "github.com/0187773933/MastersCloset/v1/user"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
-	log "github.com/0187773933/MastersCloset/v1/log"
+	// log "github.com/0187773933/MastersCloset/v1/log"
 )
 
 // http://localhost:5950/user/get/04b5fba6-6d76-42e0-a543-863c3f0c252c
@@ -20,7 +20,7 @@ func GetUser( context *fiber.Ctx ) ( error ) {
 	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
 	defer db.Close()
 	viewed_user := user.GetByUUID( user_uuid , db , GlobalConfig.BoltDBEncryptionKey )
-	log.PrintlnConsole( viewed_user.UUID , "===" , "Selected" )
+	log.Info( fmt.Sprintf( "%s === Selected" , viewed_user.UUID ) )
 	return context.JSON( fiber.Map{
 		"route": "/admin/user/get/:uuid" ,
 		"result": viewed_user ,
@@ -37,7 +37,7 @@ func GetUserViaBarcode( context *fiber.Ctx ) ( error ) {
 		barcode_bucket := tx.Bucket( []byte( "barcodes" ) )
 		x_uuid := barcode_bucket.Get( []byte( barcode ) )
 		if x_uuid == nil { return nil }
-		log.Printf( "Barcode : %s || UUID : %s\n" , barcode , x_uuid )
+		log.Info( fmt.Sprintf( "Barcode : %s || UUID : %s" , barcode , x_uuid ) )
 		user_bucket := tx.Bucket( []byte( "users" ) )
 		x_user := user_bucket.Get( []byte( x_uuid ) )
 		decrypted_user := encryption.ChaChaDecryptBytes( GlobalConfig.BoltDBEncryptionKey , x_user )
@@ -60,7 +60,7 @@ func GetUserViaULID( context *fiber.Ctx ) ( error ) {
 		ulid_uuid_bucket := tx.Bucket( []byte( "ulid-uuid" ) )
 		x_uuid := ulid_uuid_bucket.Get( []byte( x_ulid ) )
 		if x_uuid == nil { return nil }
-		log.Printf( "ULID : %s || UUID : %s\n" , x_ulid , x_uuid )
+		log.Info( fmt.Sprintf( "ULID : %s || UUID : %s" , x_ulid , x_uuid ) )
 		user_bucket := tx.Bucket( []byte( "users" ) )
 		x_user := user_bucket.Get( []byte( x_uuid ) )
 		decrypted_user := encryption.ChaChaDecryptBytes( GlobalConfig.BoltDBEncryptionKey , x_user )

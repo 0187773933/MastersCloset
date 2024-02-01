@@ -49,14 +49,14 @@ func _user_similar_by_name( sent_user *user.User , compared_user *user.User ) ( 
 	if sent_user.Identity.FirstName != "" && compared_user.Identity.FirstName != "" {
 		d := distance.LevenshteinDistance( sent_user.Identity.FirstName , compared_user.Identity.FirstName )
 		if d < LevenshteinDistanceThresold {
-			// log.Debug( fmt.Sprintf( "Similar First Name Found : %s , %s , %d" , sent_user.Identity.FirstName , compared_user.Identity.FirstName , d ) )
+			log.Debug( fmt.Sprintf( "Similar First Name Found : %s , %s , %d" , sent_user.Identity.FirstName , compared_user.Identity.FirstName , d ) )
 			first_name_match = true
 		}
 	}
 	if sent_user.Identity.LastName != "" && compared_user.Identity.LastName != "" {
 		d := distance.LevenshteinDistance( sent_user.Identity.LastName , compared_user.Identity.LastName )
 		if d < LevenshteinDistanceThresold {
-			// log.Debug( fmt.Sprintf( "Similar Last Name Found : %s , %s , %d" , sent_user.Identity.LastName , compared_user.Identity.LastName , d ) )
+			log.Debug( fmt.Sprintf( "Similar Last Name Found : %s , %s , %d" , sent_user.Identity.LastName , compared_user.Identity.LastName , d ) )
 			last_name_match = true
 		}
 	}
@@ -73,7 +73,7 @@ func _user_similar_by_email( sent_user *user.User , compared_user *user.User ) (
 	if sent_user.EmailAddress != "" && compared_user.EmailAddress != "" {
 		d := distance.LevenshteinDistance( sent_user.Identity.LastName , compared_user.Identity.LastName )
 		if d < LevenshteinDistanceThresold {
-			// log.Debug( fmt.Sprintf( "Similar Email Address Found : %s , %s , %d" , sent_user.EmailAddress , compared_user.EmailAddress , d ) )
+			log.Debug( fmt.Sprintf( "Similar Email Address Found : %s , %s , %d" , sent_user.EmailAddress , compared_user.EmailAddress , d ) )
 			result = true
 		}
 	}
@@ -99,7 +99,7 @@ func _user_similar_by_address( sent_user *user.User , compared_user *user.User )
 	if sent_user.Identity.Address.StreetNumber != "" && compared_user.Identity.Address.StreetNumber != "" {
 		d := distance.LevenshteinDistance( sent_user.Identity.Address.StreetNumber , compared_user.Identity.Address.StreetNumber )
 		if d < LevenshteinDistanceThresold {
-			// log.Debug( fmt.Sprintf( "Similar Street Number Found : %s , %s , %d" , sent_user.Identity.Address.StreetNumber , compared_user.Identity.Address.StreetNumber , d ) )
+			log.Debug( fmt.Sprintf( "Similar Street Number Found : %s , %s , %d" , sent_user.Identity.Address.StreetNumber , compared_user.Identity.Address.StreetNumber , d ) )
 			street_number_match = true
 		}
 	}
@@ -107,7 +107,7 @@ func _user_similar_by_address( sent_user *user.User , compared_user *user.User )
 	if sent_user.Identity.Address.StreetName != "" && compared_user.Identity.Address.StreetName != "" {
 		d := distance.LevenshteinDistance( sent_user.Identity.Address.StreetName , compared_user.Identity.Address.StreetName )
 		if d < LevenshteinDistanceThresold {
-			// log.Debug( fmt.Sprintf( "Similar Street Number Found : %s , %s , %d" , sent_user.Identity.Address.StreetName , compared_user.Identity.Address.StreetNumber , d ) )
+			log.Debug( fmt.Sprintf( "Similar Street Number Found : %s , %s , %d" , sent_user.Identity.Address.StreetName , compared_user.Identity.Address.StreetNumber , d ) )
 			street_name_match = true
 		}
 	}

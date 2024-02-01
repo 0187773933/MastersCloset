@@ -1,0 +1,125 @@
+Searching 687 files for "github.com/0187773933/MastersCloset/v1/log"
+
+~/WORKSPACE/GO/MastersCloset/main.go:
+    9  	server "github.com/0187773933/MastersCloset/v1/server"
+   10  	utils "github.com/0187773933/MastersCloset/v1/utils"
+   11: 	// log "github.com/0187773933/MastersCloset/v1/log"
+   12: 	logger "github.com/0187773933/MastersCloset/v1/logger"
+   13  )
+   14
+
+~/WORKSPACE/GO/MastersCloset/v1/printer/printer.go:
+   17  	"github.com/ppsleep/barcode/code128"
+   18  	types "github.com/0187773933/MastersCloset/v1/types"
+   19: 	log "github.com/0187773933/MastersCloset/v1/log"
+   20  )
+   21
+
+~/WORKSPACE/GO/MastersCloset/v1/server/server.go:
+   13  	// "os"
+   14  	utils "github.com/0187773933/MastersCloset/v1/utils"
+   15: 	log "github.com/0187773933/MastersCloset/v1/log"
+   16: 	logger "github.com/0187773933/MastersCloset/v1/logger"
+   17  )
+   18
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/auth.go:
+    7  	bcrypt "golang.org/x/crypto/bcrypt"
+    8  	encryption "github.com/0187773933/MastersCloset/v1/encryption"
+    9: 	log "github.com/0187773933/MastersCloset/v1/log"
+   10  )
+   11
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/logs.go:
+    4  	// "fmt"
+    5  	fiber "github.com/gofiber/fiber/v2"
+    6: 	log "github.com/0187773933/MastersCloset/v1/log"
+    7  )
+    8
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/user_checkin.go:
+   13  	user "github.com/0187773933/MastersCloset/v1/user"
+   14  	printer "github.com/0187773933/MastersCloset/v1/printer"
+   15: 	log "github.com/0187773933/MastersCloset/v1/log"
+   16  	ulid "github.com/oklog/ulid/v2"
+   17  )
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/user_delete.go:
+    9  	bolt_api "github.com/boltdb/bolt"
+   10  	user "github.com/0187773933/MastersCloset/v1/user"
+   11: 	log "github.com/0187773933/MastersCloset/v1/log"
+   12  	encryption "github.com/0187773933/MastersCloset/v1/encryption"
+   13  )
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/user_edit.go:
+   10  	// pp "github.com/k0kubun/pp/v3"
+   11  	// pp.Println( viewed_user )
+   12: 	log "github.com/0187773933/MastersCloset/v1/log"
+   13
+   14  	bolt_api "github.com/boltdb/bolt"
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/user_email.go:
+   10  	user "github.com/0187773933/MastersCloset/v1/user"
+   11  	encryption "github.com/0187773933/MastersCloset/v1/encryption"
+   12: 	log "github.com/0187773933/MastersCloset/v1/log"
+   13  	try "github.com/manucorporat/try"
+   14  )
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/user_get.go:
+   11  	user "github.com/0187773933/MastersCloset/v1/user"
+   12  	encryption "github.com/0187773933/MastersCloset/v1/encryption"
+   13: 	log "github.com/0187773933/MastersCloset/v1/log"
+   14  )
+   15
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/user_new.go:
+   21  	bleve "github.com/blevesearch/bleve/v2"
+   22  	utils "github.com/0187773933/MastersCloset/v1/utils"
+   23: 	log "github.com/0187773933/MastersCloset/v1/log"
+   24  )
+   25
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/user_reports.go:
+   14  	user "github.com/0187773933/MastersCloset/v1/user"
+   15  	encryption "github.com/0187773933/MastersCloset/v1/encryption"
+   16: 	log "github.com/0187773933/MastersCloset/v1/log"
+   17  )
+   18
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/user_search.go:
+   13  	user "github.com/0187773933/MastersCloset/v1/user"
+   14  	encryption "github.com/0187773933/MastersCloset/v1/encryption"
+   15: 	log "github.com/0187773933/MastersCloset/v1/log"
+   16  )
+   17
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/user_similar.go:
+   21  	// bleve "github.com/blevesearch/bleve/v2"
+   22  	// utils "github.com/0187773933/MastersCloset/v1/utils"
+   23: 	// log "github.com/0187773933/MastersCloset/v1/log"
+   24: 	// logger "github.com/0187773933/MastersCloset/v1/logger"
+   25  )
+   26
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/admin/user_sms.go:
+   12  	encryption "github.com/0187773933/MastersCloset/v1/encryption"
+   13  	twilio "github.com/sfreiberg/gotwilio"
+   14: 	log "github.com/0187773933/MastersCloset/v1/log"
+   15  	try "github.com/manucorporat/try"
+   16  )
+
+~/WORKSPACE/GO/MastersCloset/v1/server/routes/user/user_routes.go:
+   16  	user "github.com/0187773933/MastersCloset/v1/user"
+   17  	encryption "github.com/0187773933/MastersCloset/v1/encryption"
+   18: 	log "github.com/0187773933/MastersCloset/v1/log"
+   19  	// bleve "github.com/blevesearch/bleve/v2"
+   20  )
+
+~/WORKSPACE/GO/MastersCloset/v1/user/user.go:
+   14  	encrypt "github.com/0187773933/MastersCloset/v1/encryption"
+   15  	types "github.com/0187773933/MastersCloset/v1/types"
+   16: 	log "github.com/0187773933/MastersCloset/v1/log"
+   17  	printer "github.com/0187773933/MastersCloset/v1/printer"
+   18  )
+
+20 matches across 17 files

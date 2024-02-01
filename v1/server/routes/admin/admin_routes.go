@@ -3,9 +3,11 @@ package adminroutes
 import (
 	fiber "github.com/gofiber/fiber/v2"
 	types "github.com/0187773933/MastersCloset/v1/types"
+	logger "github.com/0187773933/MastersCloset/v1/logger"
 )
 
 var GlobalConfig *types.ConfigFile
+var log = logger.GetLogger()
 
 var ui_html_pages = map[ string ]string {
 	"/": "./v1/server/html/admin.html" ,
