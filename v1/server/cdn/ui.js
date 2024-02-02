@@ -1118,6 +1118,11 @@ function populate_similar_users( result ) {
 		document.getElementById( "user-search-input" ).value = window.USER.uuid;
 		// show_user_handoff_qrcode();
 		$( "#similar-users-modal" ).modal( "hide" );
+		if ( location.pathname.startsWith( "/admin/user/new/" ) ) {
+			console.log( "we are in the /new page , not checkin" );
+			show_user_uuid_qrcode( window.USER.uuid );
+			return;
+		}
 		window.UI.render_active_user();
 		show_user_uuid_qrcode( window.USER.uuid );
 	});

@@ -193,7 +193,7 @@
 					set_url( `/admin/user/new/${window.USER.uuid}/edit` );
 					this.buttons_stack = [ "edit-user-save-button" , "edit-user-cancel-button" , "edit-user-delete-button" , "show-handoff-qrc-button" , "sms-user-button" , "email-user-button" ];
 					this.render_buttons();
-					this.stack = [ "user_edit_form" , "user_qr_code" ];
+					this.stack = [ "user_edit_form" , "user_qr_code" , "similar_users" ];
 					this.render();
 					populate_user_edit_form( window.USER );
 					$( "#user_first_name" ).on( "change" , ( event ) => { window.USER.identity.first_name = event.target.value });
@@ -228,7 +228,7 @@
 					set_url( `/admin/user/new` );
 					this.buttons_stack = [ "new-user-save-button" , "new-user-cancel-button" ];
 					this.render_buttons();
-					this.stack = [ "user_new_form" , "user_qr_code" ];
+					this.stack = [ "user_new_form" , "user_qr_code" , "similar_users" ];
 					this.render();
 					$( "#user-search-input" ).val( "" );
 					window.USER = {};
@@ -286,6 +286,15 @@
 				}
 				if ( window?.USER?.identity?.date_of_birth?.year ) {
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
+				}
+
+				// HERE
+				let similar_users = await api_similar_users( window.USER );
+				if ( similar_users?.similar_user_reports?.length > 0 ) {
+					console.log( "SIMILAR USERS" , similar_users );
+					populate_similar_users( similar_users );
+					show_similar_users_modal();
+					return;
 				}
 
 				// let edit_result = await api_edit_user( window.USER );
@@ -397,6 +406,22 @@
 				if ( window?.USER?.identity?.date_of_birth?.year ) {
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
 				}
+
+
+				// NEW : Run Server Side Check for Uniqueness
+				let similar_users = await api_similar_users( window.USER );
+				if ( similar_users?.similar_user_reports?.length > 0 ) {
+					console.log( "SIMILAR USERS" , similar_users );
+					// TODO : Present PopUp if similar users found
+					// merge option
+					// delete others option
+
+					populate_similar_users( similar_users );
+					show_similar_users_modal();
+					return;
+				}
+
+
 				if ( window.USER.ulid ) {
 					if ( !window.USER.uuid ) {
 						console.log( "should be un-reachable" );
@@ -618,6 +643,7 @@
 						"user_balance_table": get_ui_user_balance_table ,
 						"active_user_info": get_ui_active_user_info ,
 						"user_qr_code": get_ui_user_qr_code_display ,
+						"similar_users": get_ui_similar_users_display ,
 					} ,
 					buttons_anchor: "#buttons-content" ,
 					buttons_stack: [ "new-user-button" ] ,

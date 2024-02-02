@@ -286,7 +286,7 @@
 					set_url( `/admin/user/checkin/${window.USER.uuid}/edit` );
 					this.buttons_stack = [ "edit-user-save-button" , "edit-user-cancel-button" , "edit-user-delete-button" , "show-handoff-qrc-button" , "sms-user-button" , "email-user-button" ];
 					this.render_buttons();
-					this.stack = [ "user_edit_form" , "user_qr_code" ];
+					this.stack = [ "user_edit_form" , "user_qr_code" , "similar_users" ];
 					this.render();
 					populate_user_edit_form( window.USER );
 					$( "#user_first_name" ).on( "change" , ( event ) => { event.target.value = title_case( event.target.value ); window.USER.identity.first_name = event.target.value; });
@@ -388,6 +388,16 @@
 				}
 				if ( window?.USER?.identity?.date_of_birth?.year ) {
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
+				}
+
+
+				// HERE
+				let similar_users = await api_similar_users( window.USER );
+				if ( similar_users?.similar_user_reports?.length > 0 ) {
+					console.log( "SIMILAR USERS" , similar_users );
+					populate_similar_users( similar_users );
+					show_similar_users_modal();
+					return;
 				}
 
 				if ( window.USER.ulid ) {
