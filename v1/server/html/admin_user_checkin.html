@@ -390,16 +390,17 @@
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
 				}
 
-
-				// HERE
-				let similar_users = await api_similar_users( window.USER );
-				if ( similar_users?.similar_user_reports?.length > 0 ) {
-					console.log( "SIMILAR USERS" , similar_users );
-					populate_similar_users( similar_users );
-					show_similar_users_modal();
-					return;
+				if ( !window.USER.uuid ) {
+					let similar_users = await api_similar_users( window.USER );
+					if ( similar_users?.similar_user_reports?.length > 0 ) {
+						console.log( "SIMILAR USERS" , similar_users );
+						populate_similar_users( similar_users );
+						show_similar_users_modal();
+						return;
+					}
 				}
 
+				// HERE
 				if ( window.USER.ulid ) {
 					if ( !window.USER.uuid ) {
 						console.log( "saving new user from qr code handoff" );
@@ -734,10 +735,10 @@
 			const scanner_threshold_time = 30; // Time in ms, adjust based on your scanner speed
 			let last_input_time = Date.now();
 
-			async function on_check_in_input_change(event) {
+			async function on_check_in_input_change( event ) {
 				if (event) { event.preventDefault(); }
 				let now = Date.now();
-				let typed_input = event?.target?.value || document.getElementById("user-search-input").value;
+				let typed_input = event?.target?.value || document.getElementById( "user-search-input" ).value;
 
 				if (!typed_input) return;
 
@@ -745,16 +746,16 @@
 				last_input_time = now;
 
 				// Clear any existing timeout to handle rapid scanner input
-				clearTimeout( timeout_id) ;
+				clearTimeout( timeout_id ) ;
 
 				if ( time_since_last_input < scanner_threshold_time ) {
 					// Likely scanner input, buffer until stream ends
 					timeout_id = setTimeout(() => {
-						_on_check_in_input_change(typed_input);
-					} , scanner_threshold_time);
+						_on_check_in_input_change( typed_input );
+					} , scanner_threshold_time );
 				} else {
 					// Likely human input, process immediately
-					_on_check_in_input_change(typed_input);
+					_on_check_in_input_change( typed_input );
 				}
 			}
 			async function init() {

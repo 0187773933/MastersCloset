@@ -288,13 +288,14 @@
 					window.USER.identity.date_of_birth.year = parseInt( window.USER.identity.date_of_birth.year );
 				}
 
-				// HERE
-				let similar_users = await api_similar_users( window.USER );
-				if ( similar_users?.similar_user_reports?.length > 0 ) {
-					console.log( "SIMILAR USERS" , similar_users );
-					populate_similar_users( similar_users );
-					show_similar_users_modal();
-					return;
+				if ( !window.USER.uuid ) {
+					let similar_users = await api_similar_users( window.USER );
+					if ( similar_users?.similar_user_reports?.length > 0 ) {
+						console.log( "SIMILAR USERS" , similar_users );
+						populate_similar_users( similar_users );
+						show_similar_users_modal();
+						return;
+					}
 				}
 
 				// let edit_result = await api_edit_user( window.USER );
