@@ -183,7 +183,7 @@ func HandleUserSimilar( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 	var sent_user user.User
 	context_body := context.Body()
-	fmt.Println( string( context_body ) )
+	// fmt.Println( string( context_body ) )
 	json.Unmarshal( context_body , &sent_user )
 	var similar_user_reports []UserSimilarReport
 	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
