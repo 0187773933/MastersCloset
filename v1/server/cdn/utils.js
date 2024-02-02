@@ -286,3 +286,12 @@ function show_user_uuid_qrcode( x_uuid=false ) {
 	});
 	user_handoff_modal.show();
 }
+
+function show_similar_users_modal() {
+	let similar_users_modal = new bootstrap.Modal( "#similar-users-modal" , {
+		backdrop: "static" ,
+		focus: true ,
+		keyboard: true
+	});
+	similar_users_modal.show();
+}

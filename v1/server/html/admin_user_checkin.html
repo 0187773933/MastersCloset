@@ -326,7 +326,7 @@
 					window.STATE = "new";
 					this.buttons_stack = [ "new-user-save-button" , "new-user-cancel-button" ];
 					this.render_buttons();
-					this.stack = [ "user_new_form" , "user_qr_code" ];
+					this.stack = [ "user_new_form" , "user_qr_code" , "similar_users" ];
 					this.render();
 					$( "#user-search-input" ).val( "" );
 					$( "#verified-button-text" ).text( "Un-Verified" );
@@ -530,11 +530,11 @@
 				window.USER.barcodes = window.USER.barcodes.filter( ( x ) => { return x !== ""; } );
 
 				let x_family_members = Object.values( window.FAMILY_MEMBERS );
-				console.log( x_family_members );
+				// console.log( x_family_members );
 				x_family_members = x_family_members.filter( ( x ) => { return x.age > -1; } );
 				x_family_members.forEach( ( x ) => { x.age = parseInt( x.age ); } )
 				window.USER.family_members = x_family_members;
-				console.log( window.USER.family_members );
+				// console.log( window.USER.family_members );
 
 				if ( window?.USER?.identity?.date_of_birth?.day ) {
 					window.USER.identity.date_of_birth.day = parseInt( window.USER.identity.date_of_birth.day );
@@ -545,10 +545,16 @@
 
 				// NEW : Run Server Side Check for Uniqueness
 				let similar_users = await api_similar_users( window.USER );
-				console.log( "SIMILAR USERS" , similar_users );
-				// TODO : Present PopUp if similar users found
-				// merge option
-				// delete others option
+				if ( similar_users?.similar_user_reports?.length > 0 ) {
+					console.log( "SIMILAR USERS" , similar_users );
+					// TODO : Present PopUp if similar users found
+					// merge option
+					// delete others option
+
+					populate_similar_users( similar_users );
+					show_similar_users_modal();
+					return;
+				}
 
 				let new_user_result = await api_new_user( window.USER );
 				if ( !new_user_result.result?.uuid ) { return false; }
@@ -758,6 +764,7 @@
 						"user_balance_table": get_ui_user_balance_table ,
 						"active_user_info": get_ui_active_user_info ,
 						"user_qr_code": get_ui_user_qr_code_display ,
+						"similar_users": get_ui_similar_users_display ,
 					} ,
 					buttons_anchor: "#buttons-content" ,
 					buttons_stack: [ "new-user-button" ] ,

@@ -22,6 +22,27 @@ function get_ui_user_qr_code_display() {
 	</div>`;
 }
 
+function get_ui_similar_users_display() {
+	return `
+	<div class="row">
+		<div class="col-md-6">
+			<div id="similar-users-modal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+				<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" >
+					<div class="modal-content bg-warning-subtle">
+						<div class="modal-header">
+							<h5 style="padding-left: 2.6em;" class="col-11 modal-title text-center">Similar Users</h5>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+						</div>
+						<div class="modal-body">
+							<div id="similar-users-content"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>`;
+}
+
 function get_ui_user_data_qr_code_display() {
 	return `
 		<div class="col-12">
@@ -545,6 +566,7 @@ function make( element_type , options ) {
 	if ( options.text ) { element.textContent = options.text; }
 	if ( options.style ) { element.style = options.style; }
 	if ( options.id ) { element.id = options.id; }
+	if ( options.href ) { element.href = options.href; }
 	if ( options.attributes ) {
 		let attributes = Object.keys( options.attributes );
 		for ( let i = 0; i < attributes.length; ++i ) {
@@ -1067,4 +1089,127 @@ function populate_user_edit_form( user_info ) {
 		document.getElementById( "user_spanish" ).checked = user_info[ "spanish" ];
 	}
 
+}
+
+function populate_similar_users( result ) {
+	let holder = document.getElementById( "similar-users-content" );
+	holder.innerHTML = "";
+
+	// Save Anyway Button
+	let save_anyway_row = make( "div" , {
+		id: "save_anyway_row" ,
+		class: "row g-2 mb-3" ,
+	});
+	let save_anyway_col = make( "div", {
+		id: "save_anyway_col" ,
+		class: "col-12" ,
+	});
+
+	let save_anyway_button = document.createElement( "button" );
+	save_anyway_button.setAttribute( "type" , "button" );
+	save_anyway_button.className = "btn btn-primary";
+	save_anyway_button.textContent = "Save Anway";
+	save_anyway_button.setAttribute( "id" , "save_anyway_button" );
+	save_anyway_button.addEventListener( "click" , async function( event ) {
+		let new_user_result = await api_new_user( window.USER );
+		if ( !new_user_result.result?.uuid ) { return false; }
+		window.USER = new_user_result.result;
+		console.log( window.USER );
+		document.getElementById( "user-search-input" ).value = window.USER.uuid;
+		// show_user_handoff_qrcode();
+		$( "#similar-users-modal" ).modal( "hide" );
+		window.UI.render_active_user();
+		show_user_uuid_qrcode( window.USER.uuid );
+	});
+
+	save_anyway_col.appendChild( save_anyway_button );
+	save_anyway_row.appendChild( save_anyway_col );
+	holder.appendChild( save_anyway_row );
+
+
+
+	for ( let i = 0; i < result.similar_user_reports.length; ++i ) {
+
+		let x = result.similar_user_reports[ i ];
+		let name_string = x.user.name_string;
+		let matched_keys = Object.keys( x ).filter( key => x[ key ] === true );
+		let filtered_keys = matched_keys.filter( key => key !== "is_similar" );
+		let matched_text = filtered_keys.join( ", " );
+		let url = `/admin/user/checkin/${x.user.uuid}/edit`;
+
+		let row = make( "div" , {
+			id: `similar_user_row_${(i + 1)}` ,
+			class: "row g-2 mb-3" ,
+		});
+		let col = make( "div", {
+			id: `similar_user_col_${(i + 1)}` ,
+			class: "col-12" ,
+		});
+
+		let item_holder = make( "div", {} );
+
+		// Create a non-breaking space and additional text within the same span
+		let text1 = make( "span" , {
+			id: `similar_user_text1_${(i + 1)}`,
+		});
+
+		// Assuming `make` correctly interprets HTML when setting innerText or similar properties
+		// Use innerHTML here to include HTML content directly
+		text1.innerText = `${name_string}`;
+		text1.innerHTML += "&nbsp;&nbsp;"
+		item_holder.appendChild( text1 );
+
+		let edit_button = document.createElement( "a" );
+		// edit_button.setAttribute( "href" , `/admin/user/edit/${window.users[ i ][ "uuid" ]}` );
+		edit_button.setAttribute( "href" , `/admin/user/checkin/${x.user.uuid}/edit` );
+		edit_button.setAttribute( "target" , "_blank" );
+		edit_button.className = "btn btn-warning p-1";
+		let edit_button_icon = document.createElement( "i" );
+		edit_button_icon.className = "bi bi-pen";
+		edit_button.appendChild( edit_button_icon );
+		item_holder.appendChild( edit_button );
+
+		let nbsp1 = make( "span" , {} );
+		nbsp1.innerHTML = "&nbsp";
+		item_holder.appendChild( nbsp1 );
+
+		let delete_button = document.createElement( "a" );
+		delete_button.className = "btn btn-danger p-1";
+		let delete_button_icon = document.createElement( "i" );
+		delete_button_icon.className = "bi bi-trash3-fill";
+		delete_button.appendChild( delete_button_icon );
+		delete_button.id = `similar_user_row_${(i + 1)}_delete_button`;
+		delete_button.onclick = async function( event ) {
+			let result = confirm( `Are You Absolutely Sure You Want to Delete : ${x.user.username} ???` );
+			if ( result === true ) {
+				console.log( "delete confimed" );
+				await api_delete_user( x.user.uuid );
+				// need to cross out item
+				let delete_button_id = event?.target?.parentNode?.id;
+				let parent_row_id = delete_button_id.split( "_delete_button" )[ 0 ];
+				let parent_row = document.getElementById( parent_row_id );
+				console.log( parent_row );
+	            Array.from( parent_row.querySelectorAll( "*" ) ).forEach( child => {
+                	child.classList.add( "strike-through" );
+            	});
+				return;
+			} else {
+				console.log( "delete rejected" );
+				return;
+			}
+		};
+		item_holder.appendChild( delete_button );
+
+		let text2 = make( "span" , {
+			id: `similar_user_text2_${(i + 1)}`,
+		});
+		text2.innerText = `Similar : ${matched_text}`;
+		text2.innerHTML = "&nbsp;&nbsp;" + text2.innerHTML;
+		item_holder.appendChild( text2 );
+
+
+		col.appendChild( item_holder );
+		row.appendChild( col );
+		holder.appendChild( row );
+	}
 }

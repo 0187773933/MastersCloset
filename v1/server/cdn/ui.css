@@ -57,30 +57,53 @@
 }
 
 .floating-verified {
-    position: fixed;
-    top: 10px;
-    right: 10px; /* Align to the right side */
-    z-index: 1000;
-    display: flex;
-    align-items: center;
+	position: fixed;
+	top: 10px;
+	right: 10px; /* Align to the right side */
+	z-index: 1000;
+	display: flex;
+	align-items: center;
 }
 
 .floating-verified img {
-    display: block;
-    width: 60px;
-    height: auto;
-    margin-right: 10px; /* Space between image and text */
+	display: block;
+	width: 60px;
+	height: auto;
+	margin-right: 10px; /* Space between image and text */
 }
 
 .floating-verified span {
 }
 
 .badge-custom {
-    padding-left: 1px; /* Adjust this value as needed */
-    padding-right: 1px; /* Adjust this value as needed */
+	padding-left: 1px; /* Adjust this value as needed */
+	padding-right: 1px; /* Adjust this value as needed */
 }
 
 .no-gutters-custom {
-    padding-right: 0;
-    padding-left: 0;
+	padding-right: 0;
+	padding-left: 0;
+}
+
+/*.modal {
+	position: fixed;
+	top: 50% !important;
+	left: 50%;
+}*/
+
+.strike-through {
+	text-decoration-line: line-through;
+	text-decoration-style: solid;
+	text-decoration-thickness: 2px; /* Adjust the thickness here */
+	text-decoration-color: red;
+}
+
+.modal-dialog {
+	display: flex;
+	align-items: center;
+	min-height: 100vh;
+}
+
+.modal-content {
+	margin: auto;
 }
