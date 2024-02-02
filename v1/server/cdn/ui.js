@@ -1108,7 +1108,7 @@ function populate_similar_users( result ) {
 	let save_anyway_button = document.createElement( "button" );
 	save_anyway_button.setAttribute( "type" , "button" );
 	save_anyway_button.className = "btn btn-primary";
-	save_anyway_button.textContent = "Save Anway";
+	save_anyway_button.textContent = "Save Anyway";
 	save_anyway_button.setAttribute( "id" , "save_anyway_button" );
 	save_anyway_button.addEventListener( "click" , async function( event ) {
 		let new_user_result = await api_new_user( window.USER );
