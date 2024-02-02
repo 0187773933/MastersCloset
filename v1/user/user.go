@@ -14,6 +14,7 @@ import (
 	encrypt "github.com/0187773933/MastersCloset/v1/encryption"
 	types "github.com/0187773933/MastersCloset/v1/types"
 	// log "github.com/0187773933/MastersCloset/v1/log"
+	utils "github.com/0187773933/MastersCloset/v1/utils"
 	logger "github.com/0187773933/MastersCloset/v1/logger"
 	printer "github.com/0187773933/MastersCloset/v1/printer"
 )
@@ -119,15 +120,15 @@ type GetUserResult struct {
 }
 
 func New( username string , config *types.ConfigFile ) ( new_user User ) {
-	now := time.Now()
+	now := utils.GetNowTimeOBJ()
 	new_user_uuid := uuid.NewV4().String()
 	new_user.Username = username
 	new_user.Verified = false
 	new_user.UUID = new_user_uuid
 	new_user.Config = config
 	new_user.FamilySize = 1
-	new_user.CreatedDate = now.Format( "02JAN2006" )
-	new_user.CreatedTime = now.Format( "15:04:05.000" )
+	new_user.CreatedDate = utils.GetNowDateString( &now )
+	new_user.CreatedTime = utils.GetNowTimeString( &now )
 	new_user_byte_object , _ := json.Marshal( new_user )
 	new_user_byte_object_encrypted := encrypt.ChaChaEncryptBytes( config.BoltDBEncryptionKey , new_user_byte_object )
 	db , _ := bolt.Open( config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )

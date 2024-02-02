@@ -1095,7 +1095,7 @@ function populate_similar_users( result ) {
 	let holder = document.getElementById( "similar-users-content" );
 	holder.innerHTML = "";
 
-	// Save Anyway Button
+	// 1.) Save Anyway Button
 	let save_anyway_row = make( "div" , {
 		id: "save_anyway_row" ,
 		class: "row g-2 mb-3" ,
@@ -1121,16 +1121,15 @@ function populate_similar_users( result ) {
 		window.UI.render_active_user();
 		show_user_uuid_qrcode( window.USER.uuid );
 	});
-
 	save_anyway_col.appendChild( save_anyway_button );
 	save_anyway_row.appendChild( save_anyway_col );
 	holder.appendChild( save_anyway_row );
 
-
-
+	// 2.) Add Results
 	for ( let i = 0; i < result.similar_user_reports.length; ++i ) {
 
 		let x = result.similar_user_reports[ i ];
+		let created_date = x.user.created_date;
 		let name_string = x.user.name_string;
 		let matched_keys = Object.keys( x ).filter( key => x[ key ] === true );
 		let filtered_keys = matched_keys.filter( key => key !== "is_similar" );
@@ -1148,6 +1147,13 @@ function populate_similar_users( result ) {
 
 		let item_holder = make( "div", {} );
 
+		let text0 = make( "span" , {
+			id: `similar_user_text0_${(i + 1)}`,
+		});
+		text0.innerText = `Created : ${created_date}`;
+		text0.innerHTML += "<br>";
+		item_holder.appendChild( text0 );
+
 		// Create a non-breaking space and additional text within the same span
 		let text1 = make( "span" , {
 			id: `similar_user_text1_${(i + 1)}`,
@@ -1155,7 +1161,7 @@ function populate_similar_users( result ) {
 
 		// Assuming `make` correctly interprets HTML when setting innerText or similar properties
 		// Use innerHTML here to include HTML content directly
-		text1.innerText = `${name_string}`;
+		text1.innerText = name_string;
 		text1.innerHTML += "&nbsp;&nbsp;"
 		item_holder.appendChild( text1 );
 
@@ -1189,9 +1195,9 @@ function populate_similar_users( result ) {
 				let parent_row_id = delete_button_id.split( "_delete_button" )[ 0 ];
 				let parent_row = document.getElementById( parent_row_id );
 				console.log( parent_row );
-	            Array.from( parent_row.querySelectorAll( "*" ) ).forEach( child => {
-                	child.classList.add( "strike-through" );
-            	});
+				Array.from( parent_row.querySelectorAll( "*" ) ).forEach( child => {
+					child.classList.add( "strike-through" );
+				});
 				return;
 			} else {
 				console.log( "delete rejected" );
@@ -1206,7 +1212,6 @@ function populate_similar_users( result ) {
 		text2.innerText = `Similar : ${matched_text}`;
 		text2.innerHTML = "&nbsp;&nbsp;" + text2.innerHTML;
 		item_holder.appendChild( text2 );
-
 
 		col.appendChild( item_holder );
 		row.appendChild( col );

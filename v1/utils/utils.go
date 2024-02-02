@@ -30,7 +30,7 @@ import (
 
 //go:embed zoneinfo
 var ZoneInfoFS embed.FS
-
+var location = get_location( "America/New_York" )
 
 func ParseConfig( file_path string ) ( result types.ConfigFile ) {
 	file_data , _ := ioutil.ReadFile( file_path )
@@ -68,7 +68,7 @@ func get_location( name string ) ( loc *time.Location ) {
 
 func FormatTime( input_time *time.Time ) ( result string ) {
 	// location , _ := time.LoadLocation( "America/New_York" )
-	location := get_location( "America/New_York" )
+	// location := get_location( "America/New_York" )
 	time_object := input_time.In( location )
 	month_name := strings.ToUpper( time_object.Format( "Jan" ) )
 	milliseconds := time_object.Format( ".000" )
@@ -80,13 +80,41 @@ func FormatTime( input_time *time.Time ) ( result string ) {
 
 func GetFormattedTimeString() ( result string ) {
 	// location , _ := time.LoadLocation( "America/New_York" )
-	location := get_location( "America/New_York" )
+	// location := get_location( "America/New_York" )
 	time_object := time.Now().In( location )
 	month_name := strings.ToUpper( time_object.Format( "Jan" ) )
 	milliseconds := time_object.Format( ".000" )
 	date_part := fmt.Sprintf( "%02d%s%d" , time_object.Day() , month_name , time_object.Year() )
 	time_part := fmt.Sprintf( "%02d:%02d:%02d%s" , time_object.Hour() , time_object.Minute() , time_object.Second() , milliseconds )
 	result = fmt.Sprintf( "%s === %s" , date_part , time_part )
+	return
+}
+
+func GetNowTimeOBJ() ( result time.Time ) {
+
+	result = time.Now().In( location )
+	return
+}
+
+func GetNowDateString( now *time.Time ) ( result string ) {
+	month_name := strings.ToUpper( now.Format( "Jan" ) )
+	result = fmt.Sprintf( "%02d%s%d" , now.Day() , month_name , now.Year() )
+	return
+}
+
+func GetNowTimeString( now *time.Time ) ( result string ) {
+	milliseconds := now.Format( ".000" )
+	result = fmt.Sprintf( "%02d:%02d:%02d%s" , now.Hour() , now.Minute() , now.Second() , milliseconds )
+	return
+}
+
+func GetFormattedTimeStringOBJ() ( result_string string , result_time time.Time ) {
+	result_time = time.Now().In( location )
+	month_name := strings.ToUpper( result_time.Format( "Jan" ) )
+	milliseconds := result_time.Format( ".000" )
+	date_part := fmt.Sprintf( "%02d%s%d" , result_time.Day() , month_name , result_time.Year() )
+	time_part := fmt.Sprintf( "%02d:%02d:%02d%s" , result_time.Hour() , result_time.Minute() , result_time.Second() , milliseconds )
+	result_string = fmt.Sprintf( "%s === %s" , date_part , time_part )
 	return
 }
 
