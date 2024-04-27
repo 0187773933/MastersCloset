@@ -133,6 +133,7 @@ func GetLogger() *logrus.Logger {
 }
 
 func Init() {
+	if Log != nil { return }
 	Log = logrus.New()
 	log_level := os.Getenv( "LOG_LEVEL" )
 	fmt.Printf( "LOG_LEVEL=%s\n" , log_level )

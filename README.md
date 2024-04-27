@@ -17,11 +17,8 @@
 ---
 
 ## TODO
-1. add similar user lookup :
-	- after first , middle , or last name edits.
-	- after email address changes
-	- after phone number changes
-	- after address changes
+1. Make config editable via html
+	- gather misc stuff like print speed
 2. cache stuff in production :
 	- https://docs.gofiber.io/api/middleware/cache
 3. Just let a barcode check-in a user. Avoids an extra call
@@ -40,11 +37,12 @@
 	- `time.Now().After(lastFetched.Add(CachePeriod))` ?
 8. Change "usernames" DB bucket for key=${uuid}_username , value=Username
 	- keeps only uuids as keys
-9. Make config editable via html
+9. audio ml stuff for new user creation and check-in
 10. Fix ui.js#793
 	- `document.getElementById( barcode_id ).focus();`
 	- make this optional , so that the edit page doesn't use this
-11. Fix Username/NameString to be Title Case
+11. Fix Username/NameString to be Title Case?
+12. Make family-member management more streamlined
 
 ## Misc
 

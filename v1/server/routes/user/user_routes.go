@@ -35,7 +35,7 @@ var public_limiter = rate_limiter.New(rate_limiter.Config{
 		log_message := fmt.Sprintf( "%s === %s === %s === PUBLIC RATE LIMIT REACHED !!!" , ip_address , c.Method() , c.Path() );
 		log.Info( log_message )
 		c.Set( "Content-Type" , "text/html" )
-		return c.SendString( "<html><h1>loading ...</h1><script>setTimeout(function(){ window.location.reload(1); }, 6);</script></html>" )
+		return c.SendString( "<html><h1>loading ...</h1><script>setTimeout(function(){ window.location.reload(1); }, 6000);</script></html>" )
 	} ,
 })
 
@@ -51,7 +51,7 @@ var user_creation_limiter = rate_limiter.New(rate_limiter.Config{
 		log_message := fmt.Sprintf( "%s === %s === %s === PUBLIC USER CREATION RATE LIMIT REACHED !!!" , ip_address , c.Method() , c.Path() );
 		log.Info( log_message )
 		c.Set("Content-Type", "text/html")
-		return c.SendString("<html><h1>loading ...</h1><script>setTimeout(function(){ window.location.reload(1); }, 6);</script></html>")
+		return c.SendString("<html><h1>loading ...</h1><script>setTimeout(function(){ window.location.reload(1); }, 6000);</script></html>")
 	},
 })
 
