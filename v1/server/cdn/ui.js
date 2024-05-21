@@ -111,7 +111,7 @@ function get_ui_shopping_for_selector() {
 		<div class="col-md-6">
 			<div class="input-group">
 				<div class="input-group-text">Shopping For</div>
-				<select id="shopping_for" class="form-select" aria-label="Shopping For" name="shopping_for">
+				<select autocomplete="off" id="shopping_for" class="form-select" aria-label="Shopping For" name="shopping_for">
 					<option value="1">1</option>
 					<option value="2">2</option>
 					<option value="3">3</option>
@@ -330,19 +330,19 @@ function _get_user_form() {
 					<div class="col-lg-2"></div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input id="user_first_name" type="text" class="form-control input-name" name="user_first_name">
+							<input autocomplete="off" id="user_first_name" type="text" class="form-control input-name" name="user_first_name">
 							<label for="user_first_name">First Name</label>
 						</div>
 					</div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input id="user_middle_name" type="text" class="form-control input-name" name="user_middle_name">
+							<input autocomplete="off" id="user_middle_name" type="text" class="form-control input-name" name="user_middle_name">
 							<label for="user_middle_name">Middle Name</label>
 						</div>
 					</div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input id="user_last_name" type="text" class="form-control input-name" name="user_last_name">
+							<input autocomplete="off" id="user_last_name" type="text" class="form-control input-name" name="user_last_name">
 							<label for="user_last_name">Last Name</label>
 						</div>
 					</div>
@@ -354,13 +354,13 @@ function _get_user_form() {
 					<div class="col-lg-3"></div>
 					<div class="col-sm-12 col-md-4 col-lg-4">
 						<div class="form-floating">
-							<input id="user_email" type="email" class="form-control" name="user_email">
+							<input autocomplete="off" id="user_email" type="email" class="form-control" name="user_email">
 							<label for="user_email">Email Address</label>
 						</div>
 					</div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input id="user_phone_number" type="tel" class="form-control" name="user_phone_number">
+							<input autocomplete="off" id="user_phone_number" type="tel" class="form-control" name="user_phone_number">
 							<label for="user_phone_number">Phone Number</label>
 						</div>
 					</div>
@@ -397,19 +397,19 @@ function _get_user_form() {
 				<div class="row g-2 mb-3">
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input id="user_street_number" type="text" class="form-control" name="user_street_number">
+							<input autocomplete="off" id="user_street_number" type="text" class="form-control" name="user_street_number">
 							<label for="user_street_number">Street Number</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input id="user_street_name" type="text" class="form-control" name="user_street_name">
+							<input autocomplete="off" id="user_street_name" type="text" class="form-control" name="user_street_name">
 							<label for="user_street_name">Street Name</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input id="user_address_two" type="text" class="form-control" name="user_street_name">
+							<input autocomplete="off" id="user_address_two" type="text" class="form-control" name="user_street_name">
 							<label for="user_address_two">Address 2</label>
 						</div>
 					</div>
@@ -419,19 +419,19 @@ function _get_user_form() {
 				<div class="row g-2 mb-3">
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input id="user_city" type="text" class="form-control" name="user_city">
+							<input autocomplete="off" id="user_city" type="text" class="form-control" name="user_city">
 							<label for="user_city">City</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input id="user_state" type="text" class="form-control" name="user_state">
+							<input autocomplete="off" id="user_state" type="text" class="form-control" name="user_state">
 							<label for="user_state">State</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input id="user_zip_code" type="text" class="form-control" name="user_zip_code">
+							<input autocomplete="off" id="user_zip_code" type="text" class="form-control" name="user_zip_code">
 							<label for="user_zip_code">Zip Code</label>
 						</div>
 					</div>
@@ -442,7 +442,7 @@ function _get_user_form() {
 
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input id="user_birth_day" type="number" min="1" max="31" class="form-control" name="user_birth_day_name">
+							<input autocomplete="off" id="user_birth_day" type="number" min="1" max="31" class="form-control" name="user_birth_day_name">
 							<label for="user_birth_day_name">Birth Day</label>
 						</div>
 					</div>
@@ -467,7 +467,7 @@ function _get_user_form() {
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input id="user_birth_year" type="number" min="1900" max="2100" class="form-control" name="user_birth_year_name">
+							<input autocomplete="off" id="user_birth_year" type="number" min="1900" max="2100" class="form-control" name="user_birth_year_name">
 							<label for="user_birth_year_name">Birth Year</label>
 						</div>
 					</div>

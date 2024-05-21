@@ -25,24 +25,19 @@
 	- GET /admin/user/get/barcode/:barcode
 	- GET /admin/user/checkin/test/:uuid
 	- GET /admin/user/checkin/:uuid
-4. Add Admin Manual Override Routes
-	- Override Check-In Too Soon
-	- User forgot phone
-	- User has new phone
-	- option to text hand-off link if user can't scan qrcode for some reason
-5. Fix User Fields :
+4. Add User Fields :
 	- Authorized Aliases
-6. Fix Docker
-7. Use time functions
+5. Fix Docker
+6. Use time functions
 	- `time.Now().After(lastFetched.Add(CachePeriod))` ?
-8. Change "usernames" DB bucket for key=${uuid}_username , value=Username
+7. Change "usernames" DB bucket for key=${uuid}_username , value=Username
 	- keeps only uuids as keys
-9. audio ml stuff for new user creation and check-in
-10. Fix ui.js#793
+8. audio ml stuff for new user creation and check-in
+9. Fix ui.js#793
 	- `document.getElementById( barcode_id ).focus();`
 	- make this optional , so that the edit page doesn't use this
-11. Fix Username/NameString to be Title Case?
-12. Make family-member management more streamlined
+10. Fix Username/NameString to be Title Case?
+11. Make family-member management more streamlined
 
 ## Misc
 
