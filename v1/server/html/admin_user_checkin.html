@@ -179,7 +179,7 @@
 					}
 
 					// 1.) Prep UI
-					this.buttons_stack = [ "check-in-print-button" , "edit-user-button" , "new-user-button" ];
+					this.buttons_stack = [ "check-in-print-button" , "edit-user-button" , "new-user-button" , "new-guest-button" ];
 					this.render_buttons();
 					set_url( `/admin/user/checkin/${window.USER.uuid}` );
 
@@ -204,13 +204,17 @@
 
 					window.FAMILY_MEMBERS = {};
 
-					// Add Self
+					// Dynamic Shopping For Selection - Add Self
 					// console.log( "adding self" );
 					let self_ulid = on_add_family_member_display();
 					let self_text = document.getElementById( `user_family_member_label_${self_ulid}` );
 					self_text.textContent = "Self";
 
-					// Add Family Members
+					// Dynamic Shopping For Selection - Add Guests
+					// by default none ,
+					// let guest_ulid = on_add_guest_display( event );
+
+					// Dynamic Shopping For Selection - Add Family Members
 					if ( window.USER[ "family_members" ] ) {
 						for ( let i = 0; i < window.USER[ "family_members" ].length; ++i ) {
 							if ( window.USER[ "family_members" ][ i ].age < 0 ) { continue; }
@@ -469,6 +473,9 @@
 				let girls = 0;
 				let men = 0;
 				let women = 0;
+				let guests = document.querySelectorAll( ".user-guest-member.btn-secondary" ).length;
+				shopping_for += guests;
+
 				Object.keys( window.FAMILY_MEMBERS ).forEach( ( i ) => {
 					const x = window.FAMILY_MEMBERS[ i ];
 					switch ( x.sex ) {
@@ -515,7 +522,8 @@
 					"uuid": window.USER.uuid ,
 					"shopping_for": shopping_for ,
 					"boys": boys , "girls": girls ,
-					"men": men , "women": women
+					"men": men , "women": women ,
+					"guests": guests ,
 				};
 				for ( let i = 0; i < balance_inputs.length; ++i ) {
 					form_data[ balance_inputs[ i ].id ] = parseInt( balance_inputs[ i ].value );
@@ -530,6 +538,21 @@
 				console.log( "on_new_button_click()" );
 				if ( event ) { event.preventDefault(); }
 				window.UI.render_new_form();
+			}
+
+			function on_new_guest_button_click( event ) {
+				console.log( "on_new_guest_button_click()" );
+				if ( event ) { event.preventDefault(); }
+				document.getElementById( "guest_zone" ).style.display = "block";
+				let guest_ulid = on_add_guest_display( event );
+				console.log( guest_ulid );
+				let shopping_for_family = document.querySelectorAll( ".user-family-member.btn-primary" ).length;
+				console.log( "shopping_for_family" , shopping_for_family );
+				let shopping_for_guests = document.querySelectorAll( ".user-guest-member.btn-secondary" ).length;
+				console.log( "shopping_for_guests" , shopping_for_guests );
+				let total_shopping_for = ( shopping_for_family + shopping_for_guests );
+				console.log( "total_shopping_for" , total_shopping_for );
+				populate_user_balance_table( total_shopping_for , window.USER.balance , window.BALANCE_CONFIG );
 			}
 
 			async function on_new_save_button_click( event ) {
@@ -814,6 +837,11 @@
 							text: "New User" ,
 							color: "success" ,
 							on_click: on_new_button_click ,
+						} ,
+						"new-guest-button": {
+							text: "New Guest" ,
+							color: "secondary" ,
+							on_click: on_new_guest_button_click ,
 						} ,
 						"new-user-save-button": {
 							text: "Save" ,

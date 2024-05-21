@@ -107,6 +107,7 @@ type User struct {
 	CreatedTime string `json:"created_time"`
 	CheckIns []CheckIn `json:"check_ins"`
 	FailedCheckIns []CheckIn `json:"failed_check_ins"`
+	TotalGuestsAdmitted int `json:"total_guests_admitted"`
 	Balance Balance `json:"balance"`
 	TimeRemaining int `json:"time_remaining"`
 	AllowedToCheckIn bool `json:"allowed_to_checkin"`

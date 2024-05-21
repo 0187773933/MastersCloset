@@ -87,6 +87,7 @@ type CustomLine struct {
 	Size float64 `json:"size"`
 	Y float64 `json:"page_height"`
 }
+
 type PrintJob struct {
 	FamilySize int `json:"family_size"`
 	TotalClothingItems int `json:"total_clothing_items"`
@@ -104,6 +105,7 @@ type PrintJob struct {
 	Girls int `json:"girls"`
 	Men int `json:"men"`
 	Women int `json:"women"`
+	Guests int `json:"guests"`
 }
 
 func add_centered_text( pdf *gofpdf.Fpdf , text string , font_name string , font_size float64 , at_page_height float64 ) {
@@ -328,6 +330,7 @@ func PrintTicket2( config types.PrinterConfig , job PrintJob ) {
 	// 5.) Shopping For Population
 	shopping_for_y1 := 4.6
 	shopping_for_y2 := 4.9
+	shopping_for_y3 := 5.1
 	if job.Spanish == true {
 		boys := get_plural_text( job.Boys , "Niño" , "Niños" )
 		girls := get_plural_text( job.Girls , "Niña" , "Niñas" )
@@ -337,6 +340,10 @@ func PrintTicket2( config types.PrinterConfig , job PrintJob ) {
 		shopping_for_adults_text := fmt.Sprintf( "%s , %s" , women , men )
 		add_centered_text( pdf , shopping_for_children_text , config.FontName , 16 , shopping_for_y1 )
 		add_centered_text( pdf , shopping_for_adults_text , config.FontName , 16 , shopping_for_y2 )
+		if job.Guests > 1 {
+			shopping_for_guests_text := get_plural_text( job.Guests , "Invitado" , "Invitados" )
+			add_centered_text( pdf , shopping_for_guests_text , config.FontName , 16 , shopping_for_y3 )
+		}
 	} else {
 		boys := get_plural_text( job.Boys , "Boy" , "Boys" )
 		girls := get_plural_text( job.Girls , "Girl" , "Girls" )
@@ -346,6 +353,10 @@ func PrintTicket2( config types.PrinterConfig , job PrintJob ) {
 		shopping_for_adults_text := fmt.Sprintf( "%s , %s" , women , men )
 		add_centered_text( pdf , shopping_for_children_text , config.FontName , 16 , shopping_for_y1 )
 		add_centered_text( pdf , shopping_for_adults_text , config.FontName , 16 , shopping_for_y2 )
+		if job.Guests > 1 {
+			shopping_for_guests_text := get_plural_text( job.Guests , "Guest" , "Guests" )
+			add_centered_text( pdf , shopping_for_guests_text , config.FontName , 16 , shopping_for_y3 )
+		}
 	}
 
 	// 6.) Family Name

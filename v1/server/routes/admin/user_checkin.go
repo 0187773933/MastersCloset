@@ -41,6 +41,7 @@ type CheckInBalanceForm struct {
 	Girls int `json:"girls"`
 	Men int `json:"men"`
 	Women int `json:"women"`
+	Guests int `json:"guests"`
 }
 
 // Refill If Empty , Subtract Check-In Ticket
@@ -63,7 +64,7 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 
 	var balance_form CheckInBalanceForm
 	json.Unmarshal( []byte( context.Body() ), &balance_form )
-	fmt.Println( "hello ???" , "UserCheckIn()" )
+	fmt.Println( "UserCheckIn()" )
 	fmt.Printf( "%+v\n" , balance_form )
 
 	// 1.) Prep
@@ -90,7 +91,7 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 	// now_time_zone := now.Location()
 	new_check_in.Date = now.Format( "02Jan2006" )
 	new_check_in.Time = now.Format( "15:04:05.000" )
-	new_check_in.Type = "forced"
+	new_check_in.Type = "normal"
 	new_check_in.Date = strings.ToUpper( new_check_in.Date )
 	// new_check_in.ShoppingFor = balance_form.ShoppingFor
 	// viewed_user.CheckIns = append( viewed_user.CheckIns , new_check_in )
@@ -175,7 +176,10 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 		Girls: balance_form.Girls ,
 		Men: balance_form.Men ,
 		Women: balance_form.Women ,
+		Guests: balance_form.Guests ,
 	}
+
+	viewed_user.TotalGuestsAdmitted = ( viewed_user.TotalGuestsAdmitted + balance_form.Guests )
 
 	new_check_in.UUID = viewed_user.UUID
 	new_check_in.Name = viewed_user.NameString

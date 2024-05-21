@@ -134,6 +134,9 @@ function get_ui_shopping_for_selector_advanced() {
 		</div>
 		<div class="col-sm-12 col-md-4 col-lg-6">
 			<div id="user_family_members"></div>
+			<div style="display: none;" id="guest_zone">
+				<div id="user_guests"></div>
+			</div>
 		</div>
 		<div class="col-lg-2"></div>
 	</div>
@@ -330,19 +333,19 @@ function _get_user_form() {
 					<div class="col-lg-2"></div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_first_name" type="text" class="form-control input-name" name="user_first_name">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_first_name" type="text" class="form-control input-name" name="user_first_name">
 							<label for="user_first_name">First Name</label>
 						</div>
 					</div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_middle_name" type="text" class="form-control input-name" name="user_middle_name">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_middle_name" type="text" class="form-control input-name" name="user_middle_name">
 							<label for="user_middle_name">Middle Name</label>
 						</div>
 					</div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_last_name" type="text" class="form-control input-name" name="user_last_name">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_last_name" type="text" class="form-control input-name" name="user_last_name">
 							<label for="user_last_name">Last Name</label>
 						</div>
 					</div>
@@ -354,13 +357,13 @@ function _get_user_form() {
 					<div class="col-lg-3"></div>
 					<div class="col-sm-12 col-md-4 col-lg-4">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_email" type="email" class="form-control" name="user_email">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_email" type="email" class="form-control" name="user_email">
 							<label for="user_email">Email Address</label>
 						</div>
 					</div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_phone_number" type="tel" class="form-control" name="user_phone_number">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_phone_number" type="tel" class="form-control" name="user_phone_number">
 							<label for="user_phone_number">Phone Number</label>
 						</div>
 					</div>
@@ -397,7 +400,7 @@ function _get_user_form() {
 				<div class="row g-2 mb-3">
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_street_number" type="text" class="form-control" name="user_street_number">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_street_number" type="text" class="form-control" name="user_street_number">
 							<label for="user_street_number">Street Number</label>
 						</div>
 					</div>
@@ -409,7 +412,7 @@ function _get_user_form() {
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_address_two" type="text" class="form-control" name="user_street_name">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_address_two" type="text" class="form-control" name="user_street_name">
 							<label for="user_address_two">Address 2</label>
 						</div>
 					</div>
@@ -419,19 +422,19 @@ function _get_user_form() {
 				<div class="row g-2 mb-3">
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_city" type="text" class="form-control" name="user_city">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_city" type="text" class="form-control" name="user_city">
 							<label for="user_city">City</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_state" type="text" class="form-control" name="user_state">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_state" type="text" class="form-control" name="user_state">
 							<label for="user_state">State</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_zip_code" type="text" class="form-control" name="user_zip_code">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_zip_code" type="text" class="form-control" name="user_zip_code">
 							<label for="user_zip_code">Zip Code</label>
 						</div>
 					</div>
@@ -442,7 +445,7 @@ function _get_user_form() {
 
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_birth_day" type="number" min="1" max="31" class="form-control" name="user_birth_day_name">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_birth_day" type="number" min="1" max="31" class="form-control" name="user_birth_day_name">
 							<label for="user_birth_day_name">Birth Day</label>
 						</div>
 					</div>
@@ -467,7 +470,7 @@ function _get_user_form() {
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_birth_year" type="number" min="1900" max="2100" class="form-control" name="user_birth_year_name">
+							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_birth_year" type="number" min="1900" max="2100" class="form-control" name="user_birth_year_name">
 							<label for="user_birth_year_name">Birth Year</label>
 						</div>
 					</div>
@@ -851,8 +854,7 @@ function on_add_family_member_display( event ) {
 			event.target.classList.add( "btn-primary" );
 			event.target.setAttribute( "selected" , "true" );
 		}
-		let shopping_for = document.querySelectorAll( ".user-family-member.btn-primary" ).length;
-		populate_user_balance_table( shopping_for , window.USER.balance , window.BALANCE_CONFIG );
+		_new_recalc_with_guests_and_populate_user_balance_table();
 	});
 	col_2.appendChild( name );
 	container.appendChild( col_2 );
@@ -899,6 +901,85 @@ function on_add_family_member_display( event ) {
 
 	holder.appendChild( new_row );
 	return family_member_ulid;
+}
+
+function _new_recalc_with_guests_and_populate_user_balance_table() {
+	let shopping_for_family = document.querySelectorAll( ".user-family-member.btn-primary" ).length;
+	console.log( "shopping_for_family" , shopping_for_family );
+	let shopping_for_guests = document.querySelectorAll( ".user-guest-member.btn-secondary" ).length;
+	console.log( "shopping_for_guests" , shopping_for_guests );
+	let total_shopping_for = ( shopping_for_family + shopping_for_guests );
+	console.log( "total_shopping_for" , total_shopping_for );
+	populate_user_balance_table( total_shopping_for , window.USER.balance , window.BALANCE_CONFIG );
+}
+
+function on_add_guest_display( event ) {
+	if ( event ) { event.preventDefault(); }
+	console.log( "on_add_guest_display()" );
+	let guest_member_ulid = ULID.ulid();
+	let previous_total_guests = document.querySelectorAll( ".user-guest-member" ).length;;
+	let new_total_guests = ( previous_total_guests + 1 );
+	// let family_member_id = `user_family_member_${family_member_ulid}`;
+	// window.FAMILY_MEMBERS[ family_member_ulid ] = { "age": -1 , "spouse": false , "sex": "" };
+	let holder = document.getElementById( "user_guests" );
+	let new_row = document.createElement( "div" );
+	new_row.setAttribute( "id" , `user_guest_member_row_${guest_member_ulid}` );
+	new_row.className = "row no-gutters";
+	let line_break = document.createElement( "br" );
+	new_row.appendChild( line_break );
+
+	let container = document.createElement( "div" );
+	container.className = "d-flex justify-content-start";
+
+	// // Un-Named Family Member Name/ID
+	let col_2 = document.createElement( "div" );
+	col_2.className = "p-2";
+	let name = document.createElement( "button" );
+	name.setAttribute( "type" , "button" );
+	name.className = "btn btn-secondary user-guest-member";
+	name.textContent = `Guest - ${new_total_guests}`;
+	name.setAttribute( "id" , `user_guest_label_${guest_member_ulid}` );
+	name.addEventListener( "click" , function( event ) {
+		if ( event.target.classList.contains( "btn-secondary" ) ) {
+			event.target.classList.remove( "btn-secondary" );
+			event.target.classList.add( "btn-light" );
+			event.target.setAttribute( "selected" , "false" );
+		} else {
+			event.target.classList.remove( "btn-light" );
+			event.target.classList.add( "btn-secondary" );
+			event.target.setAttribute( "selected" , "true" );
+		}
+		_new_recalc_with_guests_and_populate_user_balance_table();
+	});
+	col_2.appendChild( name );
+	container.appendChild( col_2 );
+
+	// Delete Button
+	let col_3 = document.createElement( "div" );
+	col_3.className = "p-2";
+
+	let guest_delete_button = document.createElement( "a" );
+	guest_delete_button.className = "btn btn-danger p-1";
+	let guest_delete_button_icon = document.createElement( "i" );
+	guest_delete_button_icon.className = "bi bi-trash3-fill";
+	guest_delete_button.appendChild( guest_delete_button_icon );
+	guest_delete_button.onclick = function() {
+		this.parentNode.parentNode.parentNode.remove();
+		let guests = document.querySelectorAll( ".user-guest-member" );
+		for ( let i = 0; i < guests.length; ++i ) {
+			guests[ i ].textContent = `Guest - ${i+1}`;
+		}
+		_new_recalc_with_guests_and_populate_user_balance_table();
+	};
+
+	col_3.appendChild( guest_delete_button );
+	container.appendChild( col_3 );
+
+	new_row.appendChild( container );
+	new_row.setAttribute( "style" , "padding-bottom: 5px;" );
+
+	holder.appendChild( new_row );
+	return guest_member_ulid;
 }
 
 function on_add_barcode( event ) {
