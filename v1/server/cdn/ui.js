@@ -126,6 +126,7 @@ function get_ui_shopping_for_selector() {
 }
 
 function get_ui_shopping_for_selector_advanced() {
+	console.log( "not updating?" );
 	return `
 	<div class="row">
 		<div class="col-lg-2"></div>
