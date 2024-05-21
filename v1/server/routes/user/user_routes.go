@@ -78,6 +78,10 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	fiber_app.Get( "/ical" , public_limiter , func( context *fiber.Ctx ) ( error ) {
 		return context.Redirect( google_ical_link , fiber.StatusMovedPermanently )
 	})
+	fiber_app.Get( "/calendar" , public_limiter , func( context *fiber.Ctx ) ( error ) {
+		context.Set( "Content-Type" , "text/html" )
+		return context.SendFile( "./v1/server/html/calendar.html" )
+	})
 
 	user_route_group := fiber_app.Group( "/user" )
 	user_route_group.Get( "/login/fresh/:uuid" , public_limiter , LoginFresh )
