@@ -74,12 +74,18 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	// fiber_app.Post( "/user/new" , user_creation_limiter , HandleNewUserJoin )
 	fiber_app.Get( "/checkin" , public_limiter , CheckIn )
 
+	google_ical_link := "https://calendar.google.com/calendar/ical/masters.closet.5950%40gmail.com/public/basic.ics"
+	fiber_app.Get( "/ical" , public_limiter , func( context *fiber.Ctx ) ( error ) {
+		return context.Redirect( google_ical_link , fiber.StatusMovedPermanently )
+	})
+
 	user_route_group := fiber_app.Group( "/user" )
 	user_route_group.Get( "/login/fresh/:uuid" , public_limiter , LoginFresh )
 	// user_route_group.Get( "/login/success/:uuid" , LoginSuccess )
 	// user_route_group.Get( "/checkin/display/:uuid" , public_limiter , CheckInDisplay )
 	user_route_group.Get( "/checkin" , public_limiter , CheckIn )
 	user_route_group.Get( "/checkin/silent/:uuid" , public_limiter , CheckInSilentTest )
+
 
 	fiber_app.Get( "/*" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.Redirect( "/" ) } )
 }
