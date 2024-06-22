@@ -28,6 +28,7 @@
 							audioChunks.push(event.data);
 							media_type = event.data.type;
 							// 1 and done? why doesn't this call more often?
+							console.log( "using 'dataavilable' hook" );
 							const audioBlob = new Blob(audioChunks);
 							sendAudioToAPI(audioBlob);
 						});
@@ -46,6 +47,7 @@
 				stopButton.disabled = true;
 				startButton.disabled = false;
 				const audioBlob = new Blob(audioChunks);
+				console.log( "using 'stop-button-click' hook" );
 				console.log( audioBlob );
 				sendAudioToAPI(audioBlob);
 			});
@@ -53,6 +55,7 @@
 			mediaRecorder && mediaRecorder.addEventListener('stop', () => {
 				console.log( "stopped" );
 				const audioBlob = new Blob(audioChunks);
+				console.log( "using 'stop' hook" );
 				console.log( audioBlob );
 				sendAudioToAPI(audioBlob);
 			});

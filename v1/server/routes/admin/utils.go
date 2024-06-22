@@ -89,7 +89,7 @@ func PrintTwo( context *fiber.Ctx ) ( error ) {
 	})
 }
 
-func getAIParsedJSONOfAudioDescriptionOfFamily(audioTranscription string) (map[string]interface{}, error) {
+func getAIParsedJSONOfAudioDescriptionOfFamily(audioTranscription string) ( map[string]interface{}, error) {
 	assistantInstructions := `
 		convert the input into a structured JSON object, including only the details provided:
 		{
@@ -110,15 +110,12 @@ func getAIParsedJSONOfAudioDescriptionOfFamily(audioTranscription string) (map[s
 				"birth_month": "${BIRTH_MONTH}" ,
 				"birth_year": "${BIRTH_YEAR}"
 			} ,
-			"adults": [
+			"family_members": [
 				{
 					"age": ${ADULT_1_AGE} ,
 					"sex": ${ADULT_1_SEX} ,
 					"spouse": ${ADULT_1_SPOUSE_OF_SELF}
 				} ,
-				...
-			]
-			"children": [
 				{
 					"age": ${CHILD_1_AGE} ,
 					"sex": ${CHILD_1_SEX}
@@ -186,12 +183,12 @@ func AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
 	fmt.Println( "AudioToBaseUserStructure" )
 	var data types.AudioData
 	if err := c.BodyParser(&data); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"result": false, "error": err.Error()})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": err.Error()})
 	}
 
 	audioData, err := base64.StdEncoding.DecodeString(data.Audio)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"result": false, "error": "invalid base64 audio"})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": "invalid base64 audio"})
 	}
 
 	primaryMimeType := strings.Split(data.Type, ";")[0]
@@ -211,12 +208,12 @@ func AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
 	tmpFilePath := tmpFile.Name()
 	fmt.Println( tmpFilePath )
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"result": false, "error": "could not create temp file"})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": "could not create temp file"})
 	}
 	defer os.Remove(tmpFilePath)
 
 	if _, err := tmpFile.Write(audioData); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"result": false, "error": "could not write to temp file"})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": "could not write to temp file"})
 	}
 
 	// fmt.Println( "stage 2" )
@@ -228,7 +225,7 @@ func AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
 
 	file, err := os.Open(tmpFilePath)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"result": false, "error": "could not open temp file"})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": "could not open temp file"})
 	}
 	defer file.Close()
 
@@ -236,17 +233,17 @@ func AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
 	writer := multipart.NewWriter(body)
 	part, err := writer.CreateFormFile("file", filepath.Base(tmpFilePath))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"result": false, "error": "could not create form file"})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": "could not create form file"})
 	}
 	if _, err := io.Copy(part, file); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"result": false, "error": "could not copy file content"})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": "could not copy file content"})
 	}
 	writer.WriteField("model", "whisper-1")
 	writer.Close()
 
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"result": false, "error": "could not create request"})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": "could not create request"})
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	for key, value := range headers {
@@ -256,7 +253,7 @@ func AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"result": false, "error": "request failed"})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": "request failed"})
 	}
 	defer resp.Body.Close()
 
@@ -267,7 +264,7 @@ func AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
 
 	var decoded map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"result": false, "error": "could not decode response"})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": "could not decode response"})
 	}
 
 	// fmt.Println( "stage 3" )
@@ -279,7 +276,7 @@ func AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
 	fmt.Println( instructions )
 	aiParsedJSON, err := getAIParsedJSONOfAudioDescriptionOfFamily(instructions)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"result": false, "error": err.Error() , "instructions": instructions , "decoded": aiParsedJSON})
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": err.Error() , "instructions": instructions , "decoded": aiParsedJSON})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": aiParsedJSON})

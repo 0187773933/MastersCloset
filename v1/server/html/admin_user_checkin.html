@@ -115,7 +115,12 @@
 					for ( let i = 0; i < this.buttons_stack.length; ++i ) {
 						let x_button = this.buttons[ this.buttons_stack[ i ] ];
 						if ( !x_button ) { return; }
-						let html = `<button id="${this.buttons_stack[ i ]}" type="submit" class="btn btn-${x_button.color}">${x_button.text}</button>`
+						let html = "";
+						if ( x_button.text.startsWith( "bi " ) ) {
+							html = `<button id="${this.buttons_stack[ i ]}" type="submit" class="btn btn-${x_button.color}"><i class="${x_button.text}"></i></button>`
+						} else {
+							html = `<button id="${this.buttons_stack[ i ]}" type="submit" class="btn btn-${x_button.color}">${x_button.text}</button>`
+						}
 						// x_id.visible = true;
 						new_ui_stack.push( html );
 					}
@@ -328,7 +333,7 @@
 					console.log( "render_new_form()" );
 					set_url( `/admin/user/checkin/new` );
 					window.STATE = "new";
-					this.buttons_stack = [ "new-user-save-button" , "new-user-cancel-button" ];
+					this.buttons_stack = [ "new-user-save-button" , "new-user-cancel-button" , "new-user-ai-speech-button" ];
 					this.render_buttons();
 					this.stack = [ "user_new_form" , "user_qr_code" , "similar_users" ];
 					this.render();
@@ -666,6 +671,155 @@
 				}
 			}
 
+			function on_ai_speech_new_user_button_click(event) {
+				if (event) { event.preventDefault(); }
+				let x_button;
+				switch (event.target.tagName) {
+					case "BUTTON":
+						x_button = event.target;
+						break;
+					case "I":
+						x_button = event.target.parentElement;
+						break;
+					default:
+						return;
+				}
+				console.log(x_button);
+				if (window.UI.microphone_active === true) {
+					console.log("stopping the recording, and sending off to have it transcribed and converted to JSON user object");
+
+					window.UI.media_recorder.stop();
+					window.UI.microphone_active = false;
+					window.UI.microphone_ready = true;
+					x_button.classList.remove( "btn-danger" );
+					x_button.classList.add( "btn-secondary" );
+				} else {
+					if (window.UI.microphone_ready === false) {
+						console.log( "still waiting on previous recording to be decoded" );
+						return;
+					}
+					console.log( "starting the recording" );
+					window.UI.microphone_active = true;
+					window.UI.microphone_ready = false;
+					x_button.classList.remove( "btn-secondary" );
+					x_button.classList.add( "btn-danger" );
+
+					navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+						window.UI.media_recorder = new MediaRecorder(stream);
+						window.UI.audio_chunks = [];
+						console.log( "Recording started" );
+						window.UI.media_recorder.addEventListener( "dataavailable" , event => {
+							console.log( event.data );
+							window.UI.audio_chunks.push( event.data );
+							window.UI.media_type = event.data.type;
+						});
+						window.UI.media_recorder.addEventListener("stop", () => {
+							console.log( "stopped" );
+							window.UI.microphone_ready = false;
+							const audio_blob = new Blob( window.UI.audio_chunks );
+							console.log( "using 'stop' hook" , window.UI.audio_chunks.length );
+							api_transcribe_base_user_structure( audio_blob ).then( decoded => {
+								window.UI.microphone_ready = true;
+								console.log( "we have decoded ai transcription of user description!!!" );
+								console.log( decoded );
+								if ( decoded.result === false ) { return; }
+								let a = decoded.result;
+								// Self information mapping
+								const self = a.self || {};
+								const self_map = {
+									'identity.first_name': { value: self.first_name, id: 'user_first_name' },
+									'identity.middle_name': { value: self.middle_name, id: 'user_middle_name' },
+									'identity.last_name': { value: self.last_name, id: 'user_last_name' },
+									'identity.address.street_number': { value: self.street_number, id: 'user_street_number' },
+									'identity.address.street_name': { value: self.street_name, id: 'user_street_name' },
+									'identity.address.city': { value: self.city, id: 'user_city' },
+									'identity.address.state': { value: self.state, id: 'user_state' },
+									'identity.address.zipcode': { value: self.zip_code, id: 'user_zip_code' },
+									'identity.date_of_birth.day': { value: self.birth_day, id: 'user_birth_day' },
+									'identity.date_of_birth.month': { value: self.birth_month, id: 'user_birth_month' },
+									'identity.date_of_birth.year': { value: self.birth_year, id: 'user_birth_year' },
+									'email_address': { value: self.email_address, id: 'user_email' },
+									'phone_number': { value: self.phone_number, id: 'user_phone_number' }
+								};
+								const month_map = {
+									'1': 'JAN', '2': 'FEB', '3': 'MAR', '4': 'APR', '5': 'MAY', '6': 'JUN',
+									'7': 'JUL', '8': 'AUG', '9': 'SEP', '10': 'OCT', '11': 'NOV', '12': 'DEC',
+									'01': 'JAN', '02': 'FEB', '03': 'MAR', '04': 'APR', '05': 'MAY', '06': 'JUN',
+									'07': 'JUL', '08': 'AUG', '09': 'SEP', '10': 'OCT', '11': 'NOV', '12': 'DEC',
+									'January': 'JAN', 'February': 'FEB', 'March': 'MAR', 'April': 'APR', 'May': 'MAY', 'June': 'JUN',
+									'July': 'JUL', 'August': 'AUG', 'September': 'SEP', 'October': 'OCT', 'November': 'NOV', 'December': 'DEC',
+									'Jan': 'JAN', 'Feb': 'FEB', 'Mar': 'MAR', 'Apr': 'APR', 'May': 'MAY', 'Jun': 'JUN',
+									'Jul': 'JUL', 'Aug': 'AUG', 'Sep': 'SEP', 'Oct': 'OCT', 'Nov': 'NOV', 'Dec': 'DEC'
+								};
+								Object.keys( self_map ).forEach( key => {
+									const { value , id } = self_map[ key ];
+									if ( value !== undefined && value !== null ) {
+										const x_input = document.getElementById( id );
+										switch( id ) {
+											case "user_birth_month":
+												let m_value = month_map[ value ];
+												set_nested_property( window.USER , key.split( '.' ) , m_value );
+												console.log( "updating user with ai-parsed value" , key , m_value );
+												x_input.value = m_value
+												break;
+											default:
+												console.log( "updating user with ai-parsed value" , key , value );
+												set_nested_property( window.USER , key.split( '.' ) , value );
+												x_input.value = value !== null && value !== undefined ? value : '';
+												break;
+										}
+									}
+								});
+								// TODO , clean up possible vague age into birthdate
+								// TODO , need to allow updates to propagate to already added family members.
+
+								if ( !a.family_members ) { return; }
+								console.log( "up next , family members" );
+								console.log( a.family_members );
+								// Populate Family Members
+								for ( let i = 0; i < a.family_members.length; ++i ) {
+									const family_member = a.family_members[ i ];
+									// const family_member_id = `family_member_${i}`;
+									const family_member_ulid = on_add_family_member();
+									window.FAMILY_MEMBERS[ family_member_ulid ] = family_member;
+									window.FAMILY_MEMBERS[ family_member_ulid ].age = parseInt( family_member.age )
+									console.log( family_member_ulid );
+									const age = document.getElementById( `user_family_member_${family_member_ulid}_age` );
+									age.value = window.FAMILY_MEMBERS[ family_member_ulid ].age
+									if ( window.FAMILY_MEMBERS[ family_member_ulid ].age >= 18 ) {
+										let spouse = family_member.spouse;
+										console.log( "spouse ===" , spouse );
+										// const spouse_checkbox = document.getElementById( `user_family_member_${family_member_ulid}_spouse` );
+									}
+									let sex = family_member.sex.toLowerCase();
+									switch ( sex ) {
+										case "male":
+										case "man":
+										case "boy":
+											const gender_label_male_radio_button = document.getElementById( `user_family_member_${family_member_ulid}_gender_label_male` );
+											gender_label_male_radio_button.click();
+											window.FAMILY_MEMBERS[ family_member_ulid ].sex = "male";
+											break;
+										case "female":
+										case "woman":
+										case "girl":
+											const gender_label_female_radio_button = document.getElementById( `user_family_member_${family_member_ulid}_gender_label_female` );
+											window.FAMILY_MEMBERS[ family_member_ulid ].sex = "female";
+											break;
+									}
+								}
+							}).catch( error => {
+								console.error("Error transcribing audio:", error);
+								window.UI.microphone_ready = true;
+							});
+						});
+						window.UI.media_recorder.start();
+					}).catch(e => {
+						console.error('Error accessing media devices.', e);
+					});
+				}
+			}
+
 			// ON SCAN
 			async function _on_check_in_input_change( typed_input="" ) {
 				console.log( "_on_check_in_input_change()" , typed_input );
@@ -868,7 +1022,17 @@
 							color: "secondary" ,
 							on_click: on_email_user_button_click ,
 						} ,
+						"new-user-ai-speech-button": {
+							text: "bi bi-mic-fill" ,
+							color: "secondary" ,
+							on_click: on_ai_speech_new_user_button_click ,
+						}
 					} ,
+					microphone_active: false ,
+					microphone_ready: true ,
+					media_recorder: null ,
+					audio_chunks: [] ,
+					media_type: "" ,
 				});
 				// window.UI.hide_all_buttons();
 				$( "#user-search-input" ).on( "input" , on_check_in_input_change );

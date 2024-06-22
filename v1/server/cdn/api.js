@@ -41,6 +41,42 @@ function api_check_in_uuid( uuid , balance_form_data ) {
 	});
 }
 
+function api_transcribe_base_user_structure( audio_blob ) {
+	return new Promise( function( resolve , reject ) {
+		try {
+			let x_url = `${ServerBaseURL}/admin/transcribe/base-user-structure`;
+			const reader = new FileReader();
+			reader.readAsDataURL( audio_blob );
+			reader.onload = () => {
+				const base_64_audio_message = reader.result.split( ',' )[ 1 ];
+				if ( base_64_audio_message.length < 3 ) { return; }
+				console.log( base_64_audio_message );
+				// console.log( audio_blob.type );
+				console.log( window.UI.media_type );
+				fetch( x_url , {
+					method: "POST" ,
+					headers: {
+						"Content-Type": "application/json" ,
+						"key": ServerAPIKey
+					} ,
+					body: JSON.stringify( { audio: base_64_audio_message , type: window.UI.media_type } )
+				})
+				.then( response => response.json() )
+				.then( data => {
+					resolve( data );
+					return;
+				})
+				.catch(error => {
+					console.error( 'Error processing audio:' , error );
+					resolve( false );
+					return;
+				});
+			};
+		}
+		catch( error ) { console.log( error ); resolve( false ); return; }
+	});
+}
+
 function api_print( print_job ) {
 	return new Promise( async function( resolve , reject ) {
 		try {
