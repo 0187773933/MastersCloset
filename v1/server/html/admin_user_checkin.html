@@ -791,6 +791,7 @@
 										console.log( "spouse ===" , spouse );
 										// const spouse_checkbox = document.getElementById( `user_family_member_${family_member_ulid}_spouse` );
 									}
+									if ( !family_member.sex ) { continue; }
 									let sex = family_member.sex.toLowerCase();
 									switch ( sex ) {
 										case "male":
