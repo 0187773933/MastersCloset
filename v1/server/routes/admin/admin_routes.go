@@ -1,6 +1,7 @@
 package adminroutes
 
 import (
+	// "fmt"
 	fiber "github.com/gofiber/fiber/v2"
 	types "github.com/0187773933/MastersCloset/v1/types"
 	logger "github.com/0187773933/MastersCloset/v1/logger"
@@ -33,6 +34,7 @@ var ui_html_pages = map[ string ]string {
 	"/email": "./v1/server/html/admin_email_all_users.html" ,
 	"/logs": "./v1/server/html/admin_view_all_log_files.html" ,
 	"/logs/:file_name": "./v1/server/html/admin_view_log_file.html" ,
+	"/at": "./v1/server/html/audio_test.html" ,
 }
 
 func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
@@ -42,6 +44,7 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	// HTML UI Pages
 	admin_route_group.Get( "/login" , ServeLoginPage )
 	for url , _ := range ui_html_pages {
+		// fmt.Println( "Registering" , url )
 		admin_route_group.Get( url , ServeAuthenticatedPage )
 	}
 
@@ -93,5 +96,7 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	admin_route_group.Post( "/user/sms/all" , SMSAllUsers )
 	admin_route_group.Post( "/user/email/all" , EmailAllUsers )
 	admin_route_group.Post( "/user/email" , EmailUser )
+
+	admin_route_group.Post( "/transcribe/base-user-structure" , AudioToBaseUserStructure )
 
 }

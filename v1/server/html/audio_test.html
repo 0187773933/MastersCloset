@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Family Structure Recorder</title>
+</head>
+<body>
+	<button id="startButton">Start Recording</button>
+	<button id="stopButton" disabled>Stop Recording</button>
+	<pre id="output"></pre>
+	<script>
+		document.addEventListener("DOMContentLoaded", function() {
+			const startButton = document.getElementById('startButton');
+			const stopButton = document.getElementById('stopButton');
+			let mediaRecorder;
+			let audioChunks = [];
+			let media_type = "";
+			startButton.addEventListener('click', function() {
+				navigator.mediaDevices.getUserMedia({ audio: true })
+					.then(stream => {
+						mediaRecorder = new MediaRecorder(stream);
+						mediaRecorder.start();
+						audioChunks = [];
+						console.log('Recording started');
+						mediaRecorder.addEventListener( 'dataavailable' , event => {
+							console.log(event.data);
+							audioChunks.push(event.data);
+							media_type = event.data.type;
+							// 1 and done? why doesn't this call more often?
+							const audioBlob = new Blob(audioChunks);
+							sendAudioToAPI(audioBlob);
+						});
+
+						stopButton.disabled = false;
+						startButton.disabled = true;
+					})
+					.catch(e => {
+						console.error('Error accessing media devices.', e);
+					});
+			});
+
+			stopButton.addEventListener('click', function() {
+				console.log( "stopped" );
+				mediaRecorder.stop();
+				stopButton.disabled = true;
+				startButton.disabled = false;
+				const audioBlob = new Blob(audioChunks);
+				console.log( audioBlob );
+				sendAudioToAPI(audioBlob);
+			});
+
+			mediaRecorder && mediaRecorder.addEventListener('stop', () => {
+				console.log( "stopped" );
+				const audioBlob = new Blob(audioChunks);
+				console.log( audioBlob );
+				sendAudioToAPI(audioBlob);
+			});
+
+			function sendAudioToAPI(audioBlob) {
+				const reader = new FileReader();
+				reader.readAsDataURL(audioBlob);
+				reader.onload = () => {
+					const base64AudioMessage = reader.result.split(',')[1];
+					if ( base64AudioMessage.length < 3 ) { return; }
+					console.log( base64AudioMessage );
+					// console.log( audioBlob.type );
+					console.log( media_type );
+					fetch( '/admin/transcribe/base-user-structure' , {
+						method: 'POST' ,
+						headers: {
+							'Content-Type': 'application/json'
+						} ,
+						body: JSON.stringify({ audio: base64AudioMessage , type: media_type })
+					})
+					.then(response => response.json())
+					.then(data => {
+						console.log( data );
+						window.PARSED = data;
+						document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+					})
+					.catch(error => {
+						console.error('Error processing audio:', error);
+					});
+				};
+			}
+		});
+	</script>
+</body>
+</html>

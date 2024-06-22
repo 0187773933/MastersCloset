@@ -4,6 +4,11 @@ import (
 	// fiber "github.com/gofiber/fiber/v2"
 )
 
+type AudioData struct {
+	Audio string `json:"audio"`
+	Type  string `json:"type"`
+}
+
 type RedisConfig struct {
 	Host string `json:"host"`
 	Port string `json:"port"`
@@ -61,6 +66,7 @@ type ConfigFile struct {
 	TwilioClientID string `json:"twilio_client_id"`
 	TwilioAuthToken string `json:"twilio_auth_token"`
 	TwilioSMSFromNumber string `json:"twilio_sms_from_number"`
+	OpenAIAPIKey string `json:"open_ai_api_key"`
 	Email EmailConfig `json:"email"`
 	Redis RedisConfig `json:"redis"`
 	IPBlacklist []string `json:"ip_blacklist"`
