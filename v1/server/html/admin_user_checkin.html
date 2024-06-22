@@ -791,9 +791,11 @@
 									}
 
 									if ( "spouse" in family_member ) {
-										let s_val = family_member.spouse.toLowerCase();
-										let s_val_bool = Boolean( s_val );
-										if ( s_val_bool === true ) {
+										let spouse = family_member.spouse;
+										if ( typeof spouse === 'string' ) {
+											spouse = spouse.toLowerCase() === 'true';
+										}
+										if ( spouse === true ) {
 											const spouse_checkbox = document.getElementById( `user_family_member_${family_member_ulid}_spouse` );
 											spouse_checkbox.checked = spouse;
 										}
