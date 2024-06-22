@@ -35,7 +35,7 @@
 				<div class="table-responsive-sm">
 					<table id="check-in-table" class="table table-hover table-striped-columns">
 						<thead>
-							<tr>
+							<tr id="table-head-tr">
 								<th scope="col">Time <button class="btn btn-secondary btn-small" onclick="sort_table( 0 , 'time' )" data-sort="desc"><i class="bi bi-sort-down"></i></button></th>
 								<th scope="col">Name <button class="btn btn-secondary btn-small" onclick="sort_table( 1 , 'alphabetical' )" data-sort="desc"><i class="bi bi-sort-down"></i></button></th>
 								<th scope="col">Total Shopped For <button class="btn btn-secondary btn-small" onclick="sort_table( 2 , 'numerical' )" data-sort="desc"><i class="bi bi-sort-down"></i></button></th>
@@ -154,7 +154,8 @@
 				if ( !window.checkins ) { return; }
 				for ( let i = 0; i < window.checkins.length; ++i ) {
 					let _tr = document.createElement( "tr" );
-
+					_tr.setAttribute( "uuid" , window.checkins[ i ][ "uuid" ] );
+					_tr.setAttribute( "ulid" , window.checkins[ i ].ULID );
 					let time_string = document.createElement( "td" );
 					time_string.textContent = window.checkins[ i ].time;
 					// _tr.appendChild( time_string );
@@ -225,6 +226,8 @@
 				sort_table( 0 , method="time" , true );
 				$( document).ready( function(){
 					$( "tr" ).click(function(){
+						// if ( this.getAttribute( "uuid" ) === undefined ) { return; }
+						if ( this.id === "table-head-tr" ) { return; }
 						$( this ).toggleClass( "selected" );
 					});
 				});
@@ -235,10 +238,13 @@
 						console.log( "delete confimed" );
 						let to_delete = [];
 						$( "tr.selected" ).each( function(){
-							let x_href = this.childNodes[ 0 ].childNodes[ 2 ].href;
-							let x_href_parts = x_href.split( "/" );
-							let x_uuid = x_href_parts[ x_href_parts.length - 3 ];
-							let x_ulid = x_href_parts[ x_href_parts.length - 1 ];
+							// let x_href = this.childNodes[ 0 ].childNodes[ 2 ].href;
+							// let x_href_parts = x_href.split( "/" );
+							// let x_uuid = x_href_parts[ x_href_parts.length - 3 ];
+							// let x_ulid = x_href_parts[ x_href_parts.length - 1 ];
+							let x_uuid = this.getAttribute( "uuid" );
+							let x_ulid = this.getAttribute( "ulid" );
+							console.log( "deleting" ,  x_uuid , x_ulid );
 							to_delete.push( [ x_uuid , x_ulid ] );
 						});
 						for ( let i = 0; i < to_delete.length; ++i ) {
