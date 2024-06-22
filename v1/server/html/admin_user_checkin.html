@@ -782,31 +782,40 @@
 									// const family_member_id = `family_member_${i}`;
 									const family_member_ulid = on_add_family_member();
 									window.FAMILY_MEMBERS[ family_member_ulid ] = family_member;
-									window.FAMILY_MEMBERS[ family_member_ulid ].age = parseInt( family_member.age )
-									console.log( family_member_ulid );
-									const age = document.getElementById( `user_family_member_${family_member_ulid}_age` );
-									age.value = window.FAMILY_MEMBERS[ family_member_ulid ].age
-									if ( window.FAMILY_MEMBERS[ family_member_ulid ].age >= 18 ) {
-										let spouse = family_member.spouse;
-										console.log( "spouse ===" , spouse );
-										// const spouse_checkbox = document.getElementById( `user_family_member_${family_member_ulid}_spouse` );
+
+									if ( "age" in family_member ) {
+										window.FAMILY_MEMBERS[ family_member_ulid ].age = parseInt( family_member.age )
+										console.log( family_member_ulid );
+										const age = document.getElementById( `user_family_member_${family_member_ulid}_age` );
+										age.value = window.FAMILY_MEMBERS[ family_member_ulid ].age
 									}
-									if ( !family_member.sex ) { continue; }
-									let sex = family_member.sex.toLowerCase();
-									switch ( sex ) {
-										case "male":
-										case "man":
-										case "boy":
-											const gender_label_male_radio_button = document.getElementById( `user_family_member_${family_member_ulid}_gender_label_male` );
-											gender_label_male_radio_button.click();
-											window.FAMILY_MEMBERS[ family_member_ulid ].sex = "male";
-											break;
-										case "female":
-										case "woman":
-										case "girl":
-											const gender_label_female_radio_button = document.getElementById( `user_family_member_${family_member_ulid}_gender_label_female` );
-											window.FAMILY_MEMBERS[ family_member_ulid ].sex = "female";
-											break;
+
+									if ( "spouse" in family_member ) {
+										let s_val = family_member.spouse.toLowerCase();
+										let s_val_bool = Boolean( s_val );
+										if ( s_val_bool === true ) {
+											const spouse_checkbox = document.getElementById( `user_family_member_${family_member_ulid}_spouse` );
+											spouse_checkbox.checked = spouse;
+										}
+									}
+									if ( "sex" in family_member ) {
+										let sex = family_member.sex.toLowerCase();
+										switch ( sex ) {
+											case "male":
+											case "man":
+											case "boy":
+												const gender_label_male_radio_button = document.getElementById( `user_family_member_${family_member_ulid}_gender_label_male` );
+												gender_label_male_radio_button.click();
+												window.FAMILY_MEMBERS[ family_member_ulid ].sex = "male";
+												break;
+											case "female":
+											case "woman":
+											case "girl":
+												const gender_label_female_radio_button = document.getElementById( `user_family_member_${family_member_ulid}_gender_label_female` );
+												gender_label_female_radio_button.click();
+												window.FAMILY_MEMBERS[ family_member_ulid ].sex = "female";
+												break;
+										}
 									}
 								}
 							}).catch( error => {
