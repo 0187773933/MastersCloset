@@ -1,0 +1,53 @@
+{
+	"server_base_url": "http://localhost:4000" ,
+	"server_port": "4000" ,
+	"server_api_key": "asdf" ,
+	"server_cookie_secret": "asdf=" ,
+	"server_cookie_admin_secret_message": "asdf" ,
+	"server_cookie_secret_message": "asdf" ,
+	"server_live_url": "http://localhost:4000" ,
+	"local_host_url": "http://localhost:4000" ,
+	"admin_username": "asdf" ,
+	"admin_password": "asdf" ,
+	"time_zone": "America/New_York" ,
+	"bolt_db_path": "mct.db" ,
+	"bolt_db_encryption_key": "asdf" ,
+	"bleve_search_path": "mct.bleve" ,
+	"twilio_client_id": "asdf" ,
+	"twilio_auth_token": "asdf" ,
+	"twilio_sms_from_number": "+19997777777" ,
+	"open_ai_api_key": "sk-asdf" ,
+	"email": {
+		"smtp_server" : "smtp.gmail.com" ,
+		"smtp_server_url": "smtp.gmail.com:587" ,
+		"smtp_auth_email": "asdf@gmail.com" ,
+		"smtp_auth_password": "asdf" ,
+		"from": "asdf@example.com"
+	} ,
+	"redis": {
+		"host": "0.0.0.0" ,
+		"port": "6379" ,
+		"db": 3
+	} ,
+	"printer": {
+		"speed": 6 ,
+		"page_width": 4 ,
+		"page_height": 6 ,
+		"font_name": "ComicNeue" ,
+		"font_path": "./v1/printer/ComicNeue-Regular.ttf" ,
+		"printer_name": "_4BARCODE_4B_2054N" ,
+		"logo_file_path": "./v1/server/cdn/logo.png"
+	} ,
+	"check_in_cooloff_days": 30 ,
+	"balance": {
+		"general": {
+			"total": 6 ,
+			"tops": 6 ,
+			"bottoms": 3 ,
+			"dresses": 1
+		} ,
+		"shoes": 1 ,
+		"seasonals": 1 ,
+		"accessories": 2
+	}
+}

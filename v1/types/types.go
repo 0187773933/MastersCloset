@@ -31,6 +31,7 @@ type BalanceConfig struct {
 }
 
 type PrinterConfig struct {
+	Speed int `json:"speed"`
 	PageWidth float64 `json:"page_width"`
 	PageHeight float64 `json:"page_height"`
 	FontName string `json:"font_name"`

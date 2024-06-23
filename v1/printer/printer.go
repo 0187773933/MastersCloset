@@ -39,8 +39,9 @@ func clear_printer_que_mac_osx( printer_name string ) {
 
 // lpstat -v
 // lp -d "_4BARCODE_4B_2054N" -o PrintSpeed=2 -o fit-to-page "/Users/morpheous/WORKSPACE/GO/TMP2/BarcodePrinterTest/output.pdf"
-func print_pdf_mac_osx( printer_name string , pdf_file_path string ) {
-	args := []string{ "lp" , "-d" , printer_name , "-o" , "PrintSpeed=2" , "-o" , "fit-to-page" , pdf_file_path }
+func print_pdf_mac_osx( printer_name string , pdf_file_path string , print_speed int ) {
+	if print_speed < 1 { print_speed = 2 }
+	args := []string{ "lp" , "-d" , printer_name , "-o" , fmt.Sprintf( "PrintSpeed=%d" , print_speed ) , "-o" , "fit-to-page" , pdf_file_path }
 	cmd := exec.Command( args[ 0 ] , args[ 1 : ]... )
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -251,7 +252,7 @@ func PrintTicket( config types.PrinterConfig , job PrintJob ) {
 		print_pdf_windows( config.PrinterName , pdf_temp_file_path )
 	} else if runtime.GOOS == "darwin" {
 		clear_printer_que_mac_osx( config.PrinterName )
-		print_pdf_mac_osx( config.PrinterName , pdf_temp_file_path )
+		print_pdf_mac_osx( config.PrinterName , pdf_temp_file_path , config.Speed )
 	}
 }
 
@@ -328,36 +329,38 @@ func PrintTicket2( config types.PrinterConfig , job PrintJob ) {
 	}
 
 	// 5.) Shopping For Population
-	shopping_for_y1 := 4.6
-	shopping_for_y2 := 4.9
-	shopping_for_y3 := 5.1
-	if job.Spanish == true {
-		boys := get_plural_text( job.Boys , "Niño" , "Niños" )
-		girls := get_plural_text( job.Girls , "Niña" , "Niñas" )
-		men := get_plural_text( job.Men , "Hombre" , "Hombres" )
-		women := get_plural_text( job.Women , "Mujer" , "Mujeres" )
-		shopping_for_children_text := fmt.Sprintf( "%s , %s" , girls , boys )
-		shopping_for_adults_text := fmt.Sprintf( "%s , %s" , women , men )
-		add_centered_text( pdf , shopping_for_children_text , config.FontName , 16 , shopping_for_y1 )
-		add_centered_text( pdf , shopping_for_adults_text , config.FontName , 16 , shopping_for_y2 )
-		if job.Guests > 1 {
-			shopping_for_guests_text := get_plural_text( job.Guests , "Invitado" , "Invitados" )
-			add_centered_text( pdf , shopping_for_guests_text , config.FontName , 16 , shopping_for_y3 )
-		}
-	} else {
-		boys := get_plural_text( job.Boys , "Boy" , "Boys" )
-		girls := get_plural_text( job.Girls , "Girl" , "Girls" )
-		men := get_plural_text( job.Men , "Man" , "Men" )
-		women := get_plural_text( job.Women , "Woman" , "Women" )
-		shopping_for_children_text := fmt.Sprintf( "%s , %s" , girls , boys )
-		shopping_for_adults_text := fmt.Sprintf( "%s , %s" , women , men )
-		add_centered_text( pdf , shopping_for_children_text , config.FontName , 16 , shopping_for_y1 )
-		add_centered_text( pdf , shopping_for_adults_text , config.FontName , 16 , shopping_for_y2 )
-		if job.Guests > 1 {
-			shopping_for_guests_text := get_plural_text( job.Guests , "Guest" , "Guests" )
-			add_centered_text( pdf , shopping_for_guests_text , config.FontName , 16 , shopping_for_y3 )
-		}
-	}
+	// Bugged , and just adds confusion
+	// it never included "self" , because we never asked or deduced gender of account owner , just family members
+	// shopping_for_y1 := 4.6
+	// shopping_for_y2 := 4.9
+	// shopping_for_y3 := 5.1
+	// if job.Spanish == true {
+	// 	boys := get_plural_text( job.Boys , "Niño" , "Niños" )
+	// 	girls := get_plural_text( job.Girls , "Niña" , "Niñas" )
+	// 	men := get_plural_text( job.Men , "Hombre" , "Hombres" )
+	// 	women := get_plural_text( job.Women , "Mujer" , "Mujeres" )
+	// 	shopping_for_children_text := fmt.Sprintf( "%s , %s" , girls , boys )
+	// 	shopping_for_adults_text := fmt.Sprintf( "%s , %s" , women , men )
+	// 	add_centered_text( pdf , shopping_for_children_text , config.FontName , 16 , shopping_for_y1 )
+	// 	add_centered_text( pdf , shopping_for_adults_text , config.FontName , 16 , shopping_for_y2 )
+	// 	if job.Guests > 1 {
+	// 		shopping_for_guests_text := get_plural_text( job.Guests , "Invitado" , "Invitados" )
+	// 		add_centered_text( pdf , shopping_for_guests_text , config.FontName , 16 , shopping_for_y3 )
+	// 	}
+	// } else {
+	// 	boys := get_plural_text( job.Boys , "Boy" , "Boys" )
+	// 	girls := get_plural_text( job.Girls , "Girl" , "Girls" )
+	// 	men := get_plural_text( job.Men , "Man" , "Men" )
+	// 	women := get_plural_text( job.Women , "Woman" , "Women" )
+	// 	shopping_for_children_text := fmt.Sprintf( "%s , %s" , girls , boys )
+	// 	shopping_for_adults_text := fmt.Sprintf( "%s , %s" , women , men )
+	// 	add_centered_text( pdf , shopping_for_children_text , config.FontName , 16 , shopping_for_y1 )
+	// 	add_centered_text( pdf , shopping_for_adults_text , config.FontName , 16 , shopping_for_y2 )
+	// 	if job.Guests > 1 {
+	// 		shopping_for_guests_text := get_plural_text( job.Guests , "Guest" , "Guests" )
+	// 		add_centered_text( pdf , shopping_for_guests_text , config.FontName , 16 , shopping_for_y3 )
+	// 	}
+	// }
 
 	// 6.) Family Name
 	add_centered_text( pdf , job.FamilyName , config.FontName , 16 , 5.4 )
@@ -416,6 +419,6 @@ func PrintTicket2( config types.PrinterConfig , job PrintJob ) {
 		print_pdf_windows( config.PrinterName , pdf_temp_file_path )
 	} else if runtime.GOOS == "darwin" {
 		clear_printer_que_mac_osx( config.PrinterName )
-		print_pdf_mac_osx( config.PrinterName , pdf_temp_file_path )
+		print_pdf_mac_osx( config.PrinterName , pdf_temp_file_path , config.Speed )
 	}
 }
