@@ -111,7 +111,7 @@ function get_ui_shopping_for_selector() {
 		<div class="col-md-6">
 			<div class="input-group">
 				<div class="input-group-text">Shopping For</div>
-				<select autocomplete="off" id="shopping_for" class="form-select" aria-label="Shopping For" name="shopping_for">
+				<select autocomplete="new-password" id="shopping_for" class="form-select" aria-label="Shopping For" name="shopping_for">
 					<option value="1">1</option>
 					<option value="2">2</option>
 					<option value="3">3</option>
@@ -334,20 +334,20 @@ function _get_user_form() {
 					<div class="col-lg-2"></div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_first_name" type="text" class="form-control input-name" name="user_first_name">
-							<label for="user_first_name">First Name</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_first_name" type="text" class="form-control input-name" name="user_first_name">
+							<label for="user_first_name" id="user_first_name_label">First Name</label>
 						</div>
 					</div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_middle_name" type="text" class="form-control input-name" name="user_middle_name">
-							<label for="user_middle_name">Middle Name</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_middle_name" type="text" class="form-control input-name" name="user_middle_name">
+							<label for="user_middle_name" id="user_middle_name_label">Middle Name</label>
 						</div>
 					</div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_last_name" type="text" class="form-control input-name" name="user_last_name">
-							<label for="user_last_name">Last Name</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_last_name" type="text" class="form-control input-name" name="user_last_name">
+							<label for="user_last_name" id="user_last_name_label">Last Name</label>
 						</div>
 					</div>
 					<div class="col-lg-2"></div>
@@ -358,14 +358,14 @@ function _get_user_form() {
 					<div class="col-lg-3"></div>
 					<div class="col-sm-12 col-md-4 col-lg-4">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_email" type="email" class="form-control" name="user_email">
-							<label for="user_email">Email Address</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_email" type="email" class="form-control" name="user_email">
+							<label for="user_email" id="user_email_label">Email Address</label>
 						</div>
 					</div>
 					<div class="col-sm-12 col-md-4 col-lg-3">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_phone_number" type="tel" class="form-control" name="user_phone_number">
-							<label for="user_phone_number">Phone Number</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_phone_number" type="tel" class="form-control" name="user_phone_number">
+							<label for="user_phone_number" id="user_phone_number_label">Phone Number</label>
 						</div>
 					</div>
 					<div class="col-lg-3"></div>
@@ -401,20 +401,20 @@ function _get_user_form() {
 				<div class="row g-2 mb-3">
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_street_number" type="text" class="form-control" name="user_street_number">
-							<label for="user_street_number">Street Number</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_street_number" type="text" class="form-control" name="user_street_number">
+							<label for="user_street_number" id="user_street_number_label">Street Number</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocomplete="off" id="user_street_name" type="text" class="form-control" name="user_street_name">
-							<label for="user_street_name">Street Name</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_street_name" type="text" class="form-control" name="user_street_name">
+							<label for="user_street_name" id="user_street_name_label">Street Name</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_address_two" type="text" class="form-control" name="user_street_name">
-							<label for="user_address_two">Address 2</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_address_two" type="text" class="form-control" name="user_street_name">
+							<label for="user_address_two" id="user_address_two_label">Address 2</label>
 						</div>
 					</div>
 				</div>
@@ -423,20 +423,20 @@ function _get_user_form() {
 				<div class="row g-2 mb-3">
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_city" type="text" class="form-control" name="user_city">
-							<label for="user_city">City</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_city" type="text" class="form-control" name="user_city">
+							<label for="user_city" id="user_city_label">City</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_state" type="text" class="form-control" name="user_state">
-							<label for="user_state">State</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_state" type="text" class="form-control" name="user_state">
+							<label for="user_state" id="user_state_label">State</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_zip_code" type="text" class="form-control" name="user_zip_code">
-							<label for="user_zip_code">Zip Code</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_zip_code" type="text" class="form-control" name="user_zip_code">
+							<label for="user_zip_code" id="user_zip_code_label">Zip Code</label>
 						</div>
 					</div>
 				</div>
@@ -446,8 +446,8 @@ function _get_user_form() {
 
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_birth_day" type="number" min="1" max="31" class="form-control" name="user_birth_day_name">
-							<label for="user_birth_day_name">Birth Day</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_birth_day" type="number" min="1" max="31" class="form-control" name="user_birth_day_name">
+							<label for="user_birth_day_name" id="user_birth_day_label">Birth Day</label>
 						</div>
 					</div>
 					<div class="col-md-4">
@@ -466,13 +466,13 @@ function _get_user_form() {
 								<option value="NOV">NOV = 11</option>
 								<option value="DEC">DEC = 12</option>
 							</select>
-							<label for="user_birth_month">Birth Month</label>
+							<label for="user_birth_month" id="user_birth_month_label">Birth Month</label>
 						</div>
 					</div>
 					<div class="col-md-4">
 						<div class="form-floating">
-							<input autocorrect="off" spellcheck="false" autocomplete="off" id="user_birth_year" type="number" min="1900" max="2100" class="form-control" name="user_birth_year_name">
-							<label for="user_birth_year_name">Birth Year</label>
+							<input autocorrect="off" spellcheck="false" autocomplete="new-password" id="user_birth_year" type="number" min="1900" max="2100" class="form-control" name="user_birth_year_name">
+							<label for="user_birth_year_name" id="user_birth_year_label">Birth Year</label>
 						</div>
 					</div>
 				</div>
@@ -482,7 +482,7 @@ function _get_user_form() {
 					<div class="col-md-2 col-lg-2">
 						<div class="form-check">
 							<input class="form-check-input" type="checkbox" value="" id="user_spanish">
-							<label class="form-check-label" for="user_spanish">Español</label>
+							<label class="form-check-label" for="user_spanish" >Español</label>
 						</div>
 					</div>
 					<div class="col-md-5 col-lg-5"></div>
