@@ -14,7 +14,7 @@
 		<script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/protobufjs@7.2.5/dist/protobuf.min.js" integrity="sha256-6Jvh/v55qp1JJygkmb9X/iE/Qo1L7zD6WvjsdDHBGwU=" crossorigin="anonymous"></script>
 		<script src="/cdn/utils.js" crossorigin="anonymous"></script>
-		<script src="/cdn/ui.js" crossorigin="anonymous"></script>
+		<!-- <script src="/cdn/ui.js" crossorigin="anonymous"></script> -->
 		<link rel="stylesheet" type="text/css" href="/cdn/ui.css" crossorigin="anonymous">
 	</head>
 	<body>
@@ -49,6 +49,20 @@
 						var timestamp = new Date().getTime();
 						var script = document.createElement( "script" );
 						script.src = "/cdn/api.js?v=" + timestamp;
+						script.crossOrigin = "anonymous";
+						document.head.appendChild( script );
+						script.onload = resolve;
+						return;
+					}
+					catch( error ) { console.log( error ); reject( error ); return; }
+				});
+			}
+			function load_ui() {
+				return new Promise( function( resolve , reject ) {
+					try {
+						var timestamp = new Date().getTime();
+						var script = document.createElement( "script" );
+						script.src = "/cdn/ui.js?v=" + timestamp;
 						script.crossOrigin = "anonymous";
 						document.head.appendChild( script );
 						script.onload = resolve;
@@ -1001,7 +1015,10 @@
 				}
 			}
 			async function init() {
+				await load_ui();
+				console.log( "loaded new ui" );
 				await load_api();
+				console.log( "loaded new api" );
 				window.UI = new MCT_UI({
 					anchor: "#main-row" ,
 					// stack: [ "user_balance_table" , "user_search_table" , "shopping_for_selector" , "alert_check_in_allowed" , "alert_check_in_failed" ] ,
@@ -1137,12 +1154,12 @@
 					document.getElementById( "user-search-input" ).value = sent_uuid;
 					window.UI.render_active_user();
 				}
-				const inputs = document.querySelectorAll('input');
-					inputs.forEach(input => {
-					// Generate a random string for the name attribute
-					const randomName = 'name_' + Math.random().toString(36).substr(2, 9);
-					input.setAttribute('name', randomName);
-				});
+				// const inputs = document.querySelectorAll('input');
+				// 	inputs.forEach(input => {
+				// 	// Generate a random string for the name attribute
+				// 	const randomName = 'name_' + Math.random().toString(36).substr(2, 9);
+				// 	input.setAttribute('name', randomName);
+				// });
 			}
 			document.addEventListener( "DOMContentLoaded" , init );
 		</script>
