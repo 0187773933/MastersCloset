@@ -47,6 +47,7 @@ func UserSearchFuzzy( context *fiber.Ctx ) ( error ) {
 
 	username := context.Params( "username" )
 	escaped_username , _ := net_url.QueryUnescape( username )
+	escaped_username = strings.ToLower( escaped_username ) // have to fix db first
 
 	search_index , _ := bleve.Open( GlobalConfig.BleveSearchPath )
 	defer search_index.Close()
@@ -60,9 +61,10 @@ func UserSearchFuzzy( context *fiber.Ctx ) ( error ) {
 
 	words := strings.Fields( escaped_username )
 	boolean_query := bleve.NewBooleanQuery()
-	for _, word := range words {
+	for _ , word := range words {
 		q := bleve.NewFuzzyQuery( word )
-		q.Fuzziness = 2
+		q.Fuzziness = 1
+		q.SetField( "Name" )
 		boolean_query.AddMust( q )
 	}
 	search_request := bleve.NewSearchRequest( boolean_query )

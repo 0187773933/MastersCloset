@@ -94,6 +94,7 @@ type User struct {
 	Verified bool `json:"verified"`
 	Username string `json:"username"`
 	NameString string `json:"name_string"`
+	SearchString string `json:"search_string"`
 	UUID string `json:"uuid"`
 	ULID string `json:"ulid"`
 	Barcodes []string `json:"barcodes"`
@@ -192,7 +193,7 @@ func ( u *User ) Save() {
 			defer search_index.Close()
 			edited_search_item := types.SearchItem{
 				UUID: u.UUID ,
-				Name: u.NameString ,
+				Name: u.SearchString ,
 			}
 			search_index.Index( u.UUID , edited_search_item )
 		}
@@ -257,7 +258,7 @@ func ( u *User ) GetFamilySize() ( result int ) {
 	return
 }
 
-func (u *User) FormatUsername() {
+func ( u *User ) FormatUsername() {
 	var username_parts []string
 	if u.Identity.FirstName != "" {
 		u.Identity.FirstName = strings.Title( strings.ToLower( strings.TrimSpace( u.Identity.FirstName ) ) )
@@ -275,6 +276,7 @@ func (u *User) FormatUsername() {
 		u.Username = strings.Join( username_parts , "-" )
 		u.NameString = strings.Join( username_parts , " " )
 	}
+	u.SearchString = strings.ToLower( u.NameString )
 }
 
 func ( u *User ) CheckInTest() ( check_in CheckIn ) {
