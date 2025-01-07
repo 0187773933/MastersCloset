@@ -64,7 +64,8 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	admin_route_group.Post( "/checkins/edit/:uuid/:ulid" , EditCheckIn )
 
 	admin_route_group.Post( "/user/new" , HandleNewUserJoin )
-	admin_route_group.Post( "/user/similar" , HandleUserSimilar ) // finds similar users
+	admin_route_group.Post( "/user/similar" , HandleUserSimilar ) // finds similar users reports
+	admin_route_group.Get( "/user/similar/o/:uuid" , HandleUserSimilarObjects ) // finds similar user objects
 	admin_route_group.Post( "/user/edit" , HandleUserEdit )
 	admin_route_group.Get( "/user/delete/:uuid" , DeleteUser )
 	// admin_route_group.Get( "/user/check/username" , CheckIfFirstNameLastNameAlreadyExists )

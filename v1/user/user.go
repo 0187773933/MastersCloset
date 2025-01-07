@@ -11,6 +11,7 @@ import (
 	bolt "github.com/boltdb/bolt"
 	bleve "github.com/blevesearch/bleve/v2"
 	uuid "github.com/satori/go.uuid"
+	distance "github.com/hbollon/go-edlib"
 	encrypt "github.com/0187773933/MastersCloset/v1/encryption"
 	types "github.com/0187773933/MastersCloset/v1/types"
 	// log "github.com/0187773933/MastersCloset/v1/log"
@@ -113,6 +114,7 @@ type User struct {
 	TimeRemaining int `json:"time_remaining"`
 	AllowedToCheckIn bool `json:"allowed_to_checkin"`
 	Spanish bool `json:"spanish"`
+	SimilarUsers []User `json:"similar_users"`
 }
 
 type GetUserResult struct {
@@ -278,6 +280,50 @@ func ( u *User ) FormatUsername() {
 	}
 	u.SearchString = strings.ToLower( u.NameString )
 }
+
+func ( u *User ) GetSimilarUsers( db *bolt.DB , config *types.ConfigFile ) {
+	db.View( func( tx *bolt.Tx ) error {
+		bucket := tx.Bucket( []byte( "users" ) )
+		bucket.ForEach( func( uuid , value []byte ) error {
+			var viewed_user User
+			decrypted_bucket_value := encrypt.ChaChaDecryptBytes( config.BoltDBEncryptionKey , value )
+			json.Unmarshal( decrypted_bucket_value , &viewed_user )
+			similarity_report := u.GetUserSimilarityReport( &viewed_user , config.LevenshteinDistanceThreshold )
+			if similarity_report.IsSimilar == false { return nil }
+			u.SimilarUsers = append( u.SimilarUsers , viewed_user )
+			return nil
+		})
+		return nil
+	})
+}
+
+type UserSimilarReport struct {
+	IsSimilar bool `json:"is_similar"`
+	Name bool `json:"name"`
+	Email bool `json:"email"`
+	Phone bool `json:"phone"`
+	Address bool `json:"address"`
+	Birthday bool `json:"birthday"`
+	Barcode bool `json:"barcode"`
+	User User `json:"user"`
+}
+
+func ( u *User ) GetUserSimilarityReport( compared_user *User , l_distance int ) ( result UserSimilarReport ) {
+	result.Name = _user_similar_by_name( u , compared_user , l_distance )
+	if result.Name == true { result.IsSimilar = true }
+	result.Email = _user_similar_by_email( u , compared_user , l_distance )
+	if result.Email == true { result.IsSimilar = true }
+	result.Phone = _user_similar_by_phone( u , compared_user )
+	if result.Phone == true { result.IsSimilar = true }
+	result.Address = _user_similar_by_address( u , compared_user , l_distance )
+	if result.Address == true { result.IsSimilar = true }
+	result.Birthday = _user_similar_by_birthday( u , compared_user )
+	if result.Birthday == true { result.IsSimilar = true }
+	result.Barcode = _user_similar_by_barcode( u , compared_user )
+	if result.Barcode == true { result.IsSimilar = true }
+	return
+}
+
 
 func ( u *User ) CheckInTest() ( check_in CheckIn ) {
 
@@ -623,3 +669,147 @@ func CheckInUser( user_uuid string , db *bolt.DB , encryption_key string , cool_
 	if db_result != nil { panic( "couldn't write to bolt db ??" ) }
 	return
 }
+
+func _user_similar_by_name( sent_user *User , compared_user *User , l_distance int ) ( result bool ) {
+	result = false
+	// if sent_user.Identity.FirstName == "" { return }
+	// if sent_user.Identity.LastName == "" { return }
+	// if compared_user.Identity.FirstName == "" { return }
+	// if compared_user.Identity.LastName == "" { return }
+	// if sent_user.Identity.FirstName == compared_user.Identity.FirstName {
+	// 	// if sent_user.Identity.MiddleName == compared_user.Identity.MiddleName {
+	// 		if sent_user.Identity.LastName == compared_user.Identity.LastName {
+	// 			result = true
+	// 		}
+	// 	// }
+	// }
+
+	first_name_match := false
+	// middle_name_match := false
+	last_name_match := false
+
+	if sent_user.Identity.FirstName != "" && compared_user.Identity.FirstName != "" {
+		d := distance.LevenshteinDistance( sent_user.Identity.FirstName , compared_user.Identity.FirstName )
+		if d < l_distance {
+			log.Debug( fmt.Sprintf( "Similar First Name Found : %s , %s , %d" , sent_user.Identity.FirstName , compared_user.Identity.FirstName , d ) )
+			first_name_match = true
+		}
+	}
+	if sent_user.Identity.LastName != "" && compared_user.Identity.LastName != "" {
+		d := distance.LevenshteinDistance( sent_user.Identity.LastName , compared_user.Identity.LastName )
+		if d < l_distance {
+			log.Debug( fmt.Sprintf( "Similar Last Name Found : %s , %s , %d" , sent_user.Identity.LastName , compared_user.Identity.LastName , d ) )
+			last_name_match = true
+		}
+	}
+
+	if first_name_match == true && last_name_match == true {
+		result = true
+	}
+
+	return
+}
+
+func _user_similar_by_email( sent_user *User , compared_user *User , l_distance int ) ( result bool ) {
+	result = false
+	if sent_user.EmailAddress != "" && compared_user.EmailAddress != "" {
+		d := distance.LevenshteinDistance( sent_user.Identity.LastName , compared_user.Identity.LastName )
+		if d < l_distance {
+			log.Debug( fmt.Sprintf( "Similar Email Address Found : %s , %s , %d" , sent_user.EmailAddress , compared_user.EmailAddress , d ) )
+			result = true
+		}
+	}
+	return
+}
+
+func _user_similar_by_phone( sent_user *User , compared_user *User ) ( result bool ) {
+	result = false
+	if sent_user.PhoneNumber == "" { return }
+	if compared_user.PhoneNumber == "" { return }
+	if sent_user.PhoneNumber == compared_user.PhoneNumber {
+		result = true
+	}
+	return
+}
+
+func _user_similar_by_address( sent_user *User , compared_user *User , l_distance int ) ( result bool ) {
+	result = false
+
+	street_number_match := false
+	street_name_match := false
+
+	if sent_user.Identity.Address.StreetNumber != "" && compared_user.Identity.Address.StreetNumber != "" {
+		d := distance.LevenshteinDistance( sent_user.Identity.Address.StreetNumber , compared_user.Identity.Address.StreetNumber )
+		if d < l_distance {
+			log.Debug( fmt.Sprintf( "Similar Street Number Found : %s , %s , %d" , sent_user.Identity.Address.StreetNumber , compared_user.Identity.Address.StreetNumber , d ) )
+			street_number_match = true
+		}
+	}
+
+	if sent_user.Identity.Address.StreetName != "" && compared_user.Identity.Address.StreetName != "" {
+		d := distance.LevenshteinDistance( sent_user.Identity.Address.StreetName , compared_user.Identity.Address.StreetName )
+		if d < l_distance {
+			log.Debug( fmt.Sprintf( "Similar Street Number Found : %s , %s , %d" , sent_user.Identity.Address.StreetName , compared_user.Identity.Address.StreetNumber , d ) )
+			street_name_match = true
+		}
+	}
+
+	if street_number_match == true && street_name_match == true {
+		result = true
+	}
+
+	return
+}
+
+func _user_similar_by_birthday( sent_user *User , compared_user *User ) ( result bool ) {
+	result = false
+	if sent_user.Identity.DateOfBirth.Year == 0 { return }
+	if sent_user.Identity.DateOfBirth.Month == "" { return }
+	if sent_user.Identity.DateOfBirth.Day == 0 { return }
+	if compared_user.Identity.DateOfBirth.Year == 0 { return }
+	if compared_user.Identity.DateOfBirth.Month == "" { return }
+	if compared_user.Identity.DateOfBirth.Day == 0 { return }
+	if sent_user.Identity.DateOfBirth.Year == compared_user.Identity.DateOfBirth.Year {
+		if sent_user.Identity.DateOfBirth.Month == compared_user.Identity.DateOfBirth.Month {
+			if sent_user.Identity.DateOfBirth.Day == compared_user.Identity.DateOfBirth.Day {
+				result = true
+				return
+			}
+		}
+	}
+	return
+}
+
+func _user_similar_by_barcode( sent_user *User , compared_user *User ) ( result bool ) {
+	result = false
+	for _ , sent_barcode := range sent_user.Barcodes {
+		if sent_barcode == "" { continue }
+		for _ , compared_barcode := range compared_user.Barcodes {
+			if compared_barcode == "" { continue }
+			if sent_barcode == compared_barcode {
+				result = true
+				return
+			}
+		}
+	}
+	return
+}
+
+// func _user_is_similar_bool( sent_user *User , compared_user *User ) ( result bool ) {
+// 	result = false
+// 	var test UserSimilarReport
+// 	test.Name = _user_similar_by_name( sent_user , compared_user )
+// 	if test.Name == true { test.IsSimilar = true }
+// 	test.Email = _user_similar_by_email( sent_user , compared_user )
+// 	if test.Email == true { test.IsSimilar = true }
+// 	test.Phone = _user_similar_by_phone( sent_user , compared_user )
+// 	if test.Phone == true { test.IsSimilar = true }
+// 	test.Address = _user_similar_by_address( sent_user , compared_user )
+// 	if test.Address == true { test.IsSimilar = true }
+// 	test.Birthday = _user_similar_by_birthday( sent_user , compared_user )
+// 	if test.Birthday == true { test.IsSimilar = true }
+// 	test.Barcode = _user_similar_by_barcode( sent_user , compared_user )
+// 	if test.Barcode == true { test.IsSimilar = true }
+// 	if test.IsSimilar == true { result = true }
+// 	return
+// }

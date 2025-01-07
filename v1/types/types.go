@@ -63,6 +63,7 @@ type ConfigFile struct {
 	BoltDBPath string `json:"bolt_db_path"`
 	BoltDBEncryptionKey string `json:"bolt_db_encryption_key"`
 	BleveSearchPath string `json:"bleve_search_path"`
+	LevenshteinDistanceThreshold int `json:"levenshtein_distance_threshold"`
 	CheckInCoolOffDays int `json:"check_in_cooloff_days"`
 	TwilioClientID string `json:"twilio_client_id"`
 	TwilioAuthToken string `json:"twilio_auth_token"`

@@ -44,12 +44,15 @@
 12. Make family-member management more streamlined
 	- "ai" ? , too slow. 10-15 seconds some times.
 13. Add delete all exact duplicate checkin button
-14. V2 Rewrite
+14. Add Ability to Merge Users
+15. V2 Rewrite
 	- write logger package
 		- https://github.com/0187773933/FireC2Server/blob/master/v1/logger/logger.go
 		- https://github.com/0187773933/FireC2Server/blob/master/v1/server/utils.go#L49
 	- server monolith var
 	- support offline-online transitions
+16. Add Support for "sounds like" , mainly for spanish names
+	- https://github.com/jamesturk/jellyfish
 
 ## Misc
 
