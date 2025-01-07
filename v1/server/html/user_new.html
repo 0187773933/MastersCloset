@@ -181,6 +181,36 @@
 					let new_ui_stack_html_string = new_ui_stack.join( " " );
 					$( this.options.anchor ).html( new_ui_stack_html_string );
 				}
+				_render_spanish_lables() {
+					$( "#user_first_name_label" ).text( "Nombre" );
+					$( "#user_middle_name_label" ).text( "Segundo Nombre" );
+					$( "#user_last_name_label" ).text( "Apellido" );
+					$( "#user_email_label" ).text( "Correo Electrónico" );
+					$( "#user_phone_number_label" ).text( "Número de Teléfono" );
+					$( "#user_street_number_label" ).text( "Nombre de la Calle" );
+					$( "#user_street_name_label" ).text( "Nombre de la Calle" );
+					$( "#user_city_label" ).text( "Ciudad" );
+					$( "#user_state_label" ).text( "Estado" );
+					$( "#user_zip_code_label" ).text( "Código Postal" );
+					$( "#user_birth_day_label" ).text( "Día de Nacimiento" );
+					$( "#user_birth_month_label" ).text( "Mes de Nacimiento" );
+					$( "#user_birth_year_label" ).text( "Año de Nacimiento" );
+				}
+				_render_english_lables() {
+					$( "#user_first_name_label" ).text( "First Name" );
+					$( "#user_middle_name_label" ).text( "Middle Name" );
+					$( "#user_last_name_label" ).text( "Last Name" );
+					$( "#user_email_label" ).text( "Email Address" );
+					$( "#user_phone_number_label" ).text( "Phone Number" );
+					$( "#user_street_number_label" ).text( "Street Number" );
+					$( "#user_street_name_label" ).text( "Street Name" );
+					$( "#user_city_label" ).text( "City" );
+					$( "#user_state_label" ).text( "State" );
+					$( "#user_zip_code_label" ).text( "Zip Code" );
+					$( "#user_birth_day_label" ).text( "Birth Day" );
+					$( "#user_birth_month_label" ).text( "Birth Month" );
+					$( "#user_birth_year_label" ).text( "Birth Year" );
+				}
 				render_new_form() {
 					set_url( `/join` );
 					this.buttons_stack = [ "new-user-save-button" , "new-user-cancel-button" ];
@@ -226,7 +256,18 @@
 					$( "#user_birth_day" ).on( "change" , ( event ) => { window.USER.identity.date_of_birth.day = event.target.value });
 					$( "#user_birth_month" ).on( "change" , ( event ) => { window.USER.identity.date_of_birth.month = event.target.value });
 					$( "#user_birth_year" ).on( "change" , ( event ) => { window.USER.identity.date_of_birth.year = event.target.value });
-					$( "#user_spanish" ).on( "change" , ( event ) => { window.USER.spanish = event.target.checked; });
+					// $( "#user_spanish" ).on( "change" , ( event ) => { window.USER.spanish = event.target.checked; });
+					$( "#user_spanish" ).on( "change" , ( event ) => {
+						window.USER.spanish = event.target.checked;
+						if ( event.target.checked ) {
+							console.log( "Spanish Mode" );
+							this._render_spanish_lables();
+
+						} else {
+							console.log( "English Mode" );
+							this._render_english_lables();
+						}
+					});
 				}
 			}
 
