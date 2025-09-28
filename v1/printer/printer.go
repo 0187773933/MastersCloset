@@ -70,7 +70,7 @@ func clear_printer_que_windows( printer_name string ) {
 
 // print /D:"'Brother MFC-J4535DW'" "test.pdf"
 // print /D:"printer_name" /o"option1=value1" /o"option2=value2" "file_name"
-// print.exe only prints fucking plaintext ????
+// print.exe only prints plaintext ????
 func print_pdf_windows( printer_name string , pdf_file_path string ) {
 	sumatra_file_path  , _ := filepath.Abs( "SumatraPDF.exe" )
 	args := []string{ sumatra_file_path , "-print-to" , printer_name , pdf_file_path }

@@ -268,15 +268,26 @@ func PrettyPrint( x_input interface{} ) {
 }
 
 func _finger_print_cpu() ( result string ) {
-	cpu_info , _ := cpu.Info()
-	result = fmt.Sprintf( "%s === %s === %s === %d === %s" ,
-		cpu_info[ 0 ].VendorID ,
-		cpu_info[ 0 ].Family ,
-		cpu_info[ 0 ].Model ,
-		cpu_info[ 0 ].Cores ,
-		cpu_info[ 0 ].ModelName ,
-	)
-	return
+	cpu_info , err := cpu.Info()
+	if err != nil || len( cpu_info ) == 0 { return "" }
+	info := cpu_info[ 0 ]
+	parts := []string{}
+	if info.VendorID != "" {
+		parts = append( parts , info.VendorID )
+	}
+	if info.Family != "" {
+		parts = append( parts , info.Family )
+	}
+	if info.Model != "" {
+		parts = append( parts , info.Model )
+	}
+	if info.Cores > 0 {
+		parts = append( parts , fmt.Sprintf( "%d" , info.Cores ) )
+	}
+	if info.ModelName != "" {
+		parts = append( parts , info.ModelName )
+	}
+	return strings.Join( parts , " === " )
 }
 
 func _finger_print_mac_address() ( []string ) {
