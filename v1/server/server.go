@@ -7,6 +7,7 @@ import (
 	fiber_cors "github.com/gofiber/fiber/v2/middleware/cors"
 	// favicon "github.com/gofiber/fiber/v2/middleware/favicon"
 	// try "github.com/manucorporat/try"
+	bolt "github.com/boltdb/bolt"
 	types "github.com/0187773933/MastersCloset/v1/types"
 	user_routes "github.com/0187773933/MastersCloset/v1/server/routes/user"
 	admin_routes "github.com/0187773933/MastersCloset/v1/server/routes/admin"
@@ -21,6 +22,7 @@ var GlobalConfig *types.ConfigFile
 type Server struct {
 	FiberApp *fiber.App `json:"fiber_app"`
 	Config types.ConfigFile `json:"config"`
+	DB *bolt.DB `json:"_"`
 }
 
 func request_logging_middleware( context *fiber.Ctx ) ( error ) {
@@ -66,8 +68,8 @@ func New( config types.ConfigFile ) ( server Server ) {
 }
 
 func ( s *Server ) SetupRoutes() {
-	admin_routes.RegisterRoutes( s.FiberApp , &s.Config )
-	user_routes.RegisterRoutes( s.FiberApp , &s.Config )
+	admin_routes.RegisterRoutes( s.FiberApp , &s.Config , s.DB )
+	user_routes.RegisterRoutes( s.FiberApp , &s.Config , s.DB )
 }
 
 func ( s *Server ) Start() {

@@ -107,6 +107,8 @@ type User struct {
 	FamilyMembers []Person `json:"family_members"`
 	CreatedDate string `json:"created_date"`
 	CreatedTime string `json:"created_time"`
+	ModifiedDate string `json:"modified_date"`
+	ModifiedTime string `json:"modified_time"`
 	CheckIns []CheckIn `json:"check_ins"`
 	FailedCheckIns []CheckIn `json:"failed_check_ins"`
 	TotalGuestsAdmitted int `json:"total_guests_admitted"`
@@ -115,6 +117,7 @@ type User struct {
 	AllowedToCheckIn bool `json:"allowed_to_checkin"`
 	Spanish bool `json:"spanish"`
 	SimilarUsers []User `json:"similar_users"`
+	DB *bolt.DB `json:"-"`
 }
 
 type GetUserResult struct {
@@ -123,8 +126,9 @@ type GetUserResult struct {
 	LastCheckIn CheckIn `json:"last_check_in"`
 }
 
-func New( username string , config *types.ConfigFile ) ( new_user User ) {
+func New( username string , config *types.ConfigFile , db *bolt.DB ) ( new_user User ) {
 	now := utils.GetNowTimeOBJ()
+	new_user.DB = db
 	new_user_uuid := uuid.NewV4().String()
 	new_user.Username = username
 	new_user.Verified = false
@@ -135,7 +139,6 @@ func New( username string , config *types.ConfigFile ) ( new_user User ) {
 	new_user.CreatedTime = utils.GetNowTimeString( &now )
 	new_user_byte_object , _ := json.Marshal( new_user )
 	new_user_byte_object_encrypted := encrypt.ChaChaEncryptBytes( config.BoltDBEncryptionKey , new_user_byte_object )
-	db , _ := bolt.Open( config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
 	db_result := db.Update( func( tx *bolt.Tx ) error {
 		users_bucket , _ := tx.CreateBucketIfNotExists( []byte( "users" ) )
 		users_bucket.Put( []byte( new_user_uuid ) , new_user_byte_object_encrypted )
@@ -146,17 +149,18 @@ func New( username string , config *types.ConfigFile ) ( new_user User ) {
 		// holomorphic search ?
 		usernames_bucket.Put( []byte( username ) , []byte( new_user.UUID ) )
 
+		// ADDON , saving to drainable pool
+		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( "remote-save" ) )
+		remote_save_bucket.Put( []byte( new_user_uuid ) , new_user_byte_object_encrypted )
+
 		return nil
 	})
-	db.Close()
 	if db_result != nil { panic( "couldn't write to bolt db ??" ) }
 	return
 }
 
-func ( u *User ) UpdateSelfFromDB() {
-	db , _ := bolt.Open( u.Config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-	db_result := db.View( func( tx *bolt.Tx ) error {
+func ( u *User ) UpdateSelfFromDB() { // local
+	db_result := u.DB.View( func( tx *bolt.Tx ) error {
 		users_bucket , _ := tx.CreateBucketIfNotExists( []byte( "users" ) )
 		x_user := users_bucket.Get( []byte( u.UUID ) )
 		decrypted_bucket_value := encrypt.ChaChaDecryptBytes( u.Config.BoltDBEncryptionKey , x_user )
@@ -167,11 +171,11 @@ func ( u *User ) UpdateSelfFromDB() {
 }
 
 func ( u *User ) Save() {
-	db , _ := bolt.Open( u.Config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	now := utils.GetNowTimeOBJ()
 	var existing_user *User
 	u.FormatUsername()
-	db_result := db.Update( func( tx *bolt.Tx ) error {
+	var byte_object_encrypted []byte
+	db_result := u.DB.Update( func( tx *bolt.Tx ) error {
 
 		// this was originally the only thing in here
 		users_bucket , _ := tx.CreateBucketIfNotExists( []byte( "users" ) )
@@ -209,20 +213,36 @@ func ( u *User ) Save() {
 			// Not really that big of a problem , since this just updates the barcode for the right uuid anyway
 		}
 
+		u.CreatedDate = utils.GetNowDateString( &now )
+		u.CreatedTime = utils.GetNowTimeString( &now )
+
 		byte_object , _ := json.Marshal( u )
-		byte_object_encrypted := encrypt.ChaChaEncryptBytes( u.Config.BoltDBEncryptionKey , byte_object )
+		byte_object_encrypted = encrypt.ChaChaEncryptBytes( u.Config.BoltDBEncryptionKey , byte_object )
 		users_bucket.Put( []byte( u.UUID ) , byte_object_encrypted )
+
+		// ADDON , saving to drainable pool
+		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( "remote-save" ) )
+		remote_save_bucket.Put( []byte( u.UUID ) , byte_object_encrypted )
 
 		return nil
 	})
 	if db_result != nil { panic( "couldn't write to bolt db ??" ) }
 }
 
+func ( u *User ) SaveRemote( user_uuid string , user_byte_object_encrypted *[]byte ) ( result bool ) {
+	result = false
+	return SaveRemote( user_uuid , user_byte_object_encrypted , u.Config.RemoteHostUrl , u.Config.RemoteHostAPIKey )
+}
+
+func SaveRemote( user_uuid string , user_byte_object_encrypted *[]byte , remote_host_url string , remote_host_api_key string ) ( result bool ) {
+	result = false
+	fmt.Println( "TODO :: post off to remote db consumer" , remote_host_url , remote_host_api_key , len( *user_byte_object_encrypted ) )
+	return
+}
+
 func ( u *User ) Delete() {
 	// byte_object , _ := json.Marshal( u )
 	// byte_object_encrypted := encrypt.ChaChaEncryptBytes( u.Config.BoltDBEncryptionKey , byte_object )
-	// db , _ := bolt.Open( u.Config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
-	// defer db.Close()
 	// db_result := db.Update( func( tx *bolt.Tx ) error {
 	// 	users_bucket , _ := tx.CreateBucketIfNotExists( []byte( "users" ) )
 	// 	users_bucket.Put( []byte( u.UUID ) , byte_object_encrypted )
@@ -281,8 +301,8 @@ func ( u *User ) FormatUsername() {
 	u.SearchString = strings.ToLower( u.NameString )
 }
 
-func ( u *User ) GetSimilarUsers( db *bolt.DB , config *types.ConfigFile ) {
-	db.View( func( tx *bolt.Tx ) error {
+func ( u *User ) GetSimilarUsers( config *types.ConfigFile ) {
+	u.DB.View( func( tx *bolt.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {
 			var viewed_user User
@@ -329,8 +349,6 @@ func ( u *User ) CheckInTest() ( check_in CheckIn ) {
 
 	// 1.) prelim
 	time_remaining := -1
-	// db , _ := bolt.Open( u.Config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
-	// defer db.Close()
 
 	// 2.) Test if Check-In is possible
 	now := time.Now()
@@ -444,7 +462,7 @@ func FormatUsername( x_user *User ) {
 
 func UserNameExists( username string , db *bolt.DB ) ( result bool , uuid string ) {
 	result = false
-	db.Update( func( tx *bolt.Tx ) error {
+	db.View( func( tx *bolt.Tx ) error {
 		bucket , tx_error := tx.CreateBucketIfNotExists( []byte( "usernames" ) )
 		if tx_error != nil { log.Debug( tx_error ); return nil }
 		bucket_value := bucket.Get( []byte( username ) )
@@ -470,9 +488,7 @@ func GetByUUID( user_uuid string , db *bolt.DB , encryption_key string ) ( viewe
 	return
 }
 
-func GetViaUUID( user_uuid string , config *types.ConfigFile ) ( viewed_user User ) {
-	db , _ := bolt.Open( config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+func GetViaUUID( user_uuid string , config *types.ConfigFile , db *bolt.DB ) ( viewed_user User ) {
 	db.View( func( tx *bolt.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket_value := bucket.Get( []byte( user_uuid ) )
@@ -486,8 +502,10 @@ func GetViaUUID( user_uuid string , config *types.ConfigFile ) ( viewed_user Use
 	return
 }
 
-func RefillBalance( user_uuid string , db *bolt.DB , encryption_key string , balance_config types.BalanceConfig , family_size int ) ( new_balance Balance ) {
+func RefillBalance( user_uuid string , db *bolt.DB , encryption_key string , balance_config types.BalanceConfig , family_size int , remote_host_url string , remote_host_api_key string ) ( new_balance Balance ) {
 	var viewed_user User
+	var viewed_user_byte_object_encrypted []byte // for saving back to remote db
+	now := utils.GetNowTimeOBJ()
 	db.Update( func( tx *bolt.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket_value := bucket.Get( []byte( user_uuid ) )
@@ -510,12 +528,20 @@ func RefillBalance( user_uuid string , db *bolt.DB , encryption_key string , bal
 		viewed_user.Balance.Accessories.Limit = ( balance_config.Accessories * family_size )
 		viewed_user.Balance.Accessories.Available = ( balance_config.Accessories * family_size )
 
+		viewed_user.ModifiedDate = utils.GetNowDateString( &now )
+		viewed_user.ModifiedTime = utils.GetNowTimeString( &now )
 		viewed_user_byte_object , _ := json.Marshal( viewed_user )
-		viewed_user_byte_object_encrypted := encrypt.ChaChaEncryptBytes( encryption_key , viewed_user_byte_object )
+		viewed_user_byte_object_encrypted = encrypt.ChaChaEncryptBytes( encryption_key , viewed_user_byte_object )
 		bucket.Put( []byte( user_uuid ) , viewed_user_byte_object_encrypted )
+
+		// ADDON , saving to drainable pool
+		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( "remote-save" ) )
+		remote_save_bucket.Put( []byte( user_uuid ) , viewed_user_byte_object_encrypted )
+
 		return nil
 	})
 	new_balance = viewed_user.Balance
+
 	return
 }
 
@@ -594,7 +620,7 @@ func CheckInTest( user_uuid string , db *bolt.DB , encryption_key string , cool_
 	return
 }
 
-func CheckInUser( user_uuid string , db *bolt.DB , encryption_key string , cool_off_days int ) ( result bool , time_remaining int ) {
+func CheckInUser( user_uuid string , db *bolt.DB , encryption_key string , cool_off_days int , remote_host_url string , remote_host_api_key string ) ( result bool , time_remaining int ) {
 	result = false
 	time_remaining = -1
 	var viewed_user User
@@ -659,14 +685,22 @@ func CheckInUser( user_uuid string , db *bolt.DB , encryption_key string , cool_
 			result = false
 		}
 	}
+	viewed_user.ModifiedDate = utils.GetNowDateString( &now )
+	viewed_user.ModifiedTime = utils.GetNowTimeString( &now )
 	viewed_user_byte_object , _ := json.Marshal( viewed_user )
 	viewed_user_byte_object_encrypted := encrypt.ChaChaEncryptBytes( encryption_key , viewed_user_byte_object )
 	db_result := db.Update( func( tx *bolt.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.Put( []byte( user_uuid ) , viewed_user_byte_object_encrypted )
+
+		// ADDON , saving to drainable pool
+		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( "remote-save" ) )
+		remote_save_bucket.Put( []byte( user_uuid ) , viewed_user_byte_object_encrypted )
+
 		return nil
 	})
 	if db_result != nil { panic( "couldn't write to bolt db ??" ) }
+
 	return
 }
 

@@ -57,6 +57,8 @@ type ConfigFile struct {
 	ServerCookieSecretMessage string `json:"server_cookie_secret_message"`
 	ServerLiveUrl string `json:"server_live_url"`
 	LocalHostUrl string `json:"local_host_url"`
+	RemoteHostUrl string `json:"remote_host_url"`
+	RemoteHostAPIKey string `json:"remote_host_api_key"`
 	AdminUsername string `json:"admin_username"`
 	AdminPassword string `json:"admin_password"`
 	TimeZone string `json:"time_zone"`

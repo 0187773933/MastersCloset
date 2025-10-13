@@ -68,8 +68,9 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 	fmt.Printf( "%+v\n" , balance_form )
 
 	// 1.) Prep
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	// db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
+	// defer db.Close()
+	db := _get_db( context )
 
 	// 2.) Grab the User
 	uploaded_uuid := context.Params( "uuid" )
@@ -215,7 +216,8 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 func UserCheckInTest( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 	x_user_uuid := context.Params( "uuid" )
-	x_user := user.GetViaUUID( x_user_uuid , GlobalConfig )
+	db := _get_db( context )
+	x_user := user.GetViaUUID( x_user_uuid , GlobalConfig , db )
 	check_in_test := x_user.CheckInTest()
 	return context.JSON( fiber.Map{
 		"route": "/admin/user/checkin/test/:uuid" ,

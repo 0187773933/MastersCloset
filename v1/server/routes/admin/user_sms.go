@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"regexp"
-	time "time"
 	json "encoding/json"
 	fiber "github.com/gofiber/fiber/v2"
 	bolt_api "github.com/boltdb/bolt"
@@ -30,8 +29,7 @@ func SMSAllUsers( context *fiber.Ctx ) ( error ) {
 
 	twilio_client := twilio.NewTwilioClient( GlobalConfig.TwilioClientID , GlobalConfig.TwilioAuthToken )
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	db := _get_db( context )
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {

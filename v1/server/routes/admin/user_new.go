@@ -123,7 +123,8 @@ func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 
 	viewed_user.FormatUsername()
 
-	new_user := user.New( viewed_user.Username , GlobalConfig )
+	db := _get_db( context )
+	new_user := user.New( viewed_user.Username , GlobalConfig , db )
 
 	log.Info( new_user )
 
@@ -135,8 +136,7 @@ func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 
 	if viewed_user.ULID != "" {
 		fmt.Println( "ulid was present" )
-		db , _ := bolt.Open( GlobalConfig.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
-		defer db.Close()
+		db := _get_db( context )
 		db.Update( func( tx *bolt.Tx ) error {
 			ulid_uuid_bucket , _ := tx.CreateBucketIfNotExists( []byte( "ulid-uuid" ) )
 			ulid_uuid_bucket.Put( []byte( viewed_user.ULID ) , []byte( viewed_user.UUID ) )

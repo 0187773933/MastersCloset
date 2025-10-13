@@ -2,7 +2,6 @@ package adminroutes
 
 import (
 	fmt "fmt"
-	time "time"
 	smtp "net/smtp"
 	json "encoding/json"
 	fiber "github.com/gofiber/fiber/v2"
@@ -60,8 +59,8 @@ func EmailAllUsers( context *fiber.Ctx ) ( error ) {
 	email_message := context.FormValue( "email-message" )
 
 	result := true
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+
+	db := _get_db( context )
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {

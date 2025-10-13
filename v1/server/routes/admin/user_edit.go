@@ -2,7 +2,6 @@ package adminroutes
 
 import (
 	"fmt"
-	"time"
 	json "encoding/json"
 	fiber "github.com/gofiber/fiber/v2"
 	// bolt "github.com/0187773933/MastersCloset/v1/bolt"
@@ -39,14 +38,11 @@ func EditCheckIn( context *fiber.Ctx ) ( error ) {
 	x_uuid := context.Params( "uuid" )
 	x_ulid := context.Params( "ulid" )
 
-
 	var x_checkin user.CheckIn
 	json.Unmarshal( x_body , &x_checkin )
 	fmt.Println( x_uuid , x_ulid , x_checkin )
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	db := _get_db( context )
 	db.Update( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {

@@ -2,7 +2,6 @@ package adminroutes
 
 import (
 	"fmt"
-	"time"
 	"bytes"
 	"strconv"
 	// "reflect"
@@ -21,9 +20,7 @@ import (
 func GetReportMailChimp( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	db := _get_db( context )
 	// Get Data from DB
 	var result [][]string
 	result = append( result , []string{ "First Name" , "Last Name" , "Email Address" , "Phone" } )
@@ -87,10 +84,7 @@ func its( i int ) ( s string ) {
 
 func GetReportMain( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
-
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	db := _get_db( context )
 	var csv_lines [][]string
 	csv_headers := []string{
 		"First Name" , "Middle Name" , "Last Name" ,

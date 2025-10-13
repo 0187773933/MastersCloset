@@ -2,7 +2,6 @@ package adminroutes
 
 import (
 	"fmt"
-	"time"
 	// "strconv"
 	json "encoding/json"
 	fiber "github.com/gofiber/fiber/v2"
@@ -17,8 +16,7 @@ import (
 func GetUser( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 	user_uuid := context.Params( "uuid" )
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	db := _get_db( context )
 	viewed_user := user.GetByUUID( user_uuid , db , GlobalConfig.BoltDBEncryptionKey )
 	log.Info( fmt.Sprintf( "%s === Selected" , viewed_user.UUID ) )
 	return context.JSON( fiber.Map{
@@ -29,8 +27,7 @@ func GetUser( context *fiber.Ctx ) ( error ) {
 
 func GetUserViaBarcode( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	db := _get_db( context )
 	barcode := context.Params( "barcode" )
 	var viewed_user user.User
 	db.View( func( tx *bolt_api.Tx ) error {
@@ -52,8 +49,7 @@ func GetUserViaBarcode( context *fiber.Ctx ) ( error ) {
 
 func GetUserViaULID( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	db := _get_db( context )
 	x_ulid := context.Params( "ulid" )
 	var viewed_user user.User
 	db.View( func( tx *bolt_api.Tx ) error {
@@ -76,9 +72,9 @@ func GetUserViaULID( context *fiber.Ctx ) ( error ) {
 func GetAllUsers( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	// db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
+	// defer db.Close()
+	db := _get_db( context )
 	var result []user.GetUserResult
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
@@ -106,9 +102,7 @@ func GetAllUsers( context *fiber.Ctx ) ( error ) {
 func GetAllCheckIns( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	db := _get_db( context )
 	date_totals := make(map[string]map[string]int)
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
@@ -149,9 +143,7 @@ func GetCheckinsDate( context *fiber.Ctx ) ( error ) {
 
 	x_date := context.Params( "date" )
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	db := _get_db( context )
 	var result []user.CheckIn
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
@@ -184,9 +176,9 @@ func GetCheckIn( context *fiber.Ctx ) ( error ) {
 	x_uuid := context.Params( "uuid" )
 	x_ulid := context.Params( "ulid" )
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	// db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
+	// defer db.Close()
+	db := _get_db( context )
 	var result user.CheckIn
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
@@ -218,9 +210,9 @@ func GetCheckIn( context *fiber.Ctx ) ( error ) {
 func GetAllEmails( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	// db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
+	// defer db.Close()
+	db := _get_db( context )
 	var result [][]string
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
@@ -244,9 +236,9 @@ func GetAllEmails( context *fiber.Ctx ) ( error ) {
 func GetAllPhoneNumbers( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	// db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
+	// defer db.Close()
+	db := _get_db( context )
 	var result [][]string
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
@@ -275,9 +267,7 @@ type UserBarcodeData struct {
 func GetAllBarcodes( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	db := _get_db( context )
 	var result []UserBarcodeData
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )

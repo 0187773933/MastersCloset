@@ -2,7 +2,6 @@ package adminroutes
 
 import (
 	"fmt"
-	"time"
 	json "encoding/json"
 	fiber "github.com/gofiber/fiber/v2"
 	bleve "github.com/blevesearch/bleve/v2"
@@ -20,8 +19,7 @@ func DeleteUser( context *fiber.Ctx ) ( error ) {
 	defer search_index.Close()
 	search_index.Delete( user_uuid )
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	db := _get_db( context )
 	viewed_user := user.GetByUUID( user_uuid , db , GlobalConfig.BoltDBEncryptionKey )
 	db.Update( func( tx *bolt_api.Tx ) error {
 		users_bucket := tx.Bucket( []byte( "users" ) )
@@ -41,8 +39,8 @@ func DeleteCheckIn( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 	user_uuid := context.Params( "uuid" )
 	check_in_ulid := context.Params( "ulid" )
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+
+	db := _get_db( context )
 	// viewed_user := user.GetByUUID( user_uuid , db , GlobalConfig.BoltDBEncryptionKey )
 	db.Update( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )

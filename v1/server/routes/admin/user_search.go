@@ -3,7 +3,6 @@ package adminroutes
 import (
 	"fmt"
 	"bytes"
-	"time"
 	"strings"
 	json "encoding/json"
 	net_url "net/url"
@@ -22,9 +21,7 @@ func UserSearch( context *fiber.Ctx ) ( error ) {
 	escaped_username , _ := net_url.QueryUnescape( username )
 	formated_username := strings.Replace( escaped_username , " " , "-" , -1 )
 	formated_username_bytes := []byte( formated_username )
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	db := _get_db( context )
 	found_uuid := "not found"
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "usernames" ) )
@@ -70,9 +67,7 @@ func UserSearchFuzzy( context *fiber.Ctx ) ( error ) {
 	search_request := bleve.NewSearchRequest( boolean_query )
 	search_results , _ := search_index.Search( search_request )
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
-
+	db := _get_db( context )
 	var search_results_users []user.User
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )

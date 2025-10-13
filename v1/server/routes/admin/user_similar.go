@@ -2,7 +2,6 @@ package adminroutes
 
 import (
 	"fmt"
-	"time"
 	json "encoding/json"
 	fiber "github.com/gofiber/fiber/v2"
 	bolt_api "github.com/boltdb/bolt"
@@ -17,8 +16,7 @@ func HandleUserSimilar( context *fiber.Ctx ) ( error ) {
 	// fmt.Println( string( context_body ) )
 	json.Unmarshal( context_body , &sent_user )
 	var similar_user_reports []user.UserSimilarReport
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	db := _get_db( context )
 	db.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {
@@ -44,10 +42,9 @@ func HandleUserSimilarObjects( context *fiber.Ctx ) ( error ) {
 	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 
 	x_uuid := context.Params( "uuid" )
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	db := _get_db( context )
 	viewed_user := user.GetByUUID( x_uuid , db , GlobalConfig.BoltDBEncryptionKey )
-	viewed_user.GetSimilarUsers( db , GlobalConfig )
+	viewed_user.GetSimilarUsers( GlobalConfig )
 	fmt.Println( viewed_user )
 
 	return context.JSON( fiber.Map{

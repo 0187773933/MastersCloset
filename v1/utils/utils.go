@@ -25,7 +25,7 @@ import (
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
 	cpu "github.com/shirou/gopsutil/cpu"
 	bolt_api "github.com/boltdb/bolt"
-	uuid "github.com/satori/go.uuid"
+	// uuid "github.com/satori/go.uuid"
 )
 
 //go:embed zoneinfo
@@ -302,7 +302,7 @@ func _finger_print_mac_address() ( []string ) {
 }
 
 type FingerPrintStore struct {
-	UUID string `json:"uuid"`
+	Sha256 string `json:"sha_256"`
 	FingerPrint string `json:"finger_print"`
 }
 func FingerPrint( config *types.ConfigFile  ) ( result string ) {
@@ -340,7 +340,7 @@ func FingerPrint( config *types.ConfigFile  ) ( result string ) {
 		finger_print := finger_prints_bucket.Get( []byte( finger_print_sha_256 ) )
 		if finger_print == nil { // Store new fingerprint
 			// fmt.Println( "Storing New Finger Print" )
-			x_finger_print.UUID = uuid.NewV4().String()
+			x_finger_print.Sha256 = finger_print_sha_256
 			x_finger_print.FingerPrint = finger_print_string
 			x_finger_print_byte_object , _ := json.Marshal( x_finger_print )
 			x_finger_print_byte_object_encrypted := encryption.ChaChaEncryptBytes( config.BoltDBEncryptionKey , x_finger_print_byte_object )
@@ -349,11 +349,17 @@ func FingerPrint( config *types.ConfigFile  ) ( result string ) {
 			// fmt.Println( "Retrieving Existing Finger Print" )
 			decrypted_bucket_value := encryption.ChaChaDecryptBytes( config.BoltDBEncryptionKey , finger_print )
 			json.Unmarshal( decrypted_bucket_value , &x_finger_print )
+			if x_finger_print.Sha256 == "" {
+				x_finger_print.Sha256 = finger_print_sha_256
+				x_finger_print_byte_object , _ := json.Marshal( x_finger_print )
+				x_finger_print_byte_object_encrypted := encryption.ChaChaEncryptBytes( config.BoltDBEncryptionKey , x_finger_print_byte_object )
+				finger_prints_bucket.Put( []byte( finger_print_sha_256 ) , x_finger_print_byte_object_encrypted )
+			}
 		}
 		return nil
 	})
 	fmt.Println( x_finger_print )
-	result = x_finger_print.UUID
+	result = x_finger_print.Sha256
 	return
 }
 

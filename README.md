@@ -17,41 +17,47 @@
 ---
 
 ## TODO
-1. Blogger Stuff
+1. Make offline-first-sync-later
+	- var viewed_user_byte_object_encrypted []byte
+	- user::New()  --> POST --> db.remote.com/save
+	- user::Save()  --> POST --> db.remote.com/save
+	- CheckInUser()  --> POST --> db.remote.com/save
+	- user::RefillBalance() --> POST --> db.remote.com/save
+2. Blogger Stuff
 	- https://github.com/xjh22222228/awesome-web-editor
 		- https://github.com/codex-team/editor.js
-2. Prevent browsers from attempting/offering to save user PII into some browser profiles
-3. Make config editable via html
-4. cache stuff in production :
+3. Prevent browsers from attempting/offering to save user PII into some browser profiles
+4. Make config editable via html
+5. cache stuff in production :
 	- https://docs.gofiber.io/api/middleware/cache
 	- use CDN
 	- need V2
-5. Just let a barcode check-in a user. Avoids an extra call
+6. Just let a barcode check-in a user. Avoids an extra call
 	- GET /admin/user/get/barcode/:barcode
 	- GET /admin/user/checkin/test/:uuid
 	- GET /admin/user/checkin/:uuid
-6. Add User Fields :
+7. Add User Fields :
 	- Authorized Aliases
-7. Fix Docker
-8. Use time functions
+8. Fix Docker
+9. Use time functions
 	- `time.Now().After(lastFetched.Add(CachePeriod))` ?
-9. Change "usernames" DB bucket for key=${uuid}_username , value=Username
+10. Change "usernames" DB bucket for key=${uuid}_username , value=Username
 	- keeps only uuids as keys
-10. Fix ui.js#793
+11. Fix ui.js#793
 	- `document.getElementById( barcode_id ).focus();`
 	- make this optional , so that the edit page doesn't use this
-11. Fix Username/NameString to be Title Case?
-12. Make family-member management more streamlined
+12. Fix Username/NameString to be Title Case?
+13. Make family-member management more streamlined
 	- "ai" ? , too slow. 10-15 seconds some times.
-13. Add delete all exact duplicate checkin button
-14. Add Ability to Merge Users
-15. V2 Rewrite
+14. Add delete all exact duplicate checkin button
+15. Add Ability to Merge Users
+16. V2 Rewrite
 	- write logger package
 		- https://github.com/0187773933/FireC2Server/blob/master/v1/logger/logger.go
 		- https://github.com/0187773933/FireC2Server/blob/master/v1/server/utils.go#L49
 	- server monolith var
 	- support offline-online transitions
-16. Add Support for "sounds like" , mainly for spanish names
+17. Add Support for "sounds like" , mainly for spanish names
 	- https://github.com/jamesturk/jellyfish
 
 ## Misc

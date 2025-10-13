@@ -4,6 +4,7 @@ import (
 	// "fmt"
 	fiber "github.com/gofiber/fiber/v2"
 	types "github.com/0187773933/MastersCloset/v1/types"
+	bolt "github.com/boltdb/bolt"
 	logger "github.com/0187773933/MastersCloset/v1/logger"
 )
 
@@ -37,12 +38,27 @@ var ui_html_pages = map[ string ]string {
 	"/at": "./v1/server/html/audio_test.html" ,
 }
 
-func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
+func _get_db( context *fiber.Ctx ) ( *bolt.DB ) {
+	db := context.Locals( "db" )
+	if db == nil {
+		log.Error( "Database not found in context locals" )
+		return nil
+	}
+	db_cast , ok := db.( *bolt.DB )
+	if !ok {
+		log.Error( "Database in context locals is not of type *bolt.DB" )
+		return nil
+	}
+	return db_cast
+}
+
+func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile , db *bolt.DB ) {
 	GlobalConfig = config
 	admin_route_group := fiber_app.Group( "/admin" )
 
 	// HTML UI Pages
 	admin_route_group.Get( "/login" , ServeLoginPage )
+
 	for url , _ := range ui_html_pages {
 		// fmt.Println( "Registering" , url )
 		admin_route_group.Get( url , ServeAuthenticatedPage )
@@ -52,6 +68,8 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 		if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
 		return context.SendFile( "./v1/server/cdn/api.js" )
 	})
+
+	admin_route_group.Use( func( c *fiber.Ctx ) error { c.Locals( "db" , db ); return c.Next() } )
 
 	admin_route_group.Get( "/logout" , Logout )
 	admin_route_group.Post( "/login" , HandleLogin )

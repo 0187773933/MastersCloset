@@ -55,19 +55,54 @@ var user_creation_limiter = rate_limiter.New(rate_limiter.Config{
 	},
 })
 
+func _get_db( context *fiber.Ctx ) ( *bolt_api.DB ) {
+	db := context.Locals( "db" )
+	if db == nil {
+		log.Error( "Database not found in context locals" )
+		return nil
+	}
+	db_cast , ok := db.( *bolt_api.DB )
+	if !ok {
+		log.Error( "Database in context locals is not of type *bolt.DB" )
+		return nil
+	}
+	return db_cast
+}
 
-func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
+
+func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile , db *bolt_api.DB ) {
 	GlobalConfig = config
 
 	fiber_app.Get( "/" , public_limiter , RenderHomePage )
-	fiber_app.Get( "/logo.png" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/logo.png" ) } )
-	fiber_app.Get( "/cdn/utils.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/utils.js" ) } )
-	fiber_app.Get( "/cdn/ui.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/ui.js" ) } )
-	fiber_app.Get( "/cdn/ui.css" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/ui.css" ) } )
-	fiber_app.Get( "/cdn/verified.png" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/verified.png" ) } )
-	fiber_app.Get( "/favicon.ico" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/favicon.ico" ) } )
-	fiber_app.Get( "/cdn/sodium.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/sodium.js" ) } )
-	fiber_app.Get( "/cdn/protobuf.min.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/utils.js" ) } )
+	// fiber_app.Get( "/logo.png" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/logo.png" ) } )
+	// fiber_app.Get( "/cdn/utils.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/utils.js" ) } )
+	// fiber_app.Get( "/cdn/ui.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/ui.js" ) } )
+	// fiber_app.Get( "/cdn/ui.css" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/ui.css" ) } )
+	// fiber_app.Get( "/cdn/verified.png" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/verified.png" ) } )
+	// fiber_app.Get( "/favicon.ico" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/favicon.ico" ) } )
+	// fiber_app.Get( "/cdn/sodium.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/sodium.js" ) } )
+	// fiber_app.Get( "/cdn/protobuf.min.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/utils.js" ) } )
+	cdn := fiber_app.Group("/cdn", public_limiter)
+
+	// serve everything in ./v1/server/cdn at /cdn/*
+	cdn.Static("/", "./v1/server/cdn")
+
+	// tiny cache header for .js/.css only (like your old max-age=1)
+	cdn.Use(func(c *fiber.Ctx) error {
+		p := c.Path()
+		if strings.HasSuffix(p, ".js") || strings.HasSuffix(p, ".css") {
+			c.Set("Cache-Control", "public, max-age=1")
+		}
+		return c.Next()
+	})
+
+	// keep these two explicit, as requested
+	fiber_app.Get("/favicon.ico", public_limiter, func(c *fiber.Ctx) error {
+		return c.SendFile("./v1/server/cdn/favicon.ico")
+	})
+	fiber_app.Get("/logo.png", public_limiter, func(c *fiber.Ctx) error {
+		return c.SendFile("./v1/server/cdn/logo.png")
+	})
 
 	fiber_app.Get( "/join" , public_limiter , RenderJoinPage )
 	// fiber_app.Get( "/join/display" , public_limiter , CheckInDisplay )
@@ -84,6 +119,7 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile ) {
 	})
 
 	user_route_group := fiber_app.Group( "/user" )
+	user_route_group.Use( func( c *fiber.Ctx ) error { c.Locals( "db" , db ); return c.Next() } )
 	user_route_group.Get( "/login/fresh/:uuid" , public_limiter , LoginFresh )
 	// user_route_group.Get( "/login/success/:uuid" , LoginSuccess )
 	// user_route_group.Get( "/checkin/display/:uuid" , public_limiter , CheckInDisplay )
@@ -107,9 +143,9 @@ func check_if_user_cookie_exists( context *fiber.Ctx ) ( result bool ) {
 func check_if_user_ulid_cookie_exists( context *fiber.Ctx ) ( result bool ) {
 	fmt.Println( "check_if_user_ulid_cookie_exists()" )
 	result = false
-    cookieHeader := string(context.Request().Header.Peek("Cookie"))
-    cookies := strings.Split(cookieHeader, "; ")
-    fmt.Println( cookies )
+	cookieHeader := string(context.Request().Header.Peek("Cookie"))
+	cookies := strings.Split(cookieHeader, "; ")
+	fmt.Println( cookies )
 	user_cookie := context.Cookies( "the-masters-closet-user-ulid=" )
 	fmt.Println( user_cookie )
 	if user_cookie == "" { return }
@@ -180,8 +216,7 @@ func RenderJoinPage( context *fiber.Ctx ) ( error ) {
 
 
 func LoginFresh( context *fiber.Ctx ) ( error ) {
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	db := _get_db( context )
 
 	x_user_uuid := context.Params( "uuid" )
 	x_user := user.GetByUUID( x_user_uuid , db , GlobalConfig.BoltDBEncryptionKey )
@@ -191,7 +226,7 @@ func LoginFresh( context *fiber.Ctx ) ( error ) {
 	}
 
 	// Manual Check In For First Time Login
-	user.CheckInUser( x_user.UUID , db , GlobalConfig.BoltDBEncryptionKey , GlobalConfig.CheckInCoolOffDays )
+	user.CheckInUser( x_user.UUID , db , GlobalConfig.BoltDBEncryptionKey , GlobalConfig.CheckInCoolOffDays , GlobalConfig.RemoteHostUrl , GlobalConfig.RemoteHostAPIKey )
 
 	context.Cookie(
 		&fiber.Cookie{
@@ -211,8 +246,7 @@ func LoginFresh( context *fiber.Ctx ) ( error ) {
 
 func CheckInSilentTest( context *fiber.Ctx ) ( error ) {
 	x_user_uuid := context.Params( "uuid" )
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	db := _get_db( context )
 	check_in_result , milliseconds_remaining , balance , name_string , family_size := user.CheckInTest( x_user_uuid , db , GlobalConfig.BoltDBEncryptionKey , GlobalConfig.CheckInCoolOffDays )
 	return context.JSON( fiber.Map{
 		"route": "/user/checkin/silent/:uuid" ,
@@ -230,8 +264,7 @@ func CheckInSilentTest( context *fiber.Ctx ) ( error ) {
 // http://localhost:5950/user/new/:username
 func CheckIn( context *fiber.Ctx ) ( error ) {
 
-	db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+	db := _get_db( context )
 
 	// validate they have a stored user cookie
 	user_cookie := context.Cookies( "the-masters-closet-user" )
@@ -268,7 +301,7 @@ func CheckInDisplay( context *fiber.Ctx ) ( error ) {
 
 // 	viewed_user.FormatUsername()
 
-// 	new_user := user.New( viewed_user.Username , GlobalConfig )
+// 	new_user := user.New( viewed_user.Username , GlobalConfig , db )
 // 	log.Println( new_user )
 
 // 	viewed_user.UUID = new_user.UUID

@@ -1,4 +1,4 @@
-const uuid_v4_regex = /^[0-9A-F]{8}-[0-9A-F]{4}-[4][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i
+const uuid_v4_regex = /^[0-9A-F]{8}-[0-9A-F]{4}-[4][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i;
 function is_uuid( str ) { return uuid_v4_regex.test( str ); }
 const barcode_regex = /^\d+$/;
 function is_barcode( str ) { return barcode_regex.test( str ); }
