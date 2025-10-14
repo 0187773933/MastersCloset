@@ -1,4 +1,4 @@
-package adminroutes
+package server
 
 import (
 	"os"
@@ -19,7 +19,7 @@ import (
 )
 
 // weak attempt at sanitizing form input to build a "username"
-func SanitizeUsername( first_name string , last_name string ) ( username string ) {
+func ( s *Server ) SanitizeUsername( first_name string , last_name string ) ( username string ) {
 	if first_name == "" { first_name = "Not Provided" }
 	if last_name == "" { last_name = "Not Provided" }
 	sanitized_first_name := utils.SanitizeInputString( first_name )
@@ -28,7 +28,7 @@ func SanitizeUsername( first_name string , last_name string ) ( username string 
 	return
 }
 
-func serve_failed_attempt( context *fiber.Ctx ) ( error ) {
+func ( s *Server ) ServeFailedAttempt( context *fiber.Ctx ) ( error ) {
 	// context.Set( "Content-Type" , "text/html" )
 	// return context.SendString( "<h1>no</h1>" )
 	return context.SendFile( "./v1/server/html/admin_login.html" )
@@ -38,19 +38,19 @@ func ServeLoginPage( context *fiber.Ctx ) ( error ) {
 	return context.SendFile( "./v1/server/html/admin_login.html" )
 }
 
-func ServeAuthenticatedPage( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) ServeAuthenticatedPage( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	x_path := context.Route().Path
 	url_key := strings.Split( x_path , "/admin" )
 	if len( url_key ) < 2 { return context.SendFile( "./v1/server/html/admin_login.html" ) }
 	// fmt.Println( "Sending -->" , url_key[ 1 ] , x_path )
 	context.Set( "Cache-Control" , "public, max-age=1" );
-	return context.SendFile( ui_html_pages[ url_key[ 1 ] ] )
+	return context.SendFile( admin_ui_html_pages[ url_key[ 1 ] ] )
 }
 
-func PrintTest( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
-	printer.PrintTicket( GlobalConfig.Printer , printer.PrintJob{
+func ( s *Server ) PrintTest( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
+	printer.PrintTicket( s.Config.Printer , printer.PrintJob{
 		FamilySize: 5 ,
 		TotalClothingItems: 23 ,
 		Shoes: 1 ,
@@ -64,32 +64,32 @@ func PrintTest( context *fiber.Ctx ) ( error ) {
 	})
 }
 
-func Print( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) Print( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	var print_job printer.PrintJob
 	json.Unmarshal( []byte( context.Body() ) , &print_job )
 	fmt.Println( print_job )
-	printer.PrintTicket( GlobalConfig.Printer , print_job )
+	printer.PrintTicket( s.Config.Printer , print_job )
 	return context.JSON( fiber.Map{
 		"route": "/admin/print" ,
 		"result": true ,
 	})
 }
 
-func PrintTwo( context *fiber.Ctx ) ( error ) {
+func ( s *Server ) PrintTwo( context *fiber.Ctx ) ( error ) {
 	fmt.Println( "PrintTwo()" )
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	var print_job printer.PrintJob
 	json.Unmarshal( []byte( context.Body() ) , &print_job )
 	fmt.Println( print_job )
-	printer.PrintTicket2( GlobalConfig.Printer , print_job )
+	printer.PrintTicket2( s.Config.Printer , print_job )
 	return context.JSON( fiber.Map{
 		"route": "/admin/print2" ,
 		"result": true ,
 	})
 }
 
-func getAIParsedJSONOfAudioDescriptionOfFamily(audioTranscription string) ( map[string]interface{}, error) {
+func ( s *Server ) GetAIParsedJSONOfAudioDescriptionOfFamily( audioTranscription string ) ( map[string]interface{}, error) {
 	assistantInstructions := `
 		convert the input into a structured JSON object, including only the details provided:
 		{
@@ -126,7 +126,7 @@ func getAIParsedJSONOfAudioDescriptionOfFamily(audioTranscription string) ( map[
 	`
 	headers := map[string]string{
 		"Content-Type":  "application/json",
-		"Authorization": fmt.Sprintf("Bearer %s", GlobalConfig.OpenAIAPIKey),
+		"Authorization": fmt.Sprintf("Bearer %s", s.Config.OpenAIAPIKey),
 	}
 	data := map[string]interface{}{
 		"model": "gpt-4",
@@ -179,7 +179,7 @@ func getAIParsedJSONOfAudioDescriptionOfFamily(audioTranscription string) ( map[
 	return jsonResult, nil
 }
 
-func AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
+func ( s *Server ) AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
 	fmt.Println( "AudioToBaseUserStructure" )
 	var data types.AudioData
 	if err := c.BodyParser(&data); err != nil {
@@ -220,7 +220,7 @@ func AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
 
 	url := "https://api.openai.com/v1/audio/transcriptions"
 	headers := map[string]string{
-		"Authorization": fmt.Sprintf("Bearer %s", GlobalConfig.OpenAIAPIKey),
+		"Authorization": fmt.Sprintf("Bearer %s", s.Config.OpenAIAPIKey),
 	}
 
 	file, err := os.Open(tmpFilePath)
@@ -274,7 +274,7 @@ func AudioToBaseUserStructure( c *fiber.Ctx ) ( error ) {
 	}
 	instructions := decoded["text"].(string)
 	fmt.Println( instructions )
-	aiParsedJSON, err := getAIParsedJSONOfAudioDescriptionOfFamily(instructions)
+	aiParsedJSON, err := s.GetAIParsedJSONOfAudioDescriptionOfFamily(instructions)
 	if err != nil {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{"result": false, "error": err.Error() , "instructions": instructions , "decoded": aiParsedJSON})
 	}

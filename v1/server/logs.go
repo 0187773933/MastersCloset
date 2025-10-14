@@ -1,4 +1,4 @@
-package adminroutes
+package server
 
 import (
 	// "fmt"
@@ -8,16 +8,16 @@ import (
 
 // TODO = fix , because we finally fixed logs
 
-func GetLogFileNames( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) GetLogFileNames( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	return context.JSON( fiber.Map{
 		"route": "/admin/logs/get-log-file-names" ,
 		"result": utils.GetLogFileNames() ,
 	})
 }
 
-func GetLogFile( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) GetLogFile( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	file_path := context.Params( "file_name" )
 	return context.JSON( fiber.Map{
 		"route": "/admin/logs/:file_name" ,

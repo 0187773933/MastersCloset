@@ -1,13 +1,14 @@
 package remotesync
 
 import (
-	// "bytes"
+	"bytes"
 	"context"
 	// "encoding/binary"
 	// "errors"
+	"encoding/json"
 	"fmt"
-	// "io"
-	// "net/http"
+	"io"
+	"net/http"
 	"time"
 	bolt "github.com/boltdb/bolt"
 	// encrypt "github.com/0187773933/MastersCloset/v1/encryption"
@@ -15,26 +16,26 @@ import (
 )
 
 var INTERVAL = 12 * time.Second
-var BUCKET_NAME = "remote-save"
+var UPLOAD_BUCKET_NAME = "remote-upload"
+var DOWNLOAD_BUCKET_NAME = "remote-download"
 
 type RemoteSync struct {
 	DB *bolt.DB `json:"-"`
 	CTX context.Context `json:"-"`
-	Config *types.ConfigFile `jsong:"-"`
+	CONFIG *types.ConfigFile `jsong:"-"`
 }
 
 func New( db *bolt.DB , ctx context.Context , config *types.ConfigFile ) ( result RemoteSync ) {
 	result.DB = db
 	result.CTX = ctx
-	result.Config = config
-	return
-}
-
-func ( rs *RemoteSync ) EnsureRemoteSaveBucket() ( err error ) {
-	return rs.DB.Update( func( tx *bolt.Tx ) error {
-		_ , err := tx.CreateBucketIfNotExists( []byte( BUCKET_NAME ) )
+	result.CONFIG = config
+	result.DB.Update( func( tx *bolt.Tx ) error {
+		_ , err := tx.CreateBucketIfNotExists( []byte( UPLOAD_BUCKET_NAME ) )
+		if err == nil { return err }
+		_ , err = tx.CreateBucketIfNotExists( []byte( DOWNLOAD_BUCKET_NAME ) )
 		return err
 	})
+	return
 }
 
 func ( rs *RemoteSync ) Start() {
@@ -42,7 +43,7 @@ func ( rs *RemoteSync ) Start() {
 		timer := time.NewTimer( INTERVAL )
 		defer timer.Stop()
 
-		// client := &http.Client{ Timeout: 10 * time.Second }
+		http_client := &http.Client{ Timeout: 10 * time.Second }
 
 		for {
 			select {
@@ -50,71 +51,60 @@ func ( rs *RemoteSync ) Start() {
 					fmt.Println( "simulated context expired ?" )
 					return
 				case <-timer.C:
-					fmt.Println( "simulated que drain" )
-					// Drain the queue until empty.
-					// for {
-					// 	payload , ok , err := popOne( db )
-					// 	if err != nil {
-					// 		// DB issue; try again next cycle
-					// 		break
-					// 	}
-					// 	if !ok {
-					// 		break
-					// 	}
-					// 	// Do HTTP outside the txn.
-					// 	if err := doPost(client, postURL, payload); err != nil {
-					// 		// Requeue on failure (best-effort) and back off slightly
-					// 		_ = EnqueueRemoteSave(db, payload)
-					// 		time.Sleep(500 * time.Millisecond)
-					// 	}
-					// }
-					// // Schedule next run AFTER finishing this one.
+					fmt.Println( "uploading all modified users" )
+					rs.DB.Update( func( tx *bolt.Tx ) error {
+						b := tx.Bucket( []byte( UPLOAD_BUCKET_NAME ) )
+						b.ForEach( func( k , v []byte ) error {
+							fmt.Printf( "A %s is %s.\n" , k , v )
+							upload_result := rs.Upload( http_client , &k , &v )
+							fmt.Println( upload_result )
+							return nil
+						})
+						return nil
+					})
 					timer.Reset( INTERVAL )
 			}
 		}
 	}()
 }
 
-// // Pop the oldest item (atomic within one Update).
-// // Returns (payload, ok, err). ok=false means queue empty.
-// func popOne(db *bolt.DB) ([]byte, bool, error) {
-// 	var vcopy []byte
-// 	err := db.Update(func(tx *bolt.Tx) error {
-// 		b := tx.Bucket([]byte(RemoteSaveBucket))
-// 		if b == nil {
-// 			return nil
-// 		}
-// 		c := b.Cursor()
-// 		k, v := c.First()
-// 		if k == nil {
-// 			return nil
-// 		}
-// 		vcopy = append([]byte(nil), v...)
-// 		return c.Delete()
-// 	})
-// 	if err != nil {
-// 		return nil, false, err
-// 	}
-// 	if vcopy == nil {
-// 		return nil, false, nil
-// 	}
-// 	return vcopy, true, nil
-// }
-
-// func doPost(client *http.Client, url string, payload []byte) error {
-// 	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
-// 	if err != nil {
-// 		return err
-// 	}
-// 	req.Header.Set("Content-Type", "application/json")
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	io.Copy(io.Discard, resp.Body)
-// 	resp.Body.Close()
-// 	if resp.StatusCode >= 300 {
-// 		return fmt.Errorf("http %d", resp.StatusCode)
-// 	}
-// 	return nil
-// }
+func ( rs *RemoteSync ) Upload( client *http.Client , uuid *[]byte , u_bytes *[]byte ) ( result bool ) {
+	result = false
+	req , err := http.NewRequest( "POST" , rs.CONFIG.RemoteHostUrl , bytes.NewReader( *u_bytes ) )
+	if err != nil {
+		fmt.Println( err )
+		result = false
+		return
+	}
+	req.Header.Set( "Content-Type" , "application/json" )
+	resp , err := client.Do( req )
+	if err != nil {
+		fmt.Println( err )
+		result = false
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		snippet , _ := io.ReadAll( io.LimitReader( resp.Body , 2048 ) )
+		x := fmt.Errorf( "http %d: %s", resp.StatusCode , string( snippet ) )
+		fmt.Println( x )
+		result = false
+		return
+	}
+	var json_response map[string]any
+	if err := json.NewDecoder( io.LimitReader( resp.Body , 1<<20 ) ).Decode( &json_response ); err != nil {
+		x := fmt.Errorf( "decode response: %w" , err )
+		fmt.Println( x )
+		result = false
+		return
+	}
+	remote_result , _ := json_response[ "result" ].( bool )
+	if !remote_result {
+		x := fmt.Errorf( "remote result=false" )
+		fmt.Println( x )
+		result = false
+		return
+	}
+	result = true
+	return
+}

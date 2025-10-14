@@ -5,7 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 	"fmt"
-	"time"
+	// "time"
 	"path/filepath"
 	"context"
 	bolt "github.com/boltdb/bolt"
@@ -51,9 +51,10 @@ func main() {
 	fmt.Println( config )
 	// log.Init( config )
 	utils.WriteJS_API( config.ServerLiveUrl , config.ServerAPIKey , config.LocalHostUrl )
-	s = server.New( config )
-	db , _ := bolt.Open( config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
-	s.DB = db
+	db , db_err := bolt.Open( config.BoltDBPath , 0600 , &bolt.Options{} )
+	// db , db_err := bolt.Open( config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
+	if db_err != nil { logger.Log.Fatal( db_err.Error() ) }
+	s = server.New( config , db )
 	rsctx , rsctxcancel = context.WithCancel( context.Background() )
 	rs = remotesync.New( db , rsctx , &config )
 	rs.Start()

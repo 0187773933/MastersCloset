@@ -1,4 +1,4 @@
-package adminroutes
+package server
 
 import (
 	"fmt"
@@ -8,19 +8,20 @@ import (
 	user "github.com/0187773933/MastersCloset/v1/user"
 	// pp "github.com/k0kubun/pp/v3"
 	// pp.Println( viewed_user )
-	// log "github.com/0187773933/MastersCloset/v1/log"
+	log "github.com/0187773933/MastersCloset/v1/log"
 
 	bolt_api "github.com/boltdb/bolt"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
 )
 
 // could move to user , but edit should be the only thing like this
-func HandleUserEdit( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) HandleUserEdit( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	var viewed_user user.User
 	json.Unmarshal( context.Body() , &viewed_user )
-	viewed_user.Config = GlobalConfig
-	viewed_user.Save();
+	viewed_user.Config = &s.Config
+	if viewed_user.DB == nil { viewed_user.DB = s.DB }
+	viewed_user.Save()
 	log.Info( fmt.Sprintf( "%s === Updated" , viewed_user.UUID ) )
 	return context.JSON( fiber.Map{
 		"route": "/admin/user/edit" ,
@@ -30,8 +31,8 @@ func HandleUserEdit( context *fiber.Ctx ) ( error ) {
 }
 
 
-func EditCheckIn( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) EditCheckIn( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 
 	x_body := []byte( context.Body() )
 
@@ -42,19 +43,18 @@ func EditCheckIn( context *fiber.Ctx ) ( error ) {
 	json.Unmarshal( x_body , &x_checkin )
 	fmt.Println( x_uuid , x_ulid , x_checkin )
 
-	db := _get_db( context )
-	db.Update( func( tx *bolt_api.Tx ) error {
+	s.DB.Update( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {
 			var viewed_user user.User
-			decrypted_bucket_value := encryption.ChaChaDecryptBytes( GlobalConfig.BoltDBEncryptionKey , value )
+			decrypted_bucket_value := encryption.ChaChaDecryptBytes( s.Config.BoltDBEncryptionKey , value )
 			json.Unmarshal( decrypted_bucket_value , &viewed_user )
 			if len( viewed_user.CheckIns ) < 0 { return nil }
 			for i , check_in := range viewed_user.CheckIns {
 				if check_in.ULID == x_ulid {
 					viewed_user.CheckIns[ i ] = x_checkin
 					viewed_user_byte_object , _ := json.Marshal( viewed_user )
-					viewed_user_byte_object_encrypted := encryption.ChaChaEncryptBytes( GlobalConfig.BoltDBEncryptionKey , viewed_user_byte_object )
+					viewed_user_byte_object_encrypted := encryption.ChaChaEncryptBytes( s.Config.BoltDBEncryptionKey , viewed_user_byte_object )
 					bucket.Put( []byte( x_uuid ) , viewed_user_byte_object_encrypted )
 					return nil
 				}

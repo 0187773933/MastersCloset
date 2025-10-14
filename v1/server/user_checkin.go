@@ -1,4 +1,4 @@
-package adminroutes
+package server
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
 	user "github.com/0187773933/MastersCloset/v1/user"
 	printer "github.com/0187773933/MastersCloset/v1/printer"
-	// log "github.com/0187773933/MastersCloset/v1/log"
+	log "github.com/0187773933/MastersCloset/v1/log"
 	ulid "github.com/oklog/ulid/v2"
 )
 
@@ -59,29 +59,24 @@ func _att( user_item *int , amount int ) {
 }
 
 // We changed this to a POST Form , so now we have to parse it
-func UserCheckIn( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) UserCheckIn( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 
 	var balance_form CheckInBalanceForm
 	json.Unmarshal( []byte( context.Body() ), &balance_form )
 	fmt.Println( "UserCheckIn()" )
 	fmt.Printf( "%+v\n" , balance_form )
 
-	// 1.) Prep
-	// db , _ := bolt_api.Open( GlobalConfig.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	// defer db.Close()
-	db := _get_db( context )
-
 	// 2.) Grab the User
 	uploaded_uuid := context.Params( "uuid" )
 	x_uuid := utils.SanitizeInputString( uploaded_uuid )
 	var viewed_user user.User
-	viewed_user.Config = GlobalConfig
-	db.View( func( tx *bolt_api.Tx ) error {
+	viewed_user.Config = &s.Config
+	s.DB.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket_value := bucket.Get( []byte( x_uuid ) )
 		if bucket_value == nil { return nil }
-		decrypted_bucket_value := encryption.ChaChaDecryptBytes( GlobalConfig.BoltDBEncryptionKey , bucket_value )
+		decrypted_bucket_value := encryption.ChaChaDecryptBytes( s.Config.BoltDBEncryptionKey , bucket_value )
 		json.Unmarshal( decrypted_bucket_value , &viewed_user )
 		return nil
 	})
@@ -99,22 +94,22 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 
 	// 4.) Update the Balance
 	_att( &viewed_user.Balance.General.Tops.Used , balance_form.TopsAvailable )
-	_ries( &viewed_user.Balance.General.Tops.Available , balance_form.TopsAvailable , ( GlobalConfig.Balance.General.Tops * balance_form.ShoppingFor ) )
+	_ries( &viewed_user.Balance.General.Tops.Available , balance_form.TopsAvailable , ( s.Config.Balance.General.Tops * balance_form.ShoppingFor ) )
 
 	_att( &viewed_user.Balance.General.Bottoms.Used , balance_form.BottomsAvailable )
-	_ries( &viewed_user.Balance.General.Bottoms.Available , balance_form.BottomsAvailable , ( GlobalConfig.Balance.General.Bottoms * balance_form.ShoppingFor ) )
+	_ries( &viewed_user.Balance.General.Bottoms.Available , balance_form.BottomsAvailable , ( s.Config.Balance.General.Bottoms * balance_form.ShoppingFor ) )
 
 	_att( &viewed_user.Balance.General.Dresses.Used , balance_form.DressesAvailable )
-	_ries( &viewed_user.Balance.General.Dresses.Available , balance_form.DressesAvailable , ( GlobalConfig.Balance.General.Dresses * balance_form.ShoppingFor ) )
+	_ries( &viewed_user.Balance.General.Dresses.Available , balance_form.DressesAvailable , ( s.Config.Balance.General.Dresses * balance_form.ShoppingFor ) )
 
 	_att( &viewed_user.Balance.Shoes.Used , balance_form.ShoesAvailable )
-	_ries( &viewed_user.Balance.Shoes.Available , balance_form.ShoesAvailable , ( GlobalConfig.Balance.Shoes * balance_form.ShoppingFor ) )
+	_ries( &viewed_user.Balance.Shoes.Available , balance_form.ShoesAvailable , ( s.Config.Balance.Shoes * balance_form.ShoppingFor ) )
 
 	_att( &viewed_user.Balance.Seasonals.Used , balance_form.SeasonalsAvailable )
-	_ries( &viewed_user.Balance.Seasonals.Available , balance_form.SeasonalsAvailable , ( GlobalConfig.Balance.Seasonals * balance_form.ShoppingFor ) )
+	_ries( &viewed_user.Balance.Seasonals.Available , balance_form.SeasonalsAvailable , ( s.Config.Balance.Seasonals * balance_form.ShoppingFor ) )
 
 	_att( &viewed_user.Balance.Accessories.Used , balance_form.AccessoriesAvailable )
-	_ries( &viewed_user.Balance.Accessories.Available , balance_form.AccessoriesAvailable , ( GlobalConfig.Balance.Accessories * balance_form.ShoppingFor ) )
+	_ries( &viewed_user.Balance.Accessories.Available , balance_form.AccessoriesAvailable , ( s.Config.Balance.Accessories * balance_form.ShoppingFor ) )
 
 	// fmt.Println( "Checking In With Balance :" )
 	// fmt.Printf( "%+v\n" , viewed_user.Balance )
@@ -133,7 +128,7 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 	} else {
 		// Create a high number barcode
 		// barcode_number = viewed_user.AddVirtualBarcode()
-		db.Update( func( tx *bolt_api.Tx ) error {
+		s.DB.Update( func( tx *bolt_api.Tx ) error {
 			misc_bucket , _ := tx.CreateBucketIfNotExists( []byte( "misc" ) )
 			vb_index_bucket_value := misc_bucket.Get( []byte( "virtual-barcode-index" ) )
 			// fmt.Println( "vb_index_bucket_value" , vb_index_bucket_value )
@@ -164,12 +159,12 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 		FamilySize: balance_form.ShoppingFor ,
 		TotalClothingItems: total_clothing_items ,
 		Shoes: balance_form.ShoesAvailable ,
-		ShoesLimit: GlobalConfig.Balance.Shoes ,
-		PantsLimit: GlobalConfig.Balance.General.Bottoms ,
+		ShoesLimit: s.Config.Balance.Shoes ,
+		PantsLimit: s.Config.Balance.General.Bottoms ,
 		Accessories: balance_form.AccessoriesAvailable ,
-		AccessoriesLimit: GlobalConfig.Balance.Accessories ,
+		AccessoriesLimit: s.Config.Balance.Accessories ,
 		Seasonal: balance_form.SeasonalsAvailable ,
-		SeasonalLimit: GlobalConfig.Balance.Seasonals ,
+		SeasonalLimit: s.Config.Balance.Seasonals ,
 		FamilyName: family_name ,
 		BarcodeNumber: barcode_number ,
 		Spanish: viewed_user.Spanish ,
@@ -188,16 +183,16 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 	new_check_in.PrintJob = print_job
 	viewed_user.CheckIns = append( viewed_user.CheckIns , new_check_in )
 
-	// if len( GlobalConfig.LocalHostUrl ) > 3 {
+	// if len( s.Config.LocalHostUrl ) > 3 {
 	// 	log.Info( "Printing Ticket :" , print_job )
 	// 	utils.PrettyPrint( print_job )
-	// 	printer.PrintTicket( GlobalConfig.Printer , print_job )
+	// 	printer.PrintTicket( s.Config.Printer , print_job )
 	// }
 
 	// 6.) Re-Save the User
 	viewed_user_byte_object , _ := json.Marshal( viewed_user )
-	viewed_user_byte_object_encrypted := encryption.ChaChaEncryptBytes( GlobalConfig.BoltDBEncryptionKey , viewed_user_byte_object )
-	db_result := db.Update( func( tx *bolt_api.Tx ) error {
+	viewed_user_byte_object_encrypted := encryption.ChaChaEncryptBytes( s.Config.BoltDBEncryptionKey , viewed_user_byte_object )
+	db_result := s.DB.Update( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.Put( []byte( x_uuid ) , viewed_user_byte_object_encrypted )
 		return nil
@@ -213,16 +208,15 @@ func UserCheckIn( context *fiber.Ctx ) ( error ) {
 }
 
 
-func UserCheckInTest( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) UserCheckInTest( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	x_user_uuid := context.Params( "uuid" )
-	db := _get_db( context )
-	x_user := user.GetViaUUID( x_user_uuid , GlobalConfig , db )
+	x_user := user.GetViaUUID( x_user_uuid , &s.Config , s.DB )
 	check_in_test := x_user.CheckInTest()
 	return context.JSON( fiber.Map{
 		"route": "/admin/user/checkin/test/:uuid" ,
 		"result": check_in_test ,
 		"user": x_user ,
-		"balance_config": GlobalConfig.Balance ,
+		"balance_config": s.Config.Balance ,
 	})
 }

@@ -1,4 +1,4 @@
-package adminroutes
+package server
 
 import (
 	"fmt"
@@ -12,23 +12,22 @@ import (
 	bolt_api "github.com/boltdb/bolt"
 	user "github.com/0187773933/MastersCloset/v1/user"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
-	// log "github.com/0187773933/MastersCloset/v1/log"
+	log "github.com/0187773933/MastersCloset/v1/log"
 )
 
 // https://mailchimp.com/help/import-contacts-mailchimp/
 // https://mailchimp.com/help/format-guidelines-for-your-import-file/#Email_address
-func GetReportMailChimp( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) GetReportMailChimp( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 
-	db := _get_db( context )
 	// Get Data from DB
 	var result [][]string
 	result = append( result , []string{ "First Name" , "Last Name" , "Email Address" , "Phone" } )
-	db.View( func( tx *bolt_api.Tx ) error {
+	s.DB.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {
 			var viewed_user user.User
-			decrypted_bucket_value := encryption.ChaChaDecryptBytes( GlobalConfig.BoltDBEncryptionKey , value )
+			decrypted_bucket_value := encryption.ChaChaDecryptBytes( s.Config.BoltDBEncryptionKey , value )
 			json.Unmarshal( decrypted_bucket_value , &viewed_user )
 			x_user := []string{ viewed_user.Identity.FirstName , viewed_user.Identity.LastName , viewed_user.EmailAddress , viewed_user.PhoneNumber }
 			result = append( result , x_user )
@@ -82,9 +81,8 @@ func its( i int ) ( s string ) {
 	return
 }
 
-func GetReportMain( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
-	db := _get_db( context )
+func ( s *Server ) GetReportMain( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	var csv_lines [][]string
 	csv_headers := []string{
 		"First Name" , "Middle Name" , "Last Name" ,
@@ -100,11 +98,11 @@ func GetReportMain( context *fiber.Ctx ) ( error ) {
 
 	// Extract Each User's Info into out custom csv structure
 	// var viewed_users []user.User
-	db.View( func( tx *bolt_api.Tx ) error {
+	s.DB.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {
 			var viewed_user user.User
-			decrypted_bucket_value := encryption.ChaChaDecryptBytes( GlobalConfig.BoltDBEncryptionKey , value )
+			decrypted_bucket_value := encryption.ChaChaDecryptBytes( s.Config.BoltDBEncryptionKey , value )
 			json.Unmarshal( decrypted_bucket_value , &viewed_user )
 			is_spanish := strconv.FormatBool( viewed_user.Spanish )
 			primary_barcode := ""

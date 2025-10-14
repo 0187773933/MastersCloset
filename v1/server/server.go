@@ -9,15 +9,13 @@ import (
 	// try "github.com/manucorporat/try"
 	bolt "github.com/boltdb/bolt"
 	types "github.com/0187773933/MastersCloset/v1/types"
-	user_routes "github.com/0187773933/MastersCloset/v1/server/routes/user"
-	admin_routes "github.com/0187773933/MastersCloset/v1/server/routes/admin"
+	// user_routes "github.com/0187773933/MastersCloset/v1/server/routes/user"
+	// admin_routes "github.com/0187773933/MastersCloset/v1/server/routes/admin"
 	// "os"
 	utils "github.com/0187773933/MastersCloset/v1/utils"
 	log "github.com/0187773933/MastersCloset/v1/log"
 	logger "github.com/0187773933/MastersCloset/v1/logger"
 )
-
-var GlobalConfig *types.ConfigFile
 
 type Server struct {
 	FiberApp *fiber.App `json:"fiber_app"`
@@ -37,11 +35,11 @@ func request_logging_middleware( context *fiber.Ctx ) ( error ) {
 	return context.Next()
 }
 
-func New( config types.ConfigFile ) ( server Server ) {
+func New( config types.ConfigFile , db *bolt.DB ) ( server Server ) {
 
 	server.FiberApp = fiber.New()
 	server.Config = config
-	GlobalConfig = &config
+	server.DB = db
 
 	server.FiberApp.Use( request_logging_middleware )
 	// server.FiberApp.Use( favicon.New( favicon.Config{
@@ -68,8 +66,8 @@ func New( config types.ConfigFile ) ( server Server ) {
 }
 
 func ( s *Server ) SetupRoutes() {
-	admin_routes.RegisterRoutes( s.FiberApp , &s.Config , s.DB )
-	user_routes.RegisterRoutes( s.FiberApp , &s.Config , s.DB )
+	s.RegisterAdminRoutes()
+	s.RegisterUserRoutes()
 }
 
 func ( s *Server ) Start() {

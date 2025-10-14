@@ -109,6 +109,15 @@ func Debug( args ...interface{} ) {
 	log.Println( args... )
 }
 
+func Info( args ...interface{} ) {
+	time_string := utils.GetFormattedTimeString()
+	args = append( []interface{}{ time_string , "===" , finger_print , "===" , "DEBUG" , "===" } , args... )
+	// fields := logrus.Fields{ "time": time_string , }
+	// log.Logrus.WithFields( fields ).Debug( args... )
+	// log.Logrus.Debug( args... )
+	log.Println( args... )
+}
+
 func Error( args ...interface{} ) {
 	time_string := utils.GetFormattedTimeString()
 	args = append( []interface{}{ "ERROR !!!" , time_string , "===" , finger_print , "===" } , args... )

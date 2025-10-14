@@ -1,4 +1,4 @@
-package userroutes
+package server
 
 import (
 	"fmt"
@@ -9,19 +9,16 @@ import (
 	// net_url "net/url"
 	fiber "github.com/gofiber/fiber/v2"
 	rate_limiter "github.com/gofiber/fiber/v2/middleware/limiter"
-	types "github.com/0187773933/MastersCloset/v1/types"
+	// types "github.com/0187773933/MastersCloset/v1/types"
 	// bolt "github.com/0187773933/MastersCloset/v1/bolt"
 	// utils "github.com/0187773933/MastersCloset/v1/utils"
-	bolt_api "github.com/boltdb/bolt"
+	// bolt_api "github.com/boltdb/bolt"
 	user "github.com/0187773933/MastersCloset/v1/user"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
-	logger "github.com/0187773933/MastersCloset/v1/logger"
-	// log "github.com/0187773933/MastersCloset/v1/log"
+	// logger "github.com/0187773933/MastersCloset/v1/logger"
+	log "github.com/0187773933/MastersCloset/v1/log"
 	// bleve "github.com/blevesearch/bleve/v2"
 )
-
-var GlobalConfig *types.ConfigFile
-var log = logger.GetLogger()
 
 var public_limiter = rate_limiter.New(rate_limiter.Config{
 	Max:        30, // set a different rate limit for this route
@@ -55,25 +52,9 @@ var user_creation_limiter = rate_limiter.New(rate_limiter.Config{
 	},
 })
 
-func _get_db( context *fiber.Ctx ) ( *bolt_api.DB ) {
-	db := context.Locals( "db" )
-	if db == nil {
-		log.Error( "Database not found in context locals" )
-		return nil
-	}
-	db_cast , ok := db.( *bolt_api.DB )
-	if !ok {
-		log.Error( "Database in context locals is not of type *bolt.DB" )
-		return nil
-	}
-	return db_cast
-}
+func ( s *Server ) RegisterUserRoutes() {
 
-
-func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile , db *bolt_api.DB ) {
-	GlobalConfig = config
-
-	fiber_app.Get( "/" , public_limiter , RenderHomePage )
+	s.FiberApp.Get( "/" , public_limiter , s.RenderHomePage )
 	// fiber_app.Get( "/logo.png" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/logo.png" ) } )
 	// fiber_app.Get( "/cdn/utils.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/utils.js" ) } )
 	// fiber_app.Get( "/cdn/ui.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/ui.js" ) } )
@@ -82,7 +63,7 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile , db *bolt_
 	// fiber_app.Get( "/favicon.ico" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/favicon.ico" ) } )
 	// fiber_app.Get( "/cdn/sodium.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.SendFile( "./v1/server/cdn/sodium.js" ) } )
 	// fiber_app.Get( "/cdn/protobuf.min.js" , public_limiter , func( context *fiber.Ctx ) ( error ) { context.Set( "Cache-Control" , "public, max-age=1" ); return context.SendFile( "./v1/server/cdn/utils.js" ) } )
-	cdn := fiber_app.Group("/cdn", public_limiter)
+	cdn := s.FiberApp.Group("/cdn", public_limiter)
 
 	// serve everything in ./v1/server/cdn at /cdn/*
 	cdn.Static("/", "./v1/server/cdn")
@@ -97,50 +78,49 @@ func RegisterRoutes( fiber_app *fiber.App , config *types.ConfigFile , db *bolt_
 	})
 
 	// keep these two explicit, as requested
-	fiber_app.Get("/favicon.ico", public_limiter, func(c *fiber.Ctx) error {
+	s.FiberApp.Get("/favicon.ico", public_limiter, func(c *fiber.Ctx) error {
 		return c.SendFile("./v1/server/cdn/favicon.ico")
 	})
-	fiber_app.Get("/logo.png", public_limiter, func(c *fiber.Ctx) error {
+	s.FiberApp.Get("/logo.png", public_limiter, func(c *fiber.Ctx) error {
 		return c.SendFile("./v1/server/cdn/logo.png")
 	})
 
-	fiber_app.Get( "/join" , public_limiter , RenderJoinPage )
+	s.FiberApp.Get( "/join" , public_limiter , s.RenderJoinPage )
 	// fiber_app.Get( "/join/display" , public_limiter , CheckInDisplay )
 	// fiber_app.Post( "/user/new" , user_creation_limiter , HandleNewUserJoin )
-	fiber_app.Get( "/checkin" , public_limiter , CheckIn )
+	s.FiberApp.Get( "/checkin" , public_limiter , s.CheckIn )
 
 	google_ical_link := "https://calendar.google.com/calendar/ical/masters.closet.5950%40gmail.com/public/basic.ics"
-	fiber_app.Get( "/ical" , public_limiter , func( context *fiber.Ctx ) ( error ) {
+	s.FiberApp.Get( "/ical" , public_limiter , func( context *fiber.Ctx ) ( error ) {
 		return context.Redirect( google_ical_link , fiber.StatusMovedPermanently )
 	})
-	fiber_app.Get( "/calendar" , public_limiter , func( context *fiber.Ctx ) ( error ) {
+	s.FiberApp.Get( "/calendar" , public_limiter , func( context *fiber.Ctx ) ( error ) {
 		context.Set( "Content-Type" , "text/html" )
 		return context.SendFile( "./v1/server/html/calendar.html" )
 	})
 
-	user_route_group := fiber_app.Group( "/user" )
-	user_route_group.Use( func( c *fiber.Ctx ) error { c.Locals( "db" , db ); return c.Next() } )
-	user_route_group.Get( "/login/fresh/:uuid" , public_limiter , LoginFresh )
+	user_route_group := s.FiberApp.Group( "/user" )
+	// user_route_group.Use( func( c *fiber.Ctx ) error { c.Locals( "db" , db ); return c.Next() } )
+	user_route_group.Get( "/login/fresh/:uuid" , public_limiter , s.LoginFresh )
 	// user_route_group.Get( "/login/success/:uuid" , LoginSuccess )
 	// user_route_group.Get( "/checkin/display/:uuid" , public_limiter , CheckInDisplay )
-	user_route_group.Get( "/checkin" , public_limiter , CheckIn )
-	user_route_group.Get( "/checkin/silent/:uuid" , public_limiter , CheckInSilentTest )
+	user_route_group.Get( "/checkin" , public_limiter , s.CheckIn )
+	user_route_group.Get( "/checkin/silent/:uuid" , public_limiter , s.CheckInSilentTest )
 
-
-	fiber_app.Get( "/*" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.Redirect( "/" ) } )
+	s.FiberApp.Get( "/*" , public_limiter , func( context *fiber.Ctx ) ( error ) { return context.Redirect( "/" ) } )
 }
 
-func check_if_user_cookie_exists( context *fiber.Ctx ) ( result bool ) {
+func ( s *Server ) CheckIfUserCookieExists( context *fiber.Ctx ) ( result bool ) {
 	result = false
 	user_cookie := context.Cookies( "the-masters-closet-user" )
 	if user_cookie == "" { return }
-	user_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , user_cookie )
+	user_cookie_value := encryption.SecretBoxDecrypt( s.Config.BoltDBEncryptionKey , user_cookie )
 	// result = uuid.IsUUID( user_cookie_value )
 	if user_cookie_value != "" { result = true }
 	return
 }
 
-func check_if_user_ulid_cookie_exists( context *fiber.Ctx ) ( result bool ) {
+func ( s *Server ) CheckIfUserULIDCookieExists( context *fiber.Ctx ) ( result bool ) {
 	fmt.Println( "check_if_user_ulid_cookie_exists()" )
 	result = false
 	cookieHeader := string(context.Request().Header.Peek("Cookie"))
@@ -150,18 +130,18 @@ func check_if_user_ulid_cookie_exists( context *fiber.Ctx ) ( result bool ) {
 	fmt.Println( user_cookie )
 	if user_cookie == "" { return }
 	fmt.Println( user_cookie )
-	user_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , user_cookie )
+	user_cookie_value := encryption.SecretBoxDecrypt( s.Config.BoltDBEncryptionKey , user_cookie )
 	fmt.Println( user_cookie_value )
 	if user_cookie_value != "" { result = true }
 	return
 }
 
-func check_if_admin_cookie_exists( context *fiber.Ctx ) ( result bool ) {
+func ( s *Server ) CheckIfAdminCookieExists( context *fiber.Ctx ) ( result bool ) {
 	result = false
 	admin_cookie := context.Cookies( "the-masters-closet-admin" )
 	if admin_cookie == "" { return }
-	admin_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , admin_cookie )
-	if admin_cookie_value != GlobalConfig.ServerCookieAdminSecretMessage { fmt.Println( "admin cookie secret message was not equal" ); return }
+	admin_cookie_value := encryption.SecretBoxDecrypt( s.Config.BoltDBEncryptionKey , admin_cookie )
+	if admin_cookie_value != s.Config.ServerCookieAdminSecretMessage { fmt.Println( "admin cookie secret message was not equal" ); return }
 	result = true
 	return
 }
@@ -173,31 +153,31 @@ func serve_failed_check_in_attempt( context *fiber.Ctx ) ( error ) {
 	return context.SendFile( "./v1/server/html/user_check_in_failed.html" )
 }
 
-func RenderHomePage( context *fiber.Ctx ) ( error ) {
+func ( s *Server ) RenderHomePage( context *fiber.Ctx ) ( error ) {
 	fmt.Println( "RenderHomePage()" )
 	context.Set( "Content-Type" , "text/html" )
 
-	admin_logged_in := check_if_admin_cookie_exists( context )
+	admin_logged_in := s.CheckIfUserCookieExists( context )
 	if admin_logged_in == true {
 		fmt.Println( "RenderHomePage() --> Admin" )
 		return context.SendFile( "./v1/server/html/admin.html" )
 	}
 
-	user_logged_in := check_if_user_cookie_exists( context )
+	user_logged_in := s.CheckIfUserCookieExists( context )
 	if user_logged_in == true {
 		fmt.Println( "RenderHomePage() --> User UUID" )
 		user_cookie := context.Cookies( "the-masters-closet-user" )
-		user_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , user_cookie )
+		user_cookie_value := encryption.SecretBoxDecrypt( s.Config.BoltDBEncryptionKey , user_cookie )
 		fmt.Println( "user logged in" , user_cookie_value )
 		return context.SendFile( "./v1/server/html/user_home.html" )
 	}
 
-	user_ulid_cookie_exists := check_if_user_ulid_cookie_exists( context )
+	user_ulid_cookie_exists := s.CheckIfUserULIDCookieExists( context )
 	if user_ulid_cookie_exists == true {
 		fmt.Println( "RenderHomePage() --> User ULID" )
 		user_ulid_cookie := context.Cookies( "the-masters-closet-user-ulid" )
 		fmt.Println( user_ulid_cookie )
-		user_ulid_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , user_ulid_cookie )
+		user_ulid_cookie_value := encryption.SecretBoxDecrypt( s.Config.BoltDBEncryptionKey , user_ulid_cookie )
 		fmt.Println( user_ulid_cookie_value )
 		return context.SendFile( "./v1/server/html/user_home.html" )
 	}
@@ -206,8 +186,8 @@ func RenderHomePage( context *fiber.Ctx ) ( error ) {
 	return context.SendFile( "./v1/server/html/home.html" )
 }
 
-func RenderJoinPage( context *fiber.Ctx ) ( error ) {
-	user_logged_in := check_if_user_cookie_exists( context )
+func ( s *Server ) RenderJoinPage( context *fiber.Ctx ) ( error ) {
+	user_logged_in := s.CheckIfUserCookieExists( context )
 	if user_logged_in == true {
 		return context.SendFile( "./v1/server/html/user_home.html" )
 	}
@@ -215,23 +195,22 @@ func RenderJoinPage( context *fiber.Ctx ) ( error ) {
 }
 
 
-func LoginFresh( context *fiber.Ctx ) ( error ) {
-	db := _get_db( context )
+func ( s *Server ) LoginFresh( context *fiber.Ctx ) ( error ) {
 
 	x_user_uuid := context.Params( "uuid" )
-	x_user := user.GetByUUID( x_user_uuid , db , GlobalConfig.BoltDBEncryptionKey )
+	x_user := user.GetByUUID( x_user_uuid , s.DB , s.Config.BoltDBEncryptionKey )
 	if x_user.UUID == "" {
 		context.Set( "Content-Type" , "text/html" )
 		return context.SendString( "<h1>Login Failed</h1>" )
 	}
 
 	// Manual Check In For First Time Login
-	user.CheckInUser( x_user.UUID , db , GlobalConfig.BoltDBEncryptionKey , GlobalConfig.CheckInCoolOffDays , GlobalConfig.RemoteHostUrl , GlobalConfig.RemoteHostAPIKey )
+	user.CheckInUser( x_user.UUID , s.DB , s.Config.BoltDBEncryptionKey , s.Config.CheckInCoolOffDays , s.Config.RemoteHostUrl , s.Config.RemoteHostAPIKey )
 
 	context.Cookie(
 		&fiber.Cookie{
 			Name: "the-masters-closet-user" ,
-			Value: encryption.SecretBoxEncrypt( GlobalConfig.BoltDBEncryptionKey , x_user.UUID ) ,
+			Value: encryption.SecretBoxEncrypt( s.Config.BoltDBEncryptionKey , x_user.UUID ) ,
 			Secure: true , // dev
 			Path: "/" , // fucking webkit
 			// Domain: "blah.ngrok.io" , // probably should set this for webkit
@@ -244,10 +223,9 @@ func LoginFresh( context *fiber.Ctx ) ( error ) {
 	return context.SendFile( "./v1/server/html/user_login_success.html" )
 }
 
-func CheckInSilentTest( context *fiber.Ctx ) ( error ) {
+func ( s *Server ) CheckInSilentTest( context *fiber.Ctx ) ( error ) {
 	x_user_uuid := context.Params( "uuid" )
-	db := _get_db( context )
-	check_in_result , milliseconds_remaining , balance , name_string , family_size := user.CheckInTest( x_user_uuid , db , GlobalConfig.BoltDBEncryptionKey , GlobalConfig.CheckInCoolOffDays )
+	check_in_result , milliseconds_remaining , balance , name_string , family_size := user.CheckInTest( x_user_uuid , s.DB , s.Config.BoltDBEncryptionKey , s.Config.CheckInCoolOffDays )
 	return context.JSON( fiber.Map{
 		"route": "/user/checkin/silent/:uuid" ,
 		"result": fiber.Map{
@@ -262,25 +240,23 @@ func CheckInSilentTest( context *fiber.Ctx ) ( error ) {
 
 // https://docs.gofiber.io/api/ctx#cookie
 // http://localhost:5950/user/new/:username
-func CheckIn( context *fiber.Ctx ) ( error ) {
-
-	db := _get_db( context )
+func ( s *Server ) CheckIn( context *fiber.Ctx ) ( error ) {
 
 	// validate they have a stored user cookie
 	user_cookie := context.Cookies( "the-masters-closet-user" )
 	// if user_cookie == "" { fmt.Println( "user cookie was blank" ); return serve_failed_check_in_attempt( context ) }
 	if user_cookie == "" { fmt.Println( "user cookie was blank" ); return context.SendFile( "./v1/server/html/user_new.html" ) }
-	user_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , user_cookie )
-	x_user := user.GetByUUID( user_cookie_value , db , GlobalConfig.BoltDBEncryptionKey )
+	user_cookie_value := encryption.SecretBoxDecrypt( s.Config.BoltDBEncryptionKey , user_cookie )
+	x_user := user.GetByUUID( user_cookie_value , s.DB , s.Config.BoltDBEncryptionKey )
 	// if x_user.UUID == "" { fmt.Println( "UUID stored in user cookie was blank" ); return serve_failed_check_in_attempt( context ) }
 	if x_user.UUID == "" { fmt.Println( "UUID stored in user cookie was blank" ); return context.SendFile( "./v1/server/html/user_new.html" ) }
 	// TODO : render a different page if the check-in would fail ?
-	// check_in_test , time_remaining := user.CheckInUser( x_user.UUID , db , GlobalConfig.BoltDBEncryptionKey , GlobalConfig.CheckInCoolOffDays )
+	// check_in_test , time_remaining := user.CheckInUser( x_user.UUID , db , s.Config.BoltDBEncryptionKey , s.Config.CheckInCoolOffDays )
 	// fmt.Println( "Pre-Check-In Test Result ===" , check_in_test , "Time Remaining ===" , time_remaining )
 	return context.Redirect( fmt.Sprintf( "/user/checkin/display/%s" , x_user.UUID ) )
 }
 
-func CheckInDisplay( context *fiber.Ctx ) ( error ) {
+func ( s *Server ) CheckInDisplay( context *fiber.Ctx ) ( error ) {
 	return context.SendFile( "./v1/server/html/user_check_in.html" )
 }
 
@@ -289,7 +265,7 @@ func CheckInDisplay( context *fiber.Ctx ) ( error ) {
 // 	var viewed_user user.User
 // 	json.Unmarshal( context.Body() , &viewed_user )
 
-// 	viewed_user.Config = GlobalConfig
+// 	viewed_user.Config = s.Config
 
 // 	// Treat this as a Temp User
 // 	if viewed_user.Identity.FirstName == "" && viewed_user.Identity.MiddleName == "" && viewed_user.Identity.LastName == "" {
@@ -301,7 +277,7 @@ func CheckInDisplay( context *fiber.Ctx ) ( error ) {
 
 // 	viewed_user.FormatUsername()
 
-// 	new_user := user.New( viewed_user.Username , GlobalConfig , db )
+// 	new_user := user.New( viewed_user.Username , s.Config , db )
 // 	log.Println( new_user )
 
 // 	viewed_user.UUID = new_user.UUID
@@ -310,7 +286,7 @@ func CheckInDisplay( context *fiber.Ctx ) ( error ) {
 // 	viewed_user.Save()
 
 // 	// add to search index
-// 	search_index , _ := bleve.Open( GlobalConfig.BleveSearchPath )
+// 	search_index , _ := bleve.Open( s.Config.BleveSearchPath )
 // 	defer search_index.Close()
 // 	search_item := types.SearchItem{
 // 		UUID: new_user.UUID ,
@@ -324,7 +300,7 @@ func CheckInDisplay( context *fiber.Ctx ) ( error ) {
 // 	context.Cookie(
 // 		&fiber.Cookie{
 // 			Name: "the-masters-closet-user" ,
-// 			Value: encryption.SecretBoxEncrypt( GlobalConfig.BoltDBEncryptionKey , viewed_user.UUID ) ,
+// 			Value: encryption.SecretBoxEncrypt( s.Config.BoltDBEncryptionKey , viewed_user.UUID ) ,
 // 			Secure: true ,
 // 			Path: "/" ,
 // 			// Domain: "blah.ngrok.io" , // probably should set this for webkit

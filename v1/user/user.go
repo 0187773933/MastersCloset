@@ -22,6 +22,8 @@ import (
 
 var log = logger.GetLogger()
 
+var UPLOAD_BUCKET_NAME = "remote-upload"
+
 type CheckIn struct {
 	UUID string `json:"uuid"`
 	Name string `json:"name"`
@@ -150,7 +152,7 @@ func New( username string , config *types.ConfigFile , db *bolt.DB ) ( new_user 
 		usernames_bucket.Put( []byte( username ) , []byte( new_user.UUID ) )
 
 		// ADDON , saving to drainable pool
-		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( "remote-save" ) )
+		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( UPLOAD_BUCKET_NAME ) )
 		remote_save_bucket.Put( []byte( new_user_uuid ) , new_user_byte_object_encrypted )
 
 		return nil
@@ -221,7 +223,7 @@ func ( u *User ) Save() {
 		users_bucket.Put( []byte( u.UUID ) , byte_object_encrypted )
 
 		// ADDON , saving to drainable pool
-		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( "remote-save" ) )
+		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( UPLOAD_BUCKET_NAME ) )
 		remote_save_bucket.Put( []byte( u.UUID ) , byte_object_encrypted )
 
 		return nil
@@ -535,7 +537,7 @@ func RefillBalance( user_uuid string , db *bolt.DB , encryption_key string , bal
 		bucket.Put( []byte( user_uuid ) , viewed_user_byte_object_encrypted )
 
 		// ADDON , saving to drainable pool
-		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( "remote-save" ) )
+		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( UPLOAD_BUCKET_NAME ) )
 		remote_save_bucket.Put( []byte( user_uuid ) , viewed_user_byte_object_encrypted )
 
 		return nil
@@ -694,7 +696,7 @@ func CheckInUser( user_uuid string , db *bolt.DB , encryption_key string , cool_
 		bucket.Put( []byte( user_uuid ) , viewed_user_byte_object_encrypted )
 
 		// ADDON , saving to drainable pool
-		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( "remote-save" ) )
+		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( UPLOAD_BUCKET_NAME ) )
 		remote_save_bucket.Put( []byte( user_uuid ) , viewed_user_byte_object_encrypted )
 
 		return nil

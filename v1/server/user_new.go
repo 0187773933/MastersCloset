@@ -1,4 +1,4 @@
-package adminroutes
+package server
 
 import (
 	"fmt"
@@ -20,10 +20,10 @@ import (
 	bolt "github.com/boltdb/bolt"
 	bleve "github.com/blevesearch/bleve/v2"
 	utils "github.com/0187773933/MastersCloset/v1/utils"
-	// log "github.com/0187773933/MastersCloset/v1/log"
+	log "github.com/0187773933/MastersCloset/v1/log"
 )
 
-func ProcessNewUserForm( context *fiber.Ctx ) ( new_user user.User ) {
+func ( s *Server ) ProcessNewUserForm( context *fiber.Ctx ) ( new_user user.User ) {
 
 	uploaded_first_name := context.FormValue( "user_first_name" )
 	uploaded_last_name := context.FormValue( "user_last_name" )
@@ -98,13 +98,13 @@ func ProcessNewUserForm( context *fiber.Ctx ) ( new_user user.User ) {
 	return
 }
 
-func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 
 	var viewed_user user.User
 	json.Unmarshal( context.Body() , &viewed_user )
 
-	viewed_user.Config = GlobalConfig
+	viewed_user.Config = &s.Config
 
 	// Treat this as a Temp User
 	if viewed_user.Identity.FirstName == "" && viewed_user.Identity.MiddleName == "" && viewed_user.Identity.LastName == "" {
@@ -123,8 +123,7 @@ func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 
 	viewed_user.FormatUsername()
 
-	db := _get_db( context )
-	new_user := user.New( viewed_user.Username , GlobalConfig , db )
+	new_user := user.New( viewed_user.Username , &s.Config , s.DB )
 
 	log.Info( new_user )
 
@@ -136,8 +135,7 @@ func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 
 	if viewed_user.ULID != "" {
 		fmt.Println( "ulid was present" )
-		db := _get_db( context )
-		db.Update( func( tx *bolt.Tx ) error {
+		s.DB.Update( func( tx *bolt.Tx ) error {
 			ulid_uuid_bucket , _ := tx.CreateBucketIfNotExists( []byte( "ulid-uuid" ) )
 			ulid_uuid_bucket.Put( []byte( viewed_user.ULID ) , []byte( viewed_user.UUID ) )
 			return nil
@@ -145,7 +143,7 @@ func HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 	}
 
 	// add to search index
-	search_index , _ := bleve.Open( GlobalConfig.BleveSearchPath )
+	search_index , _ := bleve.Open( s.Config.BleveSearchPath )
 	defer search_index.Close()
 	search_item := types.SearchItem{
 		UUID: new_user.UUID ,

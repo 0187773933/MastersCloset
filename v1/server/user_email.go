@@ -1,4 +1,4 @@
-package adminroutes
+package server
 
 import (
 	fmt "fmt"
@@ -8,20 +8,20 @@ import (
 	bolt_api "github.com/boltdb/bolt"
 	user "github.com/0187773933/MastersCloset/v1/user"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
-	// log "github.com/0187773933/MastersCloset/v1/log"
+	log "github.com/0187773933/MastersCloset/v1/log"
 	try "github.com/manucorporat/try"
 )
 
-func send_email( to string , subject string , body string ) ( result bool ) {
+func ( s *Server ) SendEmail( to string , subject string , body string ) ( result bool ) {
 	result = false
 	try.This( func() {
 		auth := smtp.PlainAuth( "" ,
-			GlobalConfig.Email.SMTPAuthEmail ,
-			GlobalConfig.Email.SMTPAuthPassword ,
-			GlobalConfig.Email.SMTPServer )
-		msg := []byte( fmt.Sprintf( "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s" , GlobalConfig.Email.From , to , subject , body ) )
+			s.Config.Email.SMTPAuthEmail ,
+			s.Config.Email.SMTPAuthPassword ,
+			s.Config.Email.SMTPServer )
+		msg := []byte( fmt.Sprintf( "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s" , s.Config.Email.From , to , subject , body ) )
 		fmt.Println( string( msg ) )
-		err := smtp.SendMail( GlobalConfig.Email.SMTPServerUrl , auth , GlobalConfig.Email.From , []string{ to } , msg )
+		err := smtp.SendMail( s.Config.Email.SMTPServerUrl , auth , s.Config.Email.From , []string{ to } , msg )
 		if err != nil {
 			fmt.Println( err )
 		} else { result = true }
@@ -33,14 +33,14 @@ func send_email( to string , subject string , body string ) ( result bool ) {
 	return
 }
 
-func EmailUser( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) EmailUser( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	// fmt.Println( context.GetReqHeaders() )
 	email_address := context.FormValue( "email-address" )
 	email_subject := context.FormValue( "email-subject" )
 	email_message := context.FormValue( "email-message" )
 
-	email_result := send_email( email_address , email_subject , email_message )
+	email_result := s.SendEmail( email_address , email_subject , email_message )
 	log.Info( fmt.Sprintf( "%s === %t" , email_address , email_result ) )
 	return context.JSON( fiber.Map{
 		"route": "/admin/user/email" ,
@@ -51,8 +51,8 @@ func EmailUser( context *fiber.Ctx ) ( error ) {
 	})
 }
 
-func EmailAllUsers( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) EmailAllUsers( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	// fmt.Println( context.GetReqHeaders() )
 
 	email_subject := context.FormValue( "email-subject" )
@@ -60,16 +60,15 @@ func EmailAllUsers( context *fiber.Ctx ) ( error ) {
 
 	result := true
 
-	db := _get_db( context )
-	db.View( func( tx *bolt_api.Tx ) error {
+	s.DB.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {
 			var viewed_user user.User
-			decrypted_bucket_value := encryption.ChaChaDecryptBytes( GlobalConfig.BoltDBEncryptionKey , value )
+			decrypted_bucket_value := encryption.ChaChaDecryptBytes( s.Config.BoltDBEncryptionKey , value )
 			json.Unmarshal( decrypted_bucket_value , &viewed_user )
 			if viewed_user.EmailAddress == "" { return nil; }
 			// fmt.Println( viewed_user.EmailAddress , email_subject , email_message )
-			email_result := send_email( viewed_user.EmailAddress , email_subject , email_message )
+			email_result := s.SendEmail( viewed_user.EmailAddress , email_subject , email_message )
 			if email_result == false { result = false }
 			log.Info( fmt.Sprintf( "%s === %t" , viewed_user.EmailAddress , email_result ) )
 			return nil

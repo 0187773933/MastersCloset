@@ -1,4 +1,4 @@
-package adminroutes
+package server
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	user "github.com/0187773933/MastersCloset/v1/user"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
 	twilio "github.com/sfreiberg/gotwilio"
-	// log "github.com/0187773933/MastersCloset/v1/log"
+	log "github.com/0187773933/MastersCloset/v1/log"
 	try "github.com/manucorporat/try"
 )
 
@@ -22,19 +22,18 @@ func validate_us_phone_number( input string ) ( result string ) {
 	return result
 }
 
-func SMSAllUsers( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) SMSAllUsers( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	// fmt.Println( context.GetReqHeaders() )
 	sms_message := context.FormValue( "sms_message" )
 
-	twilio_client := twilio.NewTwilioClient( GlobalConfig.TwilioClientID , GlobalConfig.TwilioAuthToken )
+	twilio_client := twilio.NewTwilioClient( s.Config.TwilioClientID , s.Config.TwilioAuthToken )
 
-	db := _get_db( context )
-	db.View( func( tx *bolt_api.Tx ) error {
+	s.DB.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {
 			var viewed_user user.User
-			decrypted_bucket_value := encryption.ChaChaDecryptBytes( GlobalConfig.BoltDBEncryptionKey , value )
+			decrypted_bucket_value := encryption.ChaChaDecryptBytes( s.Config.BoltDBEncryptionKey , value )
 			json.Unmarshal( decrypted_bucket_value , &viewed_user )
 			if viewed_user.PhoneNumber == "" { return nil; }
 
@@ -45,7 +44,7 @@ func SMSAllUsers( context *fiber.Ctx ) ( error ) {
 			}
 			// https://github.com/sfreiberg/gotwilio/blob/master/sms.go#L12
 			try.This( func() {
-				result , _ , _ := twilio_client.SendSMS( GlobalConfig.TwilioSMSFromNumber , viewed_user.PhoneNumber , sms_message , "" , "" )
+				result , _ , _ := twilio_client.SendSMS( s.Config.TwilioSMSFromNumber , viewed_user.PhoneNumber , sms_message , "" , "" )
 				log.Debug( fmt.Sprintf( "Texting === %s === %s\n" , validated_phone , result.Status ) )
 			}).Catch( func( e try.E ) {
 				log.Debug( fmt.Sprintf( "Failed to Text === %s === %s\n" , viewed_user.NameString , validated_phone ) )
@@ -64,14 +63,14 @@ func SMSAllUsers( context *fiber.Ctx ) ( error ) {
 }
 
 
-func SMSUser( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) SMSUser( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	// fmt.Println( context.GetReqHeaders() )
 	sms_message := context.FormValue( "sms_message" )
 	sms_number := context.FormValue( "sms_number" )
 	validated_phone := validate_us_phone_number( sms_number )
 
-	twilio_client := twilio.NewTwilioClient( GlobalConfig.TwilioClientID , GlobalConfig.TwilioAuthToken )
+	twilio_client := twilio.NewTwilioClient( s.Config.TwilioClientID , s.Config.TwilioAuthToken )
 
 	if validated_phone == "" {
 		log.Debug( fmt.Sprintf( "Invalid phone number: %s" , sms_number ) )
@@ -84,7 +83,7 @@ func SMSUser( context *fiber.Ctx ) ( error ) {
 	}
 	// https://github.com/sfreiberg/gotwilio/blob/master/sms.go#L12
 	try.This( func() {
-		result , _ , _ := twilio_client.SendSMS( GlobalConfig.TwilioSMSFromNumber , sms_number , sms_message , "" , "" )
+		result , _ , _ := twilio_client.SendSMS( s.Config.TwilioSMSFromNumber , sms_number , sms_message , "" , "" )
 		log.Debug( fmt.Sprintf( "Texting === %s === %s\n" , validated_phone , result.Status ) )
 	}).Catch(func( e try.E ) {
 		log.Debug( fmt.Sprintf( "Failed to Text === %s\n" , validated_phone ) )

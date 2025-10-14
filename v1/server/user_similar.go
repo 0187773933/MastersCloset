@@ -1,4 +1,4 @@
-package adminroutes
+package server
 
 import (
 	"fmt"
@@ -9,21 +9,20 @@ import (
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
 )
 
-func HandleUserSimilar( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) HandleUserSimilar( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 	var sent_user user.User
 	context_body := context.Body()
 	// fmt.Println( string( context_body ) )
 	json.Unmarshal( context_body , &sent_user )
 	var similar_user_reports []user.UserSimilarReport
-	db := _get_db( context )
-	db.View( func( tx *bolt_api.Tx ) error {
+	s.DB.View( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.ForEach( func( uuid , value []byte ) error {
 			var viewed_user user.User
-			decrypted_bucket_value := encryption.ChaChaDecryptBytes( GlobalConfig.BoltDBEncryptionKey , value )
+			decrypted_bucket_value := encryption.ChaChaDecryptBytes( s.Config.BoltDBEncryptionKey , value )
 			json.Unmarshal( decrypted_bucket_value , &viewed_user )
-			similarity_report := sent_user.GetUserSimilarityReport( &viewed_user , GlobalConfig.LevenshteinDistanceThreshold )
+			similarity_report := sent_user.GetUserSimilarityReport( &viewed_user , s.Config.LevenshteinDistanceThreshold )
 			if similarity_report.IsSimilar == false { return nil }
 			similarity_report.User = viewed_user
 			similar_user_reports = append( similar_user_reports , similarity_report )
@@ -38,13 +37,12 @@ func HandleUserSimilar( context *fiber.Ctx ) ( error ) {
 	})
 }
 
-func HandleUserSimilarObjects( context *fiber.Ctx ) ( error ) {
-	if validate_admin_session( context ) == false { return serve_failed_attempt( context ) }
+func ( s *Server ) HandleUserSimilarObjects( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
 
 	x_uuid := context.Params( "uuid" )
-	db := _get_db( context )
-	viewed_user := user.GetByUUID( x_uuid , db , GlobalConfig.BoltDBEncryptionKey )
-	viewed_user.GetSimilarUsers( GlobalConfig )
+	viewed_user := user.GetByUUID( x_uuid , s.DB , s.Config.BoltDBEncryptionKey )
+	viewed_user.GetSimilarUsers( &s.Config )
 	fmt.Println( viewed_user )
 
 	return context.JSON( fiber.Map{

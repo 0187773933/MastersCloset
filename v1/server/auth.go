@@ -1,4 +1,4 @@
-package adminroutes
+package server
 
 import (
 	// "fmt"
@@ -6,23 +6,23 @@ import (
 	fiber "github.com/gofiber/fiber/v2"
 	bcrypt "golang.org/x/crypto/bcrypt"
 	encryption "github.com/0187773933/MastersCloset/v1/encryption"
-	// log "github.com/0187773933/MastersCloset/v1/log"
+	log "github.com/0187773933/MastersCloset/v1/log"
 )
 
-func validate_login_credentials( context *fiber.Ctx ) ( result bool ) {
+func ( s *Server ) ValidateLoginCredentials( context *fiber.Ctx ) ( result bool ) {
 	result = false
 	uploaded_username := context.FormValue( "username" )
 	if uploaded_username == "" { log.Println( "username empty" ); return }
-	if uploaded_username != GlobalConfig.AdminUsername { log.Println( "username not correct" ); return }
+	if uploaded_username != s.Config.AdminUsername { log.Println( "username not correct" ); return }
 	uploaded_password := context.FormValue( "password" )
 	if uploaded_password == "" { log.Println( "password empty" ); return }
-	password_matches := bcrypt.CompareHashAndPassword( []byte( uploaded_password ) , []byte( GlobalConfig.AdminPassword ) )
+	password_matches := bcrypt.CompareHashAndPassword( []byte( uploaded_password ) , []byte( s.Config.AdminPassword ) )
 	if password_matches != nil { log.Println( "bcrypted password doesn't match" ); return }
 	result = true
 	return
 }
 
-func Logout( context *fiber.Ctx ) ( error ) {
+func ( s *Server ) AdminLogout( context *fiber.Ctx ) ( error ) {
 	context.Cookie( &fiber.Cookie{
 		Name: "the-masters-closet-admin" ,
 		Value: "" ,
@@ -35,13 +35,13 @@ func Logout( context *fiber.Ctx ) ( error ) {
 }
 
 // POST http://localhost:5950/admin/login
-func HandleLogin( context *fiber.Ctx ) ( error ) {
-	valid_login := validate_login_credentials( context )
-	if valid_login == false { return serve_failed_attempt( context ) }
+func ( s *Server ) AdminLogin( context *fiber.Ctx ) ( error ) {
+	valid_login := s.ValidateLoginCredentials( context )
+	if valid_login == false { return s.ServeFailedAttempt( context ) }
 	context.Cookie(
 		&fiber.Cookie{
 			Name: "the-masters-closet-admin" ,
-			Value: encryption.SecretBoxEncrypt( GlobalConfig.BoltDBEncryptionKey , GlobalConfig.ServerCookieAdminSecretMessage ) ,
+			Value: encryption.SecretBoxEncrypt( s.Config.BoltDBEncryptionKey , s.Config.ServerCookieAdminSecretMessage ) ,
 			Secure: true ,
 			Path: "/" ,
 			// Domain: "blah.ngrok.io" , // probably should set this for webkit
@@ -53,36 +53,36 @@ func HandleLogin( context *fiber.Ctx ) ( error ) {
 	return context.Redirect( "/" )
 }
 
-func validate_admin_cookie( context *fiber.Ctx ) ( result bool ) {
+func ( s *Server ) ValidateAdminCookie( context *fiber.Ctx ) ( result bool ) {
 	result = false
 	admin_cookie := context.Cookies( "the-masters-closet-admin" )
 	if admin_cookie == "" { log.Debug( "admin cookie was blank" ); return }
-	admin_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , admin_cookie )
-	if admin_cookie_value != GlobalConfig.ServerCookieAdminSecretMessage { log.Debug( "admin cookie secret message was not equal" ); return }
+	admin_cookie_value := encryption.SecretBoxDecrypt( s.Config.BoltDBEncryptionKey , admin_cookie )
+	if admin_cookie_value != s.Config.ServerCookieAdminSecretMessage { log.Debug( "admin cookie secret message was not equal" ); return }
 	result = true
 	return
 }
 
-func validate_admin_session( context *fiber.Ctx ) ( result bool ) {
+func ( s *Server ) ValidateAdminSession( context *fiber.Ctx ) ( result bool ) {
 	result = false
 	admin_cookie := context.Cookies( "the-masters-closet-admin" )
 	if admin_cookie != "" {
-		admin_cookie_value := encryption.SecretBoxDecrypt( GlobalConfig.BoltDBEncryptionKey , admin_cookie )
-		if admin_cookie_value == GlobalConfig.ServerCookieAdminSecretMessage {
+		admin_cookie_value := encryption.SecretBoxDecrypt( s.Config.BoltDBEncryptionKey , admin_cookie )
+		if admin_cookie_value == s.Config.ServerCookieAdminSecretMessage {
 			result = true
 			return
 		}
 	}
 	admin_api_key_header := context.Get( "key" )
 	if admin_api_key_header != "" {
-		if admin_api_key_header == GlobalConfig.ServerAPIKey {
+		if admin_api_key_header == s.Config.ServerAPIKey {
 			result = true
 			return
 		}
 	}
 	admin_api_key_query := context.Query( "k" )
 	if admin_api_key_query != "" {
-		if admin_api_key_query == GlobalConfig.ServerAPIKey {
+		if admin_api_key_query == s.Config.ServerAPIKey {
 			result = true
 			return
 		}
