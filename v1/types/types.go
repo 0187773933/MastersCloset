@@ -59,6 +59,8 @@ type ConfigFile struct {
 	LocalHostUrl string `json:"local_host_url"`
 	RemoteHostUrl string `json:"remote_host_url"`
 	RemoteHostAPIKey string `json:"remote_host_api_key"`
+	RemoteHostHeaderPrefix string `json:"remote_host_header_prefix"`
+	RemoteHostClientID string `json:"remote_host_client_id"`
 	AdminUsername string `json:"admin_username"`
 	AdminPassword string `json:"admin_password"`
 	TimeZone string `json:"time_zone"`

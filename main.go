@@ -47,13 +47,16 @@ func main() {
 	config_file_path , _ := filepath.Abs( os.Args[ 1 ] )
 	logger.Log.Debug( fmt.Sprintf( "Loaded Config File From : %s\n" , config_file_path ) )
 	config := utils.ParseConfig( config_file_path )
-	config.FingerPrint = utils.FingerPrint( &config )
-	fmt.Println( config )
+
 	// log.Init( config )
 	utils.WriteJS_API( config.ServerLiveUrl , config.ServerAPIKey , config.LocalHostUrl )
 	db , db_err := bolt.Open( config.BoltDBPath , 0600 , &bolt.Options{} )
 	// db , db_err := bolt.Open( config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
 	if db_err != nil { logger.Log.Fatal( db_err.Error() ) }
+
+	config.FingerPrint = utils.FingerPrint( &config , db )
+	fmt.Println( config )
+
 	s = server.New( config , db )
 	rsctx , rsctxcancel = context.WithCancel( context.Background() )
 	rs = remotesync.New( db , rsctx , &config )

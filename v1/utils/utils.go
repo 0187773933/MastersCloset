@@ -305,10 +305,7 @@ type FingerPrintStore struct {
 	Sha256 string `json:"sha_256"`
 	FingerPrint string `json:"finger_print"`
 }
-func FingerPrint( config *types.ConfigFile  ) ( result string ) {
-
-	db , _ := bolt_api.Open( config.BoltDBPath , 0600 , &bolt_api.Options{ Timeout: ( 3 * time.Second ) } )
-	defer db.Close()
+func FingerPrint( config *types.ConfigFile , db *bolt_api.DB ) ( result string ) {
 
 	x_cpu_info := _finger_print_cpu()
 	x_os := runtime.GOOS
@@ -339,14 +336,14 @@ func FingerPrint( config *types.ConfigFile  ) ( result string ) {
 		finger_prints_bucket , _ := tx.CreateBucketIfNotExists( []byte( "fingerprints" ) )
 		finger_print := finger_prints_bucket.Get( []byte( finger_print_sha_256 ) )
 		if finger_print == nil { // Store new fingerprint
-			// fmt.Println( "Storing New Finger Print" )
+			fmt.Println( "Storing New Finger Print" )
 			x_finger_print.Sha256 = finger_print_sha_256
 			x_finger_print.FingerPrint = finger_print_string
 			x_finger_print_byte_object , _ := json.Marshal( x_finger_print )
 			x_finger_print_byte_object_encrypted := encryption.ChaChaEncryptBytes( config.BoltDBEncryptionKey , x_finger_print_byte_object )
 			finger_prints_bucket.Put( []byte( finger_print_sha_256 ) , x_finger_print_byte_object_encrypted )
 		} else { // Retrieve existing fingerprint
-			// fmt.Println( "Retrieving Existing Finger Print" )
+			fmt.Println( "Retrieving Existing Finger Print" )
 			decrypted_bucket_value := encryption.ChaChaDecryptBytes( config.BoltDBEncryptionKey , finger_print )
 			json.Unmarshal( decrypted_bucket_value , &x_finger_print )
 			if x_finger_print.Sha256 == "" {
