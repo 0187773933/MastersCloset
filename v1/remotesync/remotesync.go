@@ -17,7 +17,6 @@ import (
 
 var INTERVAL = 12 * time.Second
 var UPLOAD_BUCKET_NAME = "remote-upload"
-var DOWNLOAD_BUCKET_NAME = "remote-download"
 
 type RemoteSync struct {
 	DB *bolt.DB `json:"-"`
@@ -33,8 +32,6 @@ func New( db *bolt.DB , ctx context.Context , config *types.ConfigFile ) ( resul
 	result.HTTPClient = &http.Client{ Timeout: 10 * time.Second }
 	result.DB.Update( func( tx *bolt.Tx ) error {
 		_ , err := tx.CreateBucketIfNotExists( []byte( UPLOAD_BUCKET_NAME ) )
-		if err == nil { return err }
-		_ , err = tx.CreateBucketIfNotExists( []byte( DOWNLOAD_BUCKET_NAME ) )
 		return err
 	})
 	return
@@ -48,10 +45,10 @@ func ( rs *RemoteSync ) Start() {
 		for {
 			select {
 				case <-rs.CTX.Done():
-					fmt.Println( "simulated context expired ?" )
+					fmt.Println( "rs timer context expired ?" )
 					return
 				case <-timer.C:
-					fmt.Println( "TIMER :: TICK()" )
+					// fmt.Println( "TIMER :: TICK()" )
 					rs.DB.Update( func( tx *bolt.Tx ) error {
 
 						m_b , _ := tx.CreateBucketIfNotExists( []byte( "MISC" ) )
@@ -131,7 +128,6 @@ func ( rs *RemoteSync ) Upload( uuid *[]byte , u_bytes *[]byte ) ( result Upload
 		fmt.Println( x )
 		return
 	}
-	fmt.Println( result )
 	return
 }
 

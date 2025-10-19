@@ -17,12 +17,8 @@
 ---
 
 ## TODO
-1. Make offline-first-sync-later
-	- var viewed_user_byte_object_encrypted []byte
-	- user::New()  --> POST --> db.remote.com/save
-	- user::Save()  --> POST --> db.remote.com/save
-	- CheckInUser()  --> POST --> db.remote.com/save
-	- user::RefillBalance() --> POST --> db.remote.com/save
+1. Fix remote syncing quirk
+	- each client has to make an edit first before seq ids are synced
 2. Blogger Stuff
 	- https://github.com/xjh22222228/awesome-web-editor
 		- https://github.com/codex-team/editor.js
