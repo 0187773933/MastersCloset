@@ -51,34 +51,29 @@ func ( rs *RemoteSync ) Start() {
 					fmt.Println( "simulated context expired ?" )
 					return
 				case <-timer.C:
-					// fmt.Println( "uploading all modified users" )
+					fmt.Println( "TIMER :: TICK()" )
 					rs.DB.Update( func( tx *bolt.Tx ) error {
 
 						m_b , _ := tx.CreateBucketIfNotExists( []byte( "MISC" ) )
-						last_download_sequence_id := string( m_b.Get( []byte( "remote-last-download-sequence" ) ) )
-						last_upload_sequence_id := string( m_b.Get( []byte( "remote-last-upload-sequence" ) ) )
+						last_sequence_id := string( m_b.Get( []byte( "remote-last-sequence" ) ) )
 
 						users_bucket , _ := tx.CreateBucketIfNotExists( []byte( "users" ) )
 
 						// download any changes
-						remote_changes := rs.DownloadChangedUsersList( last_download_sequence_id )
+						remote_changes := rs.DownloadChangedUsersList( last_sequence_id )
 						total_remote_changed := len( remote_changes )
 						for i , remote_change := range remote_changes {
 							fmt.Printf( "Downloading [ %d ] of %d changed\n" , ( i + 1 ) , total_remote_changed )
 							downloaded_user := rs.DownloadUser( remote_change.UUID )
 
 							users_bucket.Put( []byte( downloaded_user.UUID ) , downloaded_user.UserBytes )
-							m_b.Put( []byte( "remote-last-download-sequence" ) , []byte( remote_change.ID ) )
+							m_b.Put( []byte( "remote-last-sequence" ) , []byte( remote_change.ID ) )
 							fmt.Printf( "\t%s === %s\n" , remote_change.ID , downloaded_user.UUID )
 						}
 
-						// TODO :: check if there are any changed uuids before downloading
+						// TODO :: check if there are any changed uuids before uploading
 						b , _ := tx.CreateBucketIfNotExists( []byte( UPLOAD_BUCKET_NAME ) )
 						total_changed := b.Stats().KeyN
-						if total_changed == 0 {
-							// fmt.Println( "No Users To Upload" )
-							return nil
-						}
 
 						// Upload all local changes
 						i := 1
@@ -88,14 +83,13 @@ func ( rs *RemoteSync ) Start() {
 							fmt.Printf( "Uploading [ %d ] of %d Edited Users ... Success === %t\n" , i , total_changed , upload_result.Result )
 							if upload_result.Result == true {
 								b.Delete( k )
-								m_b.Put( []byte( "remote-last-upload-sequence" ) , []byte( upload_result.Sequence ) )
-								last_upload_sequence_id = upload_result.Sequence
+								m_b.Put( []byte( "remote-last-sequence" ) , []byte( upload_result.Sequence ) )
+								fmt.Printf( "\t%s === %s\n" , upload_result.Sequence , k )
+								// last_upload_sequence_id = upload_result.Sequence
 							}
 							i += 1
 							return nil
 						})
-
-						fmt.Println( last_upload_sequence_id )
 
 						return nil
 					})
