@@ -195,6 +195,8 @@ func ( s *Server ) UserCheckIn( context *fiber.Ctx ) ( error ) {
 	db_result := s.DB.Update( func( tx *bolt_api.Tx ) error {
 		bucket := tx.Bucket( []byte( "users" ) )
 		bucket.Put( []byte( x_uuid ) , viewed_user_byte_object_encrypted )
+		remote_save_bucket := tx.Bucket( []byte( "remote-upload" ) )
+		remote_save_bucket.Put( []byte( x_uuid ) , viewed_user_byte_object_encrypted )
 		return nil
 	})
 	if db_result != nil { panic( "couldn't write to bolt db ??" ) }
