@@ -65,6 +65,7 @@ func ( s *Server ) RegisterAdminRoutes() {
 	admin_route_group.Post( "/user/similar" , s.HandleUserSimilar ) // finds similar users reports
 	admin_route_group.Get( "/user/similar/o/:uuid" , s.HandleUserSimilarObjects ) // finds similar user objects
 	admin_route_group.Post( "/user/edit" , s.HandleUserEdit )
+	admin_route_group.Post( "/user/import" , s.ImportUser )
 	admin_route_group.Get( "/user/delete/:uuid" , s.DeleteUser )
 	// admin_route_group.Get( "/user/check/username" , CheckIfFirstNameLastNameAlreadyExists )
 

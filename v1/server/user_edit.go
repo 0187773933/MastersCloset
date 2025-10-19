@@ -30,6 +30,28 @@ func ( s *Server ) HandleUserEdit( context *fiber.Ctx ) ( error ) {
 	})
 }
 
+func ( s *Server ) ImportUser( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
+	result := false
+	uuid := context.Query( "uuid" )
+	if uuid == "" { fmt.Println( "empty uuid" ); return context.Status( fiber.StatusBadRequest ).JSON( fiber.Map{ "result": result , } ) }
+	body := context.Body()
+	if len( body ) == 0 { fmt.Println( "empty body" ); return context.JSON( fiber.Map{ "result": result , } ) }
+	db_result := s.DB.Update( func( tx *bolt_api.Tx ) error {
+		users_bucket , users_bucket_err := tx.CreateBucketIfNotExists( []byte( "users" ) )
+		if users_bucket_err != nil { fmt.Println( users_bucket_err ); return users_bucket_err }
+		user_store_result := users_bucket.Put( []byte( uuid ) , body )
+		if user_store_result != nil { fmt.Println( user_store_result ); return user_store_result }
+		fmt.Println( "ImportUser - tracking change for user :" , uuid )
+		return nil
+	})
+	if db_result != nil { fmt.Println( db_result ); return context.Status( 500 ).JSON( fiber.Map{ "result": result } ) }
+	result = true
+	return context.Status( 200 ).JSON( fiber.Map{
+		"result": result ,
+	})
+}
+
 
 func ( s *Server ) EditCheckIn( context *fiber.Ctx ) ( error ) {
 	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
