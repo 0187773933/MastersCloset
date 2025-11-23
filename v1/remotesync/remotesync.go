@@ -16,7 +16,7 @@ import (
 	types "github.com/0187773933/MastersCloset/v1/types"
 )
 
-var INTERVAL = 12 * time.Second
+var INTERVAL = 3 * time.Second
 var UPLOAD_BUCKET_NAME = "remote-upload"
 
 type RemoteSync struct {
@@ -50,6 +50,7 @@ func ( rs *RemoteSync ) Start() {
 					return
 				case <-timer.C:
 					// fmt.Println( "TIMER :: TICK()" )
+					var updated_users = make( []user.User , 0 )
 					rs.DB.Update( func( tx *bolt.Tx ) error {
 
 						m_b , _ := tx.CreateBucketIfNotExists( []byte( "MISC" ) )
@@ -68,8 +69,7 @@ func ( rs *RemoteSync ) Start() {
 							json.Unmarshal( decrypted_bucket_value , &viewed_user )
 							// TODO update bleve search !!!
 							// users_bucket.Put( []byte( downloaded_user.UUID ) , downloaded_user.UserBytes )
-							viewed_user.DB = rs.DB
-							viewed_user.Save()
+							updated_users = append( updated_users , viewed_user )
 
 							m_b.Put( []byte( "remote-last-sequence" ) , []byte( remote_change.ID ) )
 							fmt.Printf( "\t%s === %s\n" , remote_change.ID , downloaded_user.UUID )
@@ -97,6 +97,11 @@ func ( rs *RemoteSync ) Start() {
 
 						return nil
 					})
+					for _ , u := range updated_users {
+						u.DB = rs.DB
+						u.Config = rs.CONFIG
+						u.SaveLocal()
+					}
 					timer.Reset( INTERVAL )
 			}
 		}
@@ -153,7 +158,7 @@ func ( rs *RemoteSync ) DownloadChangedUsersList( since_sequence_id string ) ( r
 		return
 	}
 	req.Header.Set( "Content-Type" , "application/json" )
-	req.Header.Set( fmt.Sprintf( "%s-CLIENT-ID" , rs.CONFIG.RemoteHostHeaderPrefix ) , rs.CONFIG.RemoteHostClientID )
+	req.Header.Set( fmt.Sprintf( "%s-CLIENT-ID" , rs.CONFIG.RemoteHostHeaderPrefix ) , rs.CONFIG.FingerPrint )
 	req.Header.Set( fmt.Sprintf( "%s-API-KEY" , rs.CONFIG.RemoteHostHeaderPrefix ) , rs.CONFIG.RemoteHostAPIKey )
 	req.Header.Set( fmt.Sprintf( "%s-SEQUENCE-ID" , rs.CONFIG.RemoteHostHeaderPrefix ) , since_sequence_id )
 	resp , err := rs.HTTPClient.Do( req )
