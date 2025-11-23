@@ -11,7 +11,8 @@ import (
 	"net/http"
 	"time"
 	bolt "github.com/boltdb/bolt"
-	// encrypt "github.com/0187773933/MastersCloset/v1/encryption"
+	user "github.com/0187773933/MastersCloset/v1/user"
+	encryption "github.com/0187773933/MastersCloset/v1/encryption"
 	types "github.com/0187773933/MastersCloset/v1/types"
 )
 
@@ -54,7 +55,7 @@ func ( rs *RemoteSync ) Start() {
 						m_b , _ := tx.CreateBucketIfNotExists( []byte( "MISC" ) )
 						last_sequence_id := string( m_b.Get( []byte( "remote-last-sequence" ) ) )
 
-						users_bucket , _ := tx.CreateBucketIfNotExists( []byte( "users" ) )
+						// users_bucket , _ := tx.CreateBucketIfNotExists( []byte( "users" ) )
 
 						// download any changes
 						remote_changes := rs.DownloadChangedUsersList( last_sequence_id )
@@ -62,8 +63,14 @@ func ( rs *RemoteSync ) Start() {
 						for i , remote_change := range remote_changes {
 							fmt.Printf( "Downloading [ %d ] of %d changed\n" , ( i + 1 ) , total_remote_changed )
 							downloaded_user := rs.DownloadUser( remote_change.UUID )
+							var viewed_user user.User
+							decrypted_bucket_value := encryption.ChaChaDecryptBytes( rs.CONFIG.BoltDBEncryptionKey , downloaded_user.UserBytes  )
+							json.Unmarshal( decrypted_bucket_value , &viewed_user )
+							// TODO update bleve search !!!
+							// users_bucket.Put( []byte( downloaded_user.UUID ) , downloaded_user.UserBytes )
+							viewed_user.DB = rs.DB
+							viewed_user.Save()
 
-							users_bucket.Put( []byte( downloaded_user.UUID ) , downloaded_user.UserBytes )
 							m_b.Put( []byte( "remote-last-sequence" ) , []byte( remote_change.ID ) )
 							fmt.Printf( "\t%s === %s\n" , remote_change.ID , downloaded_user.UUID )
 						}
@@ -139,7 +146,8 @@ type ChangedUserListResult struct {
 	Changes []ChangedUser `json:"changes"`
 }
 func ( rs *RemoteSync ) DownloadChangedUsersList( since_sequence_id string ) ( result []ChangedUser ) {
-	req , err := http.NewRequest( "GET" , rs.CONFIG.RemoteHostUrl + "/changed" , nil )
+	changed_url := fmt.Sprintf( "%s/changed" , rs.CONFIG.RemoteHostUrl )
+	req , err := http.NewRequest( "GET" , changed_url , nil )
 	if err != nil {
 		fmt.Println( err )
 		return

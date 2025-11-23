@@ -131,6 +131,7 @@ func ( s *Server ) HandleNewUserJoin( context *fiber.Ctx ) ( error ) {
 	viewed_user.CreatedDate = new_user.CreatedDate
 	viewed_user.CreatedTime = new_user.CreatedTime
 	viewed_user.Verified = new_user.Verified
+	viewed_user.DB = s.DB
 	viewed_user.Save()
 
 	if viewed_user.ULID != "" {

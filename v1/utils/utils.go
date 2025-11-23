@@ -5,11 +5,12 @@ import (
 	"os/user"
 	"embed"
 	"runtime"
+	"path/filepath"
 	"bufio"
 	"time"
 	"net"
 	"fmt"
-	// "io"
+	"io"
 	sha256 "crypto/sha256"
 	hex "encoding/hex"
 	// index_sort "github.com/mkmik/argsort"
@@ -125,6 +126,43 @@ func IsStringInArray( target string , array []string ) ( bool ) {
 		}
 	}
 	return false
+}
+
+func CopyFile( src string , dest string ) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
+}
+
+func CopyDir(src, dest string) error {
+    return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+        if err != nil {
+            return err
+        }
+
+        // Build destination path
+        rel, err := filepath.Rel(src, path)
+        if err != nil {
+            return err
+        }
+        target := filepath.Join(dest, rel)
+
+        if info.IsDir() {
+            return os.MkdirAll(target, info.Mode())
+        }
+
+        // Copy file
+        return CopyFile(path, target)
+    })
 }
 
 type Slice struct {
@@ -303,6 +341,7 @@ func _finger_print_mac_address() ( []string ) {
 
 type FingerPrintStore struct {
 	Sha256 string `json:"sha_256"`
+	Short string `json:"short"`
 	FingerPrint string `json:"finger_print"`
 }
 func FingerPrint( config *types.ConfigFile , db *bolt_api.DB ) ( result string ) {
@@ -330,14 +369,17 @@ func FingerPrint( config *types.ConfigFile , db *bolt_api.DB ) ( result string )
 		x_cpu_info ,
 	)
 	finger_print_sha_256 := Sha256Sum( finger_print_string )
+	finger_print_short := finger_print_sha_256[ 0 : 10 ]
 
 	var x_finger_print FingerPrintStore
 	db.Update( func( tx *bolt_api.Tx ) error {
+		// tx.DeleteBucket( []byte( "fingerprints" ) )
 		finger_prints_bucket , _ := tx.CreateBucketIfNotExists( []byte( "fingerprints" ) )
 		finger_print := finger_prints_bucket.Get( []byte( finger_print_sha_256 ) )
 		if finger_print == nil { // Store new fingerprint
 			fmt.Println( "Storing New Finger Print" )
 			x_finger_print.Sha256 = finger_print_sha_256
+			x_finger_print.Short = finger_print_short
 			x_finger_print.FingerPrint = finger_print_string
 			x_finger_print_byte_object , _ := json.Marshal( x_finger_print )
 			x_finger_print_byte_object_encrypted := encryption.ChaChaEncryptBytes( config.BoltDBEncryptionKey , x_finger_print_byte_object )
@@ -348,6 +390,7 @@ func FingerPrint( config *types.ConfigFile , db *bolt_api.DB ) ( result string )
 			json.Unmarshal( decrypted_bucket_value , &x_finger_print )
 			if x_finger_print.Sha256 == "" {
 				x_finger_print.Sha256 = finger_print_sha_256
+				x_finger_print.Short = finger_print_short
 				x_finger_print_byte_object , _ := json.Marshal( x_finger_print )
 				x_finger_print_byte_object_encrypted := encryption.ChaChaEncryptBytes( config.BoltDBEncryptionKey , x_finger_print_byte_object )
 				finger_prints_bucket.Put( []byte( finger_print_sha_256 ) , x_finger_print_byte_object_encrypted )
@@ -356,7 +399,28 @@ func FingerPrint( config *types.ConfigFile , db *bolt_api.DB ) ( result string )
 		return nil
 	})
 	fmt.Println( x_finger_print )
-	result = x_finger_print.Sha256
+	result = x_finger_print.Short
+	return
+}
+
+func FingerPrintPassive() ( result string ) {
+	x_cpu_info := _finger_print_cpu()
+	x_os := runtime.GOOS
+	x_arch := runtime.GOARCH
+	x_hostname , _ := os.Hostname()
+	x_user , _ := user.Current()
+	x_username := x_user.Username
+	finger_print_string := fmt.Sprintf( "%s === %s === %s === %s === %s" ,
+		x_username ,
+		x_os ,
+		x_arch ,
+		x_hostname ,
+		x_cpu_info ,
+	)
+	finger_print_sha_256 := Sha256Sum( finger_print_string )
+	finger_print_short := finger_print_sha_256[ 0 : 10 ]
+	fmt.Println( finger_print_short , finger_print_string )
+	result = finger_print_short
 	return
 }
 
