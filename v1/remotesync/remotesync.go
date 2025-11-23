@@ -16,7 +16,7 @@ import (
 	types "github.com/0187773933/MastersCloset/v1/types"
 )
 
-var INTERVAL = 3 * time.Second
+var INTERVAL = 12 * time.Second
 var UPLOAD_BUCKET_NAME = "remote-upload"
 
 type RemoteSync struct {
@@ -61,7 +61,7 @@ func ( rs *RemoteSync ) Start() {
 						// download any changes
 						remote_changes := rs.DownloadChangedUsersList( last_sequence_id )
 						total_remote_changed := len( remote_changes )
-						fmt.Println( "Total Remote Changes ===" , total_remote_changed )
+						// fmt.Println( "Total Remote Changes ===" , total_remote_changed )
 						for i , remote_change := range remote_changes {
 							fmt.Printf( "Downloading [ %d ] of %d changed\n" , ( i + 1 ) , total_remote_changed )
 							downloaded_user := rs.DownloadUser( remote_change.UUID )
@@ -79,7 +79,7 @@ func ( rs *RemoteSync ) Start() {
 						// TODO :: check if there are any changed uuids before uploading
 						b , _ := tx.CreateBucketIfNotExists( []byte( UPLOAD_BUCKET_NAME ) )
 						total_changed := b.Stats().KeyN
-						fmt.Println( "Total Local Changes ===" , total_changed )
+						// fmt.Println( "Total Local Changes ===" , total_changed )
 
 						// Upload all local changes
 						i := 1
