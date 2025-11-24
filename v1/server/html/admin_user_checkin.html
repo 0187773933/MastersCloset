@@ -997,28 +997,48 @@
 			const scanner_threshold_time = 30; // Time in ms, adjust based on your scanner speed
 			let last_input_time = Date.now();
 
-			async function on_check_in_input_change( event ) {
-				if (event) { event.preventDefault(); }
-				let now = Date.now();
-				let typed_input = event?.target?.value || document.getElementById( "user-search-input" ).value;
+			// async function on_check_in_input_change( event ) {
+			// 	if (event) { event.preventDefault(); }
+			// 	let now = Date.now();
+			// 	let typed_input = event?.target?.value || document.getElementById( "user-search-input" ).value;
 
-				if (!typed_input) return;
+			// 	if (!typed_input) return;
 
-				let time_since_last_input = now - last_input_time;
+			// 	let time_since_last_input = now - last_input_time;
+			// 	last_input_time = now;
+
+			// 	// Clear any existing timeout to handle rapid scanner input
+			// 	clearTimeout( timeout_id ) ;
+
+			// 	if ( time_since_last_input < scanner_threshold_time ) {
+			// 		// Likely scanner input, buffer until stream ends
+			// 		timeout_id = setTimeout(() => {
+			// 			_on_check_in_input_change( typed_input );
+			// 		} , scanner_threshold_time );
+			// 	} else {
+			// 		// Likely human input, process immediately
+			// 		_on_check_in_input_change( typed_input );
+			// 	}
+			// }
+
+			async function on_check_in_input_change(event) {
+				if ( event ) event.preventDefault();
+				const now = Date.now();
+				const typed_input = event?.target?.value || $( "#user-search-input" ).val();
+				const time_since_last = now - last_input_time;
 				last_input_time = now;
-
-				// Clear any existing timeout to handle rapid scanner input
-				clearTimeout( timeout_id ) ;
-
-				if ( time_since_last_input < scanner_threshold_time ) {
-					// Likely scanner input, buffer until stream ends
-					timeout_id = setTimeout(() => {
+				clearTimeout( timeout_id );
+				// FAST path — barcode/QR scanner (raw stream)
+				if ( time_since_last < scanner_threshold_time ) {
+					timeout_id = setTimeout( () => {
 						_on_check_in_input_change( typed_input );
 					} , scanner_threshold_time );
-				} else {
-					// Likely human input, process immediately
-					_on_check_in_input_change( typed_input );
+					return;
 				}
+				// HUMAN path — debounce to prevent lag
+				timeout_id = setTimeout( () => {
+					_on_check_in_input_change( typed_input );
+				} , 120 );   // <— ***THIS FIXES YOUR LAG***
 			}
 			async function init() {
 				await load_ui();
