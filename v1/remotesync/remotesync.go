@@ -70,6 +70,7 @@ func ( rs *RemoteSync ) Start() {
 							json.Unmarshal( decrypted_bucket_value , &viewed_user )
 							// TODO update bleve search !!!
 							// users_bucket.Put( []byte( downloaded_user.UUID ) , downloaded_user.UserBytes )
+							fmt.Println( "Downloaded User ===" , viewed_user.UUID , viewed_user.Username )
 							updated_users = append( updated_users , viewed_user )
 
 							m_b.Put( []byte( "remote-last-sequence" ) , []byte( remote_change.ID ) )
@@ -102,6 +103,7 @@ func ( rs *RemoteSync ) Start() {
 					for _ , u := range updated_users {
 						u.DB = rs.DB
 						u.Config = rs.CONFIG
+						fmt.Println( "Saving User ===" , u.UUID , u.Username )
 						u.SaveLocal()
 					}
 					timer.Reset( INTERVAL )

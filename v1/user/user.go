@@ -179,35 +179,31 @@ func ( u *User ) Save() {
 	var byte_object_encrypted []byte
 	db_result := u.DB.Update( func( tx *bolt.Tx ) error {
 
-		// this was originally the only thing in here
-		users_bucket , _ := tx.CreateBucketIfNotExists( []byte( "users" ) )
+		users_bucket , users_bucket_err := tx.CreateBucketIfNotExists( []byte( "users" ) )
+		if users_bucket_err != nil { fmt.Println( users_bucket_err ); return nil }
+		usernames_bucket , usernames_bucket_err := tx.CreateBucketIfNotExists( []byte( "usernames" ) )
+		if usernames_bucket_err != nil { fmt.Println( usernames_bucket_err ); return nil }
 
-		// but we added stuff below now on every save
-
-		// Grab existing version of user to see if we need to make any adjacent db changes
 		existing_user_value := users_bucket.Get( []byte( u.UUID ) )
-		if existing_user_value == nil { return nil }
-		decrypted_bucket_value := encrypt.ChaChaDecryptBytes( u.Config.BoltDBEncryptionKey , existing_user_value )
-		json.Unmarshal( decrypted_bucket_value , &existing_user )
 
-		// such as the usernames bucket
-		usernames_bucket , _ := tx.CreateBucketIfNotExists( []byte( "usernames" ) )
-		if existing_user.Username != u.Username {
-			// fmt.Println( "we have to update the username for search and stuff" )
-			fmt.Println( "existing username: " + existing_user.Username )
-			fmt.Println( "new: " + u.Username )
-			usernames_bucket.Delete( []byte( existing_user.Username ) )
-			search_index , _ := bleve.Open( u.Config.BleveSearchPath )
-			defer search_index.Close()
-			edited_search_item := types.SearchItem{
-				UUID: u.UUID ,
-				Name: u.SearchString ,
-			}
-			search_index.Index( u.UUID , edited_search_item )
+		search_index , _ := bleve.Open( u.Config.BleveSearchPath )
+		defer search_index.Close()
+		edited_search_item := types.SearchItem{
+			UUID: u.UUID ,
+			Name: u.SearchString ,
 		}
+		search_index.Index( u.UUID , edited_search_item )
+
+		if existing_user_value != nil {
+			decrypted_bucket_value := encrypt.ChaChaDecryptBytes( u.Config.BoltDBEncryptionKey , existing_user_value )
+			json.Unmarshal( decrypted_bucket_value , &existing_user )
+			if existing_user.Username != u.Username {
+				usernames_bucket.Delete( []byte( existing_user.Username ) )
+			}
+		}
+
 		usernames_bucket.Put( []byte( u.Username ) , []byte( u.UUID ) )
 
-		// and the barcode bucket
 		barcodes_bucket , _ := tx.CreateBucketIfNotExists( []byte( "barcodes" ) )
 		for i := 0; i < len( u.Barcodes ); i++ {
 			barcodes_bucket.Put( []byte( u.Barcodes[ i ] ) , []byte( u.UUID ) )
@@ -217,7 +213,6 @@ func ( u *User ) Save() {
 
 		u.CreatedDate = utils.GetNowDateString( &now )
 		u.CreatedTime = utils.GetNowTimeString( &now )
-
 		byte_object , _ := json.Marshal( u )
 		byte_object_encrypted = encrypt.ChaChaEncryptBytes( u.Config.BoltDBEncryptionKey , byte_object )
 		fmt.Println( "user::Save()" ,  u.UUID , len( byte_object_encrypted ) )
@@ -239,38 +234,32 @@ func ( u *User ) SaveLocal() {
 	u.FormatUsername()
 	var byte_object_encrypted []byte
 	db_result := u.DB.Update( func( tx *bolt.Tx ) error {
-		// fmt.Println( "SaveLocal() - 1" )
-		// this was originally the only thing in here
-		users_bucket , _ := tx.CreateBucketIfNotExists( []byte( "users" ) )
 
-		// but we added stuff below now on every save
+		users_bucket , users_bucket_err := tx.CreateBucketIfNotExists( []byte( "users" ) )
+		if users_bucket_err != nil { fmt.Println( users_bucket_err ); return nil }
+		usernames_bucket , usernames_bucket_err := tx.CreateBucketIfNotExists( []byte( "usernames" ) )
+		if usernames_bucket_err != nil { fmt.Println( usernames_bucket_err ); return nil }
 
-		// Grab existing version of user to see if we need to make any adjacent db changes
 		existing_user_value := users_bucket.Get( []byte( u.UUID ) )
-		if existing_user_value == nil { return nil }
-		// fmt.Println( "SaveLocal() - 2" )
-		decrypted_bucket_value := encrypt.ChaChaDecryptBytes( u.Config.BoltDBEncryptionKey , existing_user_value )
-		json.Unmarshal( decrypted_bucket_value , &existing_user )
-		// fmt.Println( "SaveLocal() - 3" )
-		// such as the usernames bucket
-		usernames_bucket , _ := tx.CreateBucketIfNotExists( []byte( "usernames" ) )
-		// fmt.Println( "SaveLocal() - 4" )
-		if existing_user.Username != u.Username {
-			// fmt.Println( "we have to update the username for search and stuff" )
-			fmt.Println( "existing username: " + existing_user.Username )
-			fmt.Println( "new: " + u.Username )
-			usernames_bucket.Delete( []byte( existing_user.Username ) )
-			search_index , _ := bleve.Open( u.Config.BleveSearchPath )
-			defer search_index.Close()
-			edited_search_item := types.SearchItem{
-				UUID: u.UUID ,
-				Name: u.SearchString ,
-			}
-			search_index.Index( u.UUID , edited_search_item )
+
+		search_index , _ := bleve.Open( u.Config.BleveSearchPath )
+		defer search_index.Close()
+		edited_search_item := types.SearchItem{
+			UUID: u.UUID ,
+			Name: u.SearchString ,
 		}
+		search_index.Index( u.UUID , edited_search_item )
+
+		if existing_user_value != nil {
+			decrypted_bucket_value := encrypt.ChaChaDecryptBytes( u.Config.BoltDBEncryptionKey , existing_user_value )
+			json.Unmarshal( decrypted_bucket_value , &existing_user )
+			if existing_user.Username != u.Username {
+				usernames_bucket.Delete( []byte( existing_user.Username ) )
+			}
+		}
+
 		usernames_bucket.Put( []byte( u.Username ) , []byte( u.UUID ) )
-		// fmt.Println( "SaveLocal() - 5" )
-		// and the barcode bucket
+
 		barcodes_bucket , _ := tx.CreateBucketIfNotExists( []byte( "barcodes" ) )
 		for i := 0; i < len( u.Barcodes ); i++ {
 			barcodes_bucket.Put( []byte( u.Barcodes[ i ] ) , []byte( u.UUID ) )
@@ -280,12 +269,10 @@ func ( u *User ) SaveLocal() {
 
 		u.CreatedDate = utils.GetNowDateString( &now )
 		u.CreatedTime = utils.GetNowTimeString( &now )
-		// fmt.Println( "SaveLocal() - 6" )
 		byte_object , _ := json.Marshal( u )
 		byte_object_encrypted = encrypt.ChaChaEncryptBytes( u.Config.BoltDBEncryptionKey , byte_object )
 		fmt.Println( "user::Save()" ,  u.UUID , len( byte_object_encrypted ) )
 		users_bucket.Put( []byte( u.UUID ) , byte_object_encrypted )
-		// fmt.Println( "SaveLocal() - 7" )
 		return nil
 	})
 	if db_result != nil { panic( "couldn't write to bolt db ??" ) }
