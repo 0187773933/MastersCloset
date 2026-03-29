@@ -64,6 +64,7 @@ type ConfigFile struct {
 	AdminUsername string `json:"admin_username"`
 	AdminPassword string `json:"admin_password"`
 	TimeZone string `json:"time_zone"`
+	ServeLocation string `json:"serve_location"` // "local" or "remote"
 	BoltDBPath string `json:"bolt_db_path"`
 	BoltDBEncryptionKey string `json:"bolt_db_encryption_key"`
 	BleveSearchPath string `json:"bleve_search_path"`

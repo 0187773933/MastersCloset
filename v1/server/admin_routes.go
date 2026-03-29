@@ -9,6 +9,7 @@ import (
 )
 
 var admin_ui_html_pages = map[ string ]string {
+	"": "./v1/server/html/admin.html" ,
 	"/": "./v1/server/html/admin.html" ,
 	"/users": "./v1/server/html/admin_view_users.html" ,
 	"/user/new": "./v1/server/html/admin_user_new.html" ,
@@ -91,6 +92,7 @@ func ( s *Server ) RegisterAdminRoutes() {
 
 	admin_route_group.Get( "/user/reports/main" , s.GetReportMain )
 	admin_route_group.Get( "/user/reports/mail-chimp" , s.GetReportMailChimp )
+	admin_route_group.Get( "/user/reports/checkins" , s.GetReportCheckins )
 
 	admin_route_group.Post( "/user/sms" , s.SMSUser )
 	admin_route_group.Post( "/user/sms/all" , s.SMSAllUsers )

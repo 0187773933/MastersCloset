@@ -3,8 +3,11 @@ package server
 import (
 	"fmt"
 	"bytes"
+	"time"
 	"strconv"
 	// "reflect"
+	"sort"
+	excelize "github.com/xuri/excelize/v2"
 	csv "encoding/csv"
 	json "encoding/json"
 	fiber "github.com/gofiber/fiber/v2"
@@ -138,4 +141,277 @@ func ( s *Server ) GetReportMain( context *fiber.Ctx ) ( error ) {
 	log.Debug( fmt.Sprintf( "Downloaded Report-Main , %s bytes" , csv_byte_length_string ) )
 	return context.Send( csv_bytes )
 
+}
+
+// func ( s *Server ) GetReportCheckins( context *fiber.Ctx ) ( error ) {
+// 	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
+
+// 	type CheckinRow struct {
+// 		ParsedTime time.Time
+// 		Row        []string
+// 	}
+
+// 	var all_rows []CheckinRow
+
+// 	csv_headers := []string{
+// 		"Check-In Date" , "Check-In Time",
+// 		"First Name" , "Last Name",
+// 		"Email Address" , "Phone",
+// 		"UUID" , "Primary Barcode",
+// 		"Check-In Type" , "Result",
+// 		"Family Size (At Check-In)" , "Total Clothing Items",
+// 		"Guests" , "Time Remaining",
+// 	}
+
+// 	s.DB.View( func( tx *bolt_api.Tx ) error {
+// 		bucket := tx.Bucket( []byte( "users" ) )
+// 		if bucket == nil { return nil }
+
+// 		bucket.ForEach( func( uuid , value []byte ) error {
+// 			var viewed_user user.User
+
+// 			decrypted_bucket_value := encryption.ChaChaDecryptBytes( s.Config.BoltDBEncryptionKey , value )
+// 			json.Unmarshal( decrypted_bucket_value , &viewed_user )
+
+// 			primary_barcode := ""
+// 			if len( viewed_user.Barcodes ) > 0 {
+// 				primary_barcode = viewed_user.Barcodes[ 0 ]
+// 			}
+
+// 			for _ , checkin := range viewed_user.CheckIns {
+
+// 				parsed_time , err := time.ParseInLocation(
+// 					"02Jan2006 15:04:05.000",
+// 					checkin.Date + " " + checkin.Time,
+// 					time.Local,
+// 				)
+// 				if err != nil {
+// 					parsed_time = time.Time{}
+// 				}
+
+// 				row := []string{
+// 					checkin.Date,
+// 					checkin.Time,
+// 					viewed_user.Identity.FirstName,
+// 					viewed_user.Identity.LastName,
+// 					viewed_user.EmailAddress,
+// 					viewed_user.PhoneNumber,
+// 					viewed_user.UUID,
+// 					primary_barcode,
+// 					checkin.Type,
+// 					strconv.FormatBool( checkin.Result ),
+// 					its( checkin.PrintJob.FamilySize ),
+// 					its( checkin.PrintJob.TotalClothingItems ),
+// 					its( checkin.PrintJob.Guests ),
+// 					its( checkin.TimeRemaining ),
+// 				}
+
+// 				all_rows = append( all_rows , CheckinRow{
+// 					ParsedTime: parsed_time,
+// 					Row:        row,
+// 				})
+// 			}
+
+// 			return nil
+// 		})
+
+// 		return nil
+// 	})
+
+// 	// newest first
+// 	sort.Slice( all_rows , func( i , j int ) bool {
+// 		return all_rows[ i ].ParsedTime.After( all_rows[ j ].ParsedTime )
+// 	})
+
+// 	var csv_buffer bytes.Buffer
+// 	writer := csv.NewWriter( &csv_buffer )
+
+// 	writer.Write( csv_headers )
+// 	for _ , x_row := range all_rows {
+// 		writer.Write( x_row.Row )
+// 	}
+// 	writer.Flush()
+
+// 	csv_bytes := csv_buffer.Bytes()
+// 	csv_byte_length_string := strconv.Itoa( len( csv_bytes ) )
+
+// 	context.Set( "Content-Type" , "text/csv" )
+// 	context.Set( "Content-Disposition" , "attachment;filename=masters_closet_checkins.csv" )
+// 	context.Set( "Content-Length" , csv_byte_length_string )
+
+// 	log.Debug( fmt.Sprintf( "Downloaded Report-Checkins , %s bytes" , csv_byte_length_string ) )
+
+// 	return context.Send( csv_bytes )
+// }
+
+func ( s *Server ) GetReportCheckins( context *fiber.Ctx ) ( error ) {
+	if s.ValidateAdminSession( context ) == false { return s.ServeFailedAttempt( context ) }
+
+	type CheckinRow struct {
+		ParsedTime time.Time
+		Row        []interface{}
+	}
+
+	type YearAgg struct {
+		Checkins int
+		People   int
+		Clothes  int
+	}
+
+	var all_rows []CheckinRow
+	year_map := make(map[int]*YearAgg)
+
+	headers := []string{
+		"Check-In Date","Check-In Time",
+		"First Name","Last Name",
+		"Email","Phone",
+		"UUID","Barcode",
+		"Type","Result",
+		"Family Size","Total Clothing Items",
+		"Guests","Time Remaining",
+	}
+
+	s.DB.View(func(tx *bolt_api.Tx) error {
+		b := tx.Bucket([]byte("users"))
+		if b == nil { return nil }
+
+		b.ForEach(func(_, value []byte) error {
+			var u user.User
+
+			decrypted := encryption.ChaChaDecryptBytes(s.Config.BoltDBEncryptionKey, value)
+			json.Unmarshal(decrypted, &u)
+
+			barcode := ""
+			if len(u.Barcodes) > 0 {
+				barcode = u.Barcodes[0]
+			}
+
+			for _, c := range u.CheckIns {
+
+				dt, err := time.ParseInLocation(
+					"02Jan2006 15:04:05.000",
+					c.Date+" "+c.Time,
+					time.Local,
+				)
+				if err != nil { continue }
+
+				row := []interface{}{
+					dt.Format("2006-01-02"), // SAFE STRING
+					dt.Format("15:04:05"),   // SAFE STRING
+					u.Identity.FirstName,
+					u.Identity.LastName,
+					u.EmailAddress,
+					u.PhoneNumber,
+					u.UUID,
+					barcode,
+					c.Type,
+					c.Result,
+					c.PrintJob.FamilySize,
+					c.PrintJob.TotalClothingItems,
+					c.PrintJob.Guests,
+					c.TimeRemaining,
+				}
+
+				all_rows = append(all_rows, CheckinRow{
+					ParsedTime: dt,
+					Row:        row,
+				})
+
+				// YTD (correct logic)
+				year := dt.Year()
+
+				if year_map[year] == nil {
+					year_map[year] = &YearAgg{}
+				}
+
+				year_map[year].Checkins++
+				year_map[year].People += (c.PrintJob.FamilySize + c.PrintJob.Guests)
+				year_map[year].Clothes += c.PrintJob.TotalClothingItems
+			}
+
+			return nil
+		})
+
+		return nil
+	})
+
+	// sort newest first
+	sort.Slice(all_rows, func(i, j int) bool {
+		return all_rows[i].ParsedTime.After(all_rows[j].ParsedTime)
+	})
+
+	f := excelize.NewFile()
+	main_sheet := "Checkins"
+	f.SetSheetName("Sheet1", main_sheet)
+
+	// headers
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(main_sheet, cell, h)
+	}
+
+	// rows
+	for r, row := range all_rows {
+		for c, val := range row.Row {
+			cell, _ := excelize.CoordinatesToCellName(c+1, r+2)
+			f.SetCellValue(main_sheet, cell, val)
+		}
+	}
+
+	f.AutoFilter(main_sheet, "A1:N1", nil)
+
+	for i := range headers {
+		col, _ := excelize.ColumnNumberToName(i + 1)
+		f.SetColWidth(main_sheet, col, col, 20)
+	}
+
+	// =========================
+	// YTD SHEET
+	// =========================
+
+	ytd_sheet := "YTD"
+	f.NewSheet(ytd_sheet)
+
+	headers_ytd := []string{
+		"Year",
+		"Total Check-Ins",
+		"Total Family Members (Including Guests)",
+		"Total Clothing Items",
+	}
+
+	for i, h := range headers_ytd {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(ytd_sheet, cell, h)
+	}
+
+	var years []int
+	for y := range year_map {
+		years = append(years, y)
+	}
+	sort.Ints(years)
+
+	for i, y := range years {
+		agg := year_map[y]
+
+		f.SetCellValue(ytd_sheet, fmt.Sprintf("A%d", i+2), y)
+		f.SetCellValue(ytd_sheet, fmt.Sprintf("B%d", i+2), agg.Checkins)
+		f.SetCellValue(ytd_sheet, fmt.Sprintf("C%d", i+2), agg.People)
+		f.SetCellValue(ytd_sheet, fmt.Sprintf("D%d", i+2), agg.Clothes)
+	}
+
+	f.AutoFilter(ytd_sheet, "A1:D1", nil)
+
+	for i := range headers_ytd {
+		col, _ := excelize.ColumnNumberToName(i + 1)
+		f.SetColWidth(ytd_sheet, col, col, 25)
+	}
+
+	buf, err := f.WriteToBuffer()
+	if err != nil { return err }
+
+	context.Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	context.Set("Content-Disposition", "attachment; filename=masters_closet_checkins.xlsx")
+	context.Set("Content-Length", strconv.Itoa(len(buf.Bytes())))
+
+	return context.Send(buf.Bytes())
 }

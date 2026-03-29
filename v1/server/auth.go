@@ -17,18 +17,21 @@ func ( s *Server ) ValidateLoginCredentials( context *fiber.Ctx ) ( result bool 
 	uploaded_password := context.FormValue( "password" )
 	if uploaded_password == "" { log.Println( "password empty" ); return }
 	password_matches := bcrypt.CompareHashAndPassword( []byte( uploaded_password ) , []byte( s.Config.AdminPassword ) )
+	// password_matches := bcrypt.CompareHashAndPassword( []byte( s.Config.AdminPassword ) , []byte( uploaded_password ) )
 	if password_matches != nil { log.Println( "bcrypted password doesn't match" ); return }
 	result = true
 	return
 }
 
 func ( s *Server ) AdminLogout( context *fiber.Ctx ) ( error ) {
+	_secure := true
+	if s.Config.ServeLocation == "local" { _secure = false }
 	context.Cookie( &fiber.Cookie{
 		Name: "the-masters-closet-admin" ,
 		Value: "" ,
 		Expires: time.Now().Add( -time.Hour ) , // set the expiration to the past
 		HTTPOnly: true ,
-		Secure: true ,
+		Secure: _secure ,
 	})
 	context.Set( "Content-Type" , "text/html" )
 	return context.SendString( "<h1>Logged Out</h1>" )
@@ -38,11 +41,13 @@ func ( s *Server ) AdminLogout( context *fiber.Ctx ) ( error ) {
 func ( s *Server ) AdminLogin( context *fiber.Ctx ) ( error ) {
 	valid_login := s.ValidateLoginCredentials( context )
 	if valid_login == false { return s.ServeFailedAttempt( context ) }
+	_secure := true
+	if s.Config.ServeLocation == "local" { _secure = false }
 	context.Cookie(
 		&fiber.Cookie{
 			Name: "the-masters-closet-admin" ,
 			Value: encryption.SecretBoxEncrypt( s.Config.BoltDBEncryptionKey , s.Config.ServerCookieAdminSecretMessage ) ,
-			Secure: true ,
+			Secure: _secure ,
 			Path: "/" ,
 			// Domain: "blah.ngrok.io" , // probably should set this for webkit
 			HTTPOnly: true ,
@@ -50,7 +55,7 @@ func ( s *Server ) AdminLogin( context *fiber.Ctx ) ( error ) {
 			Expires: time.Now().AddDate( 10 , 0 , 0 ) , // aka 10 years from now
 		} ,
 	)
-	return context.Redirect( "/" )
+	return context.Redirect( "/admin/" )
 }
 
 func ( s *Server ) ValidateAdminCookie( context *fiber.Ctx ) ( result bool ) {
