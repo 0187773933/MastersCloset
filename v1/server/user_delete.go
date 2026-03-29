@@ -59,6 +59,10 @@ func ( s *Server ) DeleteCheckIn( context *fiber.Ctx ) ( error ) {
 		viewed_user_byte_object_encrypted := encryption.ChaChaEncryptBytes( s.Config.BoltDBEncryptionKey , viewed_user_byte_object )
 		bucket.Put( []byte( user_uuid ) , viewed_user_byte_object_encrypted )
 
+		// ADDON , saving to drainable pool
+		remote_save_bucket , _ := tx.CreateBucketIfNotExists( []byte( "remote-upload" ) )
+		remote_save_bucket.Put( []byte( user_uuid ) , viewed_user_byte_object_encrypted )
+
 		return nil
 	})
 	return context.JSON( fiber.Map{

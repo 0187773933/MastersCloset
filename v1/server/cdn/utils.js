@@ -48,6 +48,7 @@ message User {
 const BASE_64_REGEX = /^(?:[A-Za-z0-9+/]{4})*?(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 function is_proto_message( message ) {
 	try {
+		if ( message.length < 10 ) { return false; }
 		let b64_test = BASE_64_REGEX.test( message );
 		if ( !b64_test ) { return false; }
 		// let proto_message = atob( message ).trim();
