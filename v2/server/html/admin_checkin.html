@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check-In — Admin</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); font-size: .9rem; }
+  th { color: var(--muted); font-weight: 600; }
+  /* WYSIWYG print-ticket preview (mirrors the 4x6 label) */
+  .ticket { max-width: 360px; margin: 6px auto; border: 2px dashed var(--line); border-radius: 12px; padding: 18px 16px 22px; text-align: center; background: #fff; }
+  .ticket img.logo { width: 150px; margin: 0 auto 12px; }
+  .ticket .t-fam { font-size: 1.25rem; font-weight: 800; margin: 4px 0; }
+  .ticket .t-total { font-size: 1rem; margin-bottom: 12px; }
+  .ticket .t-per { text-align: left; display: inline-block; }
+  .ticket .t-per .hdr { font-weight: 700; margin: 4px 0; }
+  .ticket .t-per .item { margin: 5px 0; white-space: nowrap; }
+  .ticket .t-name { font-size: 1.1rem; font-weight: 700; margin: 14px 0 10px; }
+  .ticket .bc { font-family: monospace; letter-spacing: 1px; color: var(--muted); }
+  .tnum { width: 56px; text-align: center; padding: 4px 6px; font-weight: 700; display: inline-block; }
+  .tname-input { max-width: 260px; text-align: center; font-weight: 700; margin: 0 auto; }
+  /* "Shopping for" overview chips */
+  .sf-group { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--line); border-radius: 10px; padding: 4px 8px; }
+  .sf-group label { font-size: .85rem; font-weight: 600; color: var(--muted); }
+  .sf-group input { width: 52px; text-align: center; padding: 4px 6px; }
+  .sf-group.sf-guests { border-style: dashed; }
+  .sf-toggle { font-weight: 700; }
+</style>
+</head>
+<body>
+<main class="card wide">
+  <div class="row between">
+    <h1>🛒 Check-In</h1>
+    <a class="btn ghost small" href="/admin">← Admin</a>
+  </div>
+
+  <div class="searchbar">
+    <input id="lookup" class="search" placeholder="Scan a barcode, or type a name…" autofocus autocomplete="off">
+    <button id="clearBtn" class="btn ghost" type="button">Clear</button>
+  </div>
+  <div id="results" class="list"></div>
+
+  <div id="panel" style="display:none">
+    <section class="section">
+      <div class="row between"><h2 id="who" style="margin:0"></h2><span id="verifiedSlot"></span></div>
+      <div id="cooloff" class="status"></div>
+
+      <!-- Primary action first, for a fast check-in -->
+      <div class="row" style="margin:8px 0">
+        <button id="checkinBtn" class="btn" style="font-size:1.05rem;padding:14px 26px">✓ Check In</button>
+        <span id="result" class="muted small"></span>
+        <button id="editBtn" class="btn ghost small" type="button">✏️ Edit</button>
+        <button id="qrBtn" class="btn ghost small" type="button">Show Handoff QR</button>
+      </div>
+
+      <br>
+      <div id="qrBox" class="center"></div>
+
+      <h2>Shopping For :</h2>
+      <div id="shopFor" style="margin:10px 0 4px">
+        <div id="shopChips" class="row" style="gap:8px"></div>
+        <div id="guestNote" class="muted small" style="margin-top:6px"></div>
+      </div>
+
+      <h2>Ticket :</h2>
+      <p id="langPrintNote" class="muted small center" style="display:none"></p>
+      <!-- Each line is [pre text][editable number][post text]; only the text
+           spans are swapped per language, so the inputs keep focus + values. -->
+      <div class="ticket">
+        <img class="logo" src="/static/logo.png" alt="Master's Closet">
+        <div class="t-fam" id="line_fam"><span class="pre"></span><input id="t_for" class="tnum" type="number" min="0" value="1"><span class="post"></span></div>
+        <div class="t-total" id="line_total"><span class="pre"></span><span id="t_total">6</span><span class="post"></span></div>
+        <div class="t-per">
+          <div class="hdr" id="line_perperson"></div>
+          <div class="item" id="line_clothing"><span class="pre"></span><input id="t_clothing" class="tnum" type="number" min="0" value="6"><span class="post"></span></div>
+          <div class="item" id="line_pants"><span class="pre"></span><input id="t_pants" class="tnum" type="number" min="0" value="0"><span class="post"></span></div>
+          <div class="item" id="line_shoes"><span class="pre"></span><input id="t_shoes" class="tnum" type="number" min="0" value="0"><span class="post"></span></div>
+          <div class="item" id="line_acc"><span class="pre"></span><input id="t_acc" class="tnum" type="number" min="0" value="0"><span class="post"></span></div>
+          <div class="item" id="line_seasonal"><span class="pre"></span><input id="t_seasonal" class="tnum" type="number" min="0" value="0"><span class="post"></span></div>
+        </div>
+        <div class="t-name"><input id="t_name" class="tname-input" placeholder="Family Name"></div>
+        <div class="bc" id="t_barcode">barcode assigned at check-in</div>
+      </div>
+
+      <h2 class="muted">Current Balance <span class="small">(reference)</span></h2>
+      <table id="balance"><thead><tr><th>Category</th><th>Available</th><th>Limit</th><th>Used</th></tr></thead><tbody></tbody></table>
+    </section>
+  </div>
+</main>
+
+<script src="/static/verified.js"></script>
+<script>
+const lookup = document.getElementById('lookup');
+const results = document.getElementById('results');
+let uuid = null;
+let CUR = null;      // currently loaded user (for the verified toggle)
+let BALCFG = null;   // balance config from settings, for ticket defaults
+let LANGS = [];      // [{code,name,rtl,strings}] — same source the printer uses
+let TLANG = 'en';    // currently selected ticket language
+// Selected-user deep-link comes from the path: /admin/checkin/<uuid>
+const pathUuid = (location.pathname.match(/\/admin\/checkin\/([^\/?#]+)/) || [])[1] || '';
+
+// Scripts that preview correctly but don't yet print correctly (gofpdf has no
+// bidi / contextual shaping). The on-screen ticket is right; the label isn't.
+const PRINT_WARN = { ar: 1, fa: 1, ur: 1, hi: 1 };
+
+function num(id) { return parseInt(document.getElementById(id).value || '0', 10); }
+
+function langData(code) { return LANGS.find(l => l.code === code) || LANGS.find(l => l.code === 'en') || null; }
+function plural(n, sing, plur) { return n === 1 ? sing : plur; }
+
+// Split a "...%d..." format into the text before and after the number.
+function splitFmt(fmt) { const i = (fmt || '').indexOf('%d'); return i < 0 ? [fmt || '', ''] : [fmt.slice(0, i), fmt.slice(i + 2)]; }
+
+// Set a line's surrounding text without touching its input (preserves focus).
+function setLine(id, fmt, rtl) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const parts = splitFmt(fmt);
+  el.querySelector('.pre').textContent = parts[0];
+  el.querySelector('.post').textContent = parts[1];
+  el.dir = rtl ? 'rtl' : 'ltr';
+}
+
+// Re-render the ticket's localized text for the selected language.
+function renderTicketText() {
+  const d = langData(TLANG); if (!d) return;
+  const s = d.strings, rtl = !!d.rtl;
+  setLine('line_fam', s.family_size, rtl);
+  setLine('line_total', s.total_items, rtl);
+  const hp = document.getElementById('line_perperson'); hp.textContent = s.per_person; hp.dir = rtl ? 'rtl' : 'ltr';
+  setLine('line_clothing', s.clothing_items, rtl);
+  setLine('line_pants', s.pants_limit, rtl);
+  setLine('line_shoes', '( %d ) ' + plural(num('t_shoes'), s.shoe_singular, s.shoe_plural), rtl);
+  setLine('line_acc', '( %d ) ' + plural(num('t_acc'), s.accessory_singular, s.accessory_plural), rtl);
+  setLine('line_seasonal', '( %d ) ' + plural(num('t_seasonal'), s.seasonal_singular, s.seasonal_plural), rtl);
+  const note = document.getElementById('langPrintNote');
+  if (PRINT_WARN[TLANG]) { note.style.display = ''; note.textContent = '⚠ Preview is correct, but this script does not print correctly yet.'; }
+  else { note.style.display = 'none'; }
+  fitPreview(); // shrink any overflowing line so it stays on one line (like print)
+}
+
+// Shrink one full-width line's font until it fits on a single line. Resets to
+// the CSS default first so it can grow back when the text gets shorter.
+function fitLineEl(el, minPx) {
+  if (!el) return;
+  el.style.whiteSpace = 'nowrap';
+  el.style.fontSize = '';
+  let px = parseFloat(getComputedStyle(el).fontSize), g = 0;
+  while (el.scrollWidth > el.clientWidth && px > minPx && g++ < 60) { px -= 0.5; el.style.fontSize = px + 'px'; }
+}
+
+// Keep the ticket lines on one line, mirroring the printer's auto-fit. The
+// per-person block shrinks as a group so it stays visually uniform.
+function fitPreview() {
+  fitLineEl(document.getElementById('line_fam'), 11);
+  fitLineEl(document.getElementById('line_total'), 8);
+  const tper = document.querySelector('.t-per'), ticket = document.querySelector('.ticket');
+  if (!tper || !ticket) return;
+  const cs = getComputedStyle(ticket);
+  const innerW = ticket.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  tper.style.whiteSpace = 'nowrap';
+  tper.style.fontSize = '';
+  let px = parseFloat(getComputedStyle(tper).fontSize), g = 0;
+  while (tper.offsetWidth > innerW && px > 8 && g++ < 60) { px -= 0.5; tper.style.fontSize = px + 'px'; }
+}
+
+// Load the ticket strings once (the same source the printer uses). The language
+// itself is locked to the user's saved language — it's only editable on the
+// user's Edit page — so there is no picker here.
+async function loadTicketStrings() {
+  try { LANGS = (await (await fetch('/admin/ticket/strings')).json()).result || []; } catch (e) { LANGS = []; }
+}
+
+// Per-person limits come straight from settings; the total scales with people.
+function setTicketFromConfig() {
+  if (!BALCFG) return;
+  const g = BALCFG.general || {};
+  document.getElementById('t_clothing').value = g.total || 6;
+  document.getElementById('t_pants').value = g.bottoms || 0;
+  document.getElementById('t_shoes').value = BALCFG.shoes || 0;
+  document.getElementById('t_acc').value = BALCFG.accessories || 0;
+  document.getElementById('t_seasonal').value = BALCFG.seasonals || 0;
+  recomputeTotal();
+}
+function recomputeTotal() {
+  document.getElementById('t_total').textContent = (num('t_clothing') || 0) * num('t_for'); // 0 people -> 0 total
+}
+function debounce(fn, ms) { let t; return function () { clearTimeout(t); const a = arguments; t = setTimeout(() => fn.apply(null, a), ms); }; }
+
+// --- "Shopping for" overview -------------------------------------------------
+// Builds toggle/count chips from the user's family members. All edits here are
+// temporary (per-visit): they drive the live ticket's people count, never the
+// stored record. Adults are 18+, matching v1. The account holder (Self) has no
+// known sex, so it's a person but not part of the men/women breakdown.
+let SHOP = null;
+const ADULT = 18;
+
+function deriveShop(u) {
+  let boys = 0, girls = 0, men = 0, women = 0, spouse = null;
+  (u.family_members || []).forEach(m => {
+    const age = parseInt(m.age, 10);
+    if (isNaN(age) || age < 0) return;
+    if (!spouse && m.spouse && age >= ADULT) { spouse = m; return; } // pull spouse out
+    if (age < ADULT) { if (m.sex === 'male') boys++; else if (m.sex === 'female') girls++; }
+    else { if (m.sex === 'male') men++; else if (m.sex === 'female') women++; }
+  });
+  return { boys, girls, men, women, spouse };
+}
+
+function spouseLabel(s) {
+  if (s && s.sex === 'male') return 'Husband';
+  if (s && s.sex === 'female') return 'Wife';
+  return 'Spouse';
+}
+
+function sfToggle(label, on, cb) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  const paint = () => { b.className = 'btn small sf-toggle' + (b.dataset.on === '1' ? '' : ' ghost'); b.textContent = (b.dataset.on === '1' ? '✓ ' : '') + label; };
+  b.dataset.on = on ? '1' : '0';
+  paint();
+  b.onclick = () => { b.dataset.on = b.dataset.on === '1' ? '0' : '1'; paint(); cb(b.dataset.on === '1'); };
+  return b;
+}
+
+// singular/plural label that follows the count live (1 → "Boy", else "Boys").
+// Pass plural = null for a fixed label that never pluralizes (e.g. Unknown).
+function sfCount(singular, plural, kind, initial, extraClass) {
+  const g = document.createElement('span');
+  g.className = 'sf-group' + (extraClass ? ' ' + extraClass : '');
+  const lab = document.createElement('label');
+  const inp = document.createElement('input');
+  inp.type = 'number'; inp.min = '0'; inp.value = initial;
+  inp.dataset.kind = kind;
+  const syncLabel = () => { lab.textContent = (plural && parseInt(inp.value || '0', 10) !== 1) ? plural : singular; };
+  inp.addEventListener('input', () => { syncLabel(); recomputeShopFor(); });
+  syncLabel();
+  g.appendChild(lab); g.appendChild(inp);
+  return g;
+}
+
+function countVal(kind) {
+  const el = document.querySelector('#shopChips input[data-kind="' + kind + '"]');
+  return el ? (parseInt(el.value || '0', 10) || 0) : 0;
+}
+
+function renderShoppingFor(u) {
+  const d = deriveShop(u);
+  SHOP = { self: true, spouseOn: !!d.spouse, spousePresent: !!d.spouse, spouseSex: d.spouse ? d.spouse.sex : '' };
+  const box = document.getElementById('shopChips');
+  box.innerHTML = '';
+
+  box.appendChild(sfToggle('Self', true, on => { SHOP.self = on; recomputeShopFor(); }));
+  if (d.spouse) box.appendChild(sfToggle(spouseLabel(d.spouse), true, on => { SHOP.spouseOn = on; recomputeShopFor(); }));
+  if (d.boys)  box.appendChild(sfCount('Boy', 'Boys', 'boys', d.boys));
+  if (d.girls) box.appendChild(sfCount('Girl', 'Girls', 'girls', d.girls));
+  if (d.men)   box.appendChild(sfCount('Man', 'Men', 'men', d.men));
+  if (d.women) box.appendChild(sfCount('Woman', 'Women', 'women', d.women));
+  // Reconcile with the stored family size: members not itemized by age/sex (e.g.
+  // every user created before the family-members editor existed) show up here so
+  // the ticket starts at the real family size and stays adjustable.
+  const accounted = 1 + (d.spouse ? 1 : 0) + d.boys + d.girls + d.men + d.women;
+  const others = Math.max(0, (parseInt(u.family_size, 10) || 1) - accounted);
+  if (others) {
+    const c = sfCount('Unknown', null, 'unknown', others);
+    c.querySelector('input').title = 'Family members without an age/sex on file';
+    box.appendChild(c);
+  }
+  box.appendChild(sfCount('🎟 Guest', '🎟 Guests', 'guests', 0, 'sf-guests')); // separate: own ticket, no allowance change
+
+  recomputeShopFor();
+}
+
+// People on the family ticket = Self + Spouse + non-spouse boys/girls/men/women.
+// Guests are excluded (they print their own ticket). Drives #t_for + the total.
+function recomputeShopFor() {
+  if (!SHOP) return;
+  let people = (SHOP.self ? 1 : 0) + (SHOP.spousePresent && SHOP.spouseOn ? 1 : 0)
+    + countVal('boys') + countVal('girls') + countVal('men') + countVal('women') + countVal('unknown');
+  if (people < 0) people = 0; // 0 is allowed — no family ticket prints, but guests still can
+  document.getElementById('t_for').value = people;
+  recomputeTotal();
+  // Guests don't change the family ticket — they print their own. Note both the
+  // zero-family case (no family ticket) and how many guest tickets will print.
+  const gn = document.getElementById('guestNote');
+  if (gn) {
+    const g = countVal('guests');
+    const parts = [];
+    if (people === 0) parts.push('⚠ No family ticket will print (shopping for 0).');
+    if (g > 0) parts.push('🎟 + ' + g + ' guest ticket' + (g === 1 ? '' : 's') + ' will also print (same barcode).');
+    gn.textContent = parts.join('   ');
+  }
+}
+
+// Demographic breakdown for the record: the spouse (if shopping) folds into
+// men/women by sex; Self stays uncounted (unknown sex). Guests are separate.
+function shopDemographics() {
+  let men = countVal('men'), women = countVal('women');
+  if (SHOP && SHOP.spousePresent && SHOP.spouseOn) {
+    if (SHOP.spouseSex === 'male') men++;
+    else if (SHOP.spouseSex === 'female') women++;
+  }
+  return { boys: countVal('boys'), girls: countVal('girls'), men, women, guests: countVal('guests') };
+}
+
+function clearAll() {
+  lookup.value = '';
+  results.innerHTML = '';
+  document.getElementById('panel').style.display = 'none';
+  resetQR();
+  uuid = null;
+  history.replaceState(null, '', '/admin/checkin'); // drop the deep-link uuid
+  lookup.focus();
+}
+
+// Edit / Handoff QR actions for the selected user (same as the Users page).
+document.getElementById('editBtn').onclick = () => { if (uuid) window.location = '/admin/users/' + uuid; };
+function resetQR() {
+  document.getElementById('qrBox').innerHTML = '';
+  document.getElementById('qrBtn').textContent = '📱 Show Handoff QR';
+}
+document.getElementById('qrBtn').onclick = () => {
+  if (!uuid) return;
+  const box = document.getElementById('qrBox');
+  if (box.innerHTML) { resetQR(); }
+  else { renderHandoffQR(box, uuid, { size: 240 }); document.getElementById('qrBtn').textContent = '🙈 Hide Handoff QR'; }
+};
+
+// --- lookup paths -----------------------------------------------------------
+async function lookupByBarcode(v) {
+  results.innerHTML = '';
+  const res = await fetch('/admin/user/barcode/' + encodeURIComponent(v));
+  if (res.ok) { const u = await res.json(); return load(u.uuid); }
+  return searchByName(v, true); // unknown barcode -> fall back to a name search
+}
+
+async function searchByName(v, autoSelect) {
+  if (!v || v.length < 2) { results.innerHTML = ''; return; }
+  const res = await fetch('/admin/user/search/fuzzy/' + encodeURIComponent(v));
+  const users = (await res.json()).result || [];
+  if (autoSelect && users.length === 1) { results.innerHTML = ''; return load(users[0].uuid); }
+  renderResults(users);
+}
+
+function renderResults(users) {
+  results.innerHTML = '';
+  if (!users.length) { results.innerHTML = '<p class="muted small">No match.</p>'; return; }
+  users.slice(0, 12).forEach(u => {
+    const d = document.createElement('div');
+    d.className = 'list-row';
+    d.innerHTML = '<strong>' + (u.name_string || u.username || '(no name)') + '</strong>' +
+      '<span class="muted small">' + ((u.barcodes && u.barcodes[0]) || '') + '</span>';
+    d.onclick = () => { results.innerHTML = ''; load(u.uuid); };
+    results.appendChild(d);
+  });
+}
+
+// --- input handling: scanner vs human typing --------------------------------
+// Live: a name (starts with letters) searches as you type. A long numeric run
+// is treated as a barcode. Either way, Enter forces the decision immediately,
+// and a fast keystroke burst (a scanner) is always treated as a barcode.
+const liveSearch = debounce(function () {
+  const v = lookup.value.trim();
+  if (v.length < 2) { results.innerHTML = ''; return; }
+  if (/^\d{6,}$/.test(v)) return lookupByBarcode(v); // numeric barcode (no Enter scanners)
+  if (/^\d+$/.test(v)) return;                       // short digit run — wait for more
+  searchByName(v, false);
+}, 220);
+lookup.addEventListener('input', liveSearch);
+
+let firstKeyAt = 0, keyCount = 0;
+lookup.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const v = lookup.value.trim();
+    const scanned = keyCount >= 4 && (Date.now() - firstKeyAt) < 150;
+    firstKeyAt = 0; keyCount = 0;
+    if (!v) return;
+    if (scanned || /^\d+$/.test(v)) return lookupByBarcode(v);
+    return searchByName(v, true);
+  }
+  if (e.key.length === 1) { if (keyCount === 0) firstKeyAt = Date.now(); keyCount++; }
+});
+document.getElementById('clearBtn').onclick = clearAll;
+
+// --- selected user ----------------------------------------------------------
+async function load(id) {
+  uuid = id;
+  history.replaceState(null, '', '/admin/checkin/' + id); // keep URL navigable/back-able
+  resetQR();
+  const data = await (await fetch('/admin/user/checkin/test/' + id)).json();
+  const u = data.user, out = data.result;
+  CUR = u;
+  BALCFG = data.balance_config || null;
+  document.getElementById('panel').style.display = 'block';
+  document.getElementById('who').textContent = u.name_string + '  ·  family of ' + (u.family_size || 1);
+  document.getElementById('t_for').value = u.family_size || 1; // default people = family size
+  document.getElementById('t_name').value = u.name_string || '';
+  document.getElementById('t_barcode').textContent = (u.barcodes && u.barcodes[0]) ? u.barcodes[0] : 'barcode assigned at check-in';
+  setTicketFromConfig();                                       // per-person limits from settings
+  renderShoppingFor(u);                                        // who's shopping -> drives t_for + total
+  // Lock the ticket language to the user's saved language, then localize.
+  TLANG = u.language || (u.spanish ? 'es' : 'en');
+  if (!langData(TLANG)) TLANG = 'en';
+  renderTicketText();
+  // Read-only badge: verified state is only editable from the Edit page,
+  // like every other user attribute. (No onToggle -> renderVerified draws a
+  // plain badge instead of a button.)
+  renderVerified(document.getElementById('verifiedSlot'), !!u.verified);
+  const co = document.getElementById('cooloff');
+  if (out.allowed) { co.className = 'status ok'; co.textContent = '✓ Cleared to check in'; }
+  else { co.className = 'status wait'; co.textContent = '⏳ Last visit too recent — ' + out.days_remaining + ' day(s) of cooloff left'; }
+  renderBalance(u.balance);
+  document.getElementById('panel').scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderBalance(b) {
+  const rows = [
+    ['Tops', b.general.tops], ['Bottoms', b.general.bottoms], ['Dresses', b.general.dresses],
+    ['Shoes', b.shoes], ['Seasonals', b.seasonals], ['Accessories', b.accessories]
+  ];
+  document.querySelector('#balance tbody').innerHTML = rows.map(function (r) {
+    const it = r[1];
+    return '<tr><td>' + r[0] + '</td><td>' + it.available + '</td><td>' + it.limit + '</td><td>' + it.used + '</td></tr>';
+  }).join('');
+}
+
+async function checkin() {
+  const req = Object.assign({
+    shopping_for: num('t_for'),
+    clothing_per_person: num('t_clothing'),
+    pants_limit: num('t_pants'),
+    shoes_limit: num('t_shoes'),
+    accessories_limit: num('t_acc'),
+    seasonal_limit: num('t_seasonal'),
+    family_name: document.getElementById('t_name').value.trim(),
+    language: TLANG // print in the language shown in the preview
+  }, shopDemographics()); // boys/girls/men/women/guests from the overview
+  const r = document.getElementById('result');
+  r.textContent = 'Checking in…';
+  const res = await fetch('/admin/user/checkin/' + uuid, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req)
+  });
+  const data = await res.json();
+  if (!res.ok || !data.result) { r.innerHTML = '<span class="err">' + (data.error || 'Error') + '</span>'; return; }
+  const ulid = data.check_in.ULID;
+  let printMsg;
+  if (req.shopping_for === 0) printMsg = '<span class="muted">No family ticket (shopping for 0)</span>';
+  else if (data.printed) printMsg = '🖨 Ticket printed';
+  else if (data.print_error) printMsg = '<span class="err">⚠ Print failed: ' + data.print_error + '</span>';
+  else printMsg = '<span class="muted">(no printer configured)</span>';
+  if (data.guests_printed) printMsg += ' · 🎟 ' + data.guests_printed + ' guest ticket' + (data.guests_printed === 1 ? '' : 's');
+  r.innerHTML = '✓ Checked in — ' + data.check_in.date + ' ' + data.check_in.time + ' · ' + printMsg +
+    ' · <a href="/admin/checkin/' + ulid + '/ticket.pdf" target="_blank">View / reprint ticket</a>';
+  load(uuid); // refresh balances
+}
+document.getElementById('checkinBtn').onclick = checkin;
+document.getElementById('t_for').addEventListener('input', recomputeTotal);      // people changes -> total updates
+document.getElementById('t_clothing').addEventListener('input', recomputeTotal); // clothing/person changes -> total updates
+// Shoe/accessory/seasonal counts flip singular/plural wording — re-localize.
+['t_shoes', 't_acc', 't_seasonal'].forEach(id =>
+  document.getElementById(id).addEventListener('input', renderTicketText));
+
+// Load the ticket strings once, then honor a /<uuid> deep-link.
+loadTicketStrings().finally(() => { if (pathUuid) load(pathUuid); });
+</script>
+<script src="/static/qr-code-styling.min.js"></script>
+<script src="/static/qr.js"></script>
+</body>
+</html>

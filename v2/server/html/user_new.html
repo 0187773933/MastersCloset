@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign Up — Master's Closet</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<main class="card">
+  <div class="center"><img class="logo" src="/static/logo.png" alt="Master's Closet"></div>
+  <h1>New Guest</h1>
+  <form id="f">
+    <label>First name<input name="first_name" required></label>
+    <label>Middle name<input name="middle_name"></label>
+    <label>Last name<input name="last_name" required></label>
+    <label>Email<input name="email_address" type="email"></label>
+    <label>Phone<input name="phone_number" type="tel"></label>
+    <button class="btn" type="submit">Create account</button>
+  </form>
+  <p id="msg" class="muted small"></p>
+</main>
+<script>
+document.getElementById('f').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData(e.target).entries());
+  const msg = document.getElementById('msg');
+  msg.textContent = 'Creating…';
+  try {
+    const res = await fetch('/user/api/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) { msg.textContent = data.error || 'Error'; return; }
+    msg.textContent = 'Created: ' + data.username;
+    window.location = '/user/login/fresh/' + data.uuid;
+  } catch (err) { msg.textContent = String(err); }
+});
+</script>
+</body>
+</html>

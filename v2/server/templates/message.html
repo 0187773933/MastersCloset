@@ -1,0 +1,17 @@
+{{define "message.html"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} — Master's Closet</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<main class="card center">
+  <img class="logo" src="/static/logo.png" alt="Master's Closet">
+  <h1>{{.Title}}</h1>
+  <p>{{.Body}}</p>
+  {{if .Link}}<a class="btn" href="{{.Link}}">{{.LinkText}}</a>{{end}}
+</main>
+</body>
+</html>{{end}}

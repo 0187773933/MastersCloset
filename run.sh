@@ -1,2 +1,2 @@
 #!/bin/bash
-LOG_LEVEL=debug go run main.go config.json
+LOG_LEVEL=debug go run . config.json

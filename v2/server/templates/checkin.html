@@ -1,0 +1,20 @@
+{{define "checkin.html"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check-In — Master's Closet</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<main class="card center">
+  <img class="logo" src="/static/logo.png" alt="Master's Closet">
+  <h1>{{.Name}}</h1>
+  <div class="status {{if .Allowed}}ok{{else}}wait{{end}}">
+    {{if .Allowed}}✓ Ready to check in{{else}}⏳ Please wait{{end}}
+  </div>
+  <p>{{.Message}}</p>
+  <p class="muted small">{{.UUID}}</p>
+</main>
+</body>
+</html>{{end}}

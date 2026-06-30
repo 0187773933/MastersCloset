@@ -27,6 +27,6 @@ else
 	git commit -m "$NextCommitNumber"
 	git tag v1.0.$NextCommitNumber
 fi
-git remote add origin git@github.com:0187773933/MastersCloset.git
+git remote add origin git@github-0187773933:0187773933/MastersCloset.git
 git push origin --tags
 git push origin master

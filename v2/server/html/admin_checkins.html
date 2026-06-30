@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check-In History — Admin</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  .day-link { text-decoration: none; color: inherit; }
+  .pill { background: var(--line); color: var(--muted); border-radius: 20px; padding: 3px 11px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+  .pill.b { background: #f3e8ef; color: var(--brand); }
+  .date { font-size: 1.05rem; font-weight: 700; }
+  .totals { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 6px; }
+  .stat { flex: 1 1 120px; background: #f3e8ef; border-radius: 12px; padding: 14px 16px; text-align: center; }
+  .stat .num { font-size: 1.7rem; font-weight: 800; color: var(--brand); line-height: 1; }
+  .stat .lbl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 5px; font-weight: 700; }
+</style>
+</head>
+<body>
+<main class="card wide">
+  <div class="row between">
+    <h1>📅 Check-In History</h1>
+    <span>
+      <a class="btn small" href="/admin/checkins/export.xlsx">⬇ Download full XLSX</a>
+      <a class="btn ghost small" href="/admin">← Admin</a>
+    </span>
+  </div>
+
+  <div id="banner" class="totals"></div>
+
+  <div class="row" style="gap:14px;margin:6px 0">
+    <label class="small">Sort
+      <select id="order" style="width:auto;display:inline-block;margin-left:4px">
+        <option value="desc">Newest first</option>
+        <option value="asc">Oldest first</option>
+        <option value="busy">Busiest (check-ins)</option>
+        <option value="shopped">Most people shopped for</option>
+      </select>
+    </label>
+  </div>
+  <p class="muted small">Tap a day to open its detail view (opens in a new tab).</p>
+
+  <div id="list" class="list"></div>
+</main>
+
+<script>
+let DAYS = [];
+function esc(v) { return v == null ? '' : String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+async function load() {
+  document.getElementById('list').innerHTML = 'Loading…';
+  DAYS = (await (await fetch('/admin/checkins/days')).json()).result || [];
+  render();
+}
+
+function stat(n, label) {
+  return '<div class="stat"><div class="num">' + n.toLocaleString() + '</div><div class="lbl">' + label + '</div></div>';
+}
+
+function render() {
+  const order = document.getElementById('order').value;
+  let days = DAYS.slice();              // backend gives newest-first
+  if (order === 'asc') days.reverse();
+  else if (order === 'busy') days.sort((a, b) => b.count - a.count);
+  else if (order === 'shopped') days.sort((a, b) => b.shopped_for - a.shopped_for);
+
+  const tc = DAYS.reduce((s, d) => s + d.count, 0);
+  const ts = DAYS.reduce((s, d) => s + d.shopped_for, 0);
+  document.getElementById('banner').innerHTML =
+    stat(DAYS.length, 'Collection Days') + stat(tc, 'Total Check-Ins') + stat(ts, 'People Shopped For');
+
+  const el = document.getElementById('list');
+  if (!days.length) { el.innerHTML = '<p class="muted">No check-ins yet.</p>'; return; }
+  el.innerHTML = '';
+  days.forEach(d => {
+    const a = document.createElement('a');
+    a.className = 'list-row day-link';
+    a.href = '/admin/checkins/day/' + encodeURIComponent(d.date);
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.innerHTML = '<span class="date">' + esc(d.date) + '</span>' +
+      '<span class="row" style="gap:6px">' +
+        '<span class="pill">' + d.count + ' check-ins</span>' +
+        '<span class="pill b">' + d.shopped_for + ' shopped for</span>' +
+      '</span>';
+    el.appendChild(a);
+  });
+}
+
+document.getElementById('order').addEventListener('change', render);
+load();
+</script>
+</body>
+</html>

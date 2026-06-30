@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Users — Admin</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  /* Family-member rows: age + sex + spouse on one line (wraps on mobile). */
+  .fm-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .fm-row .fm-age { width: 90px; flex: 0 0 auto; }
+  .fm-row .fm-sex { width: 130px; flex: 0 0 auto; }
+  .fm-row .fm-spouse { display: flex; align-items: center; gap: 6px; font-size: .85rem; white-space: nowrap; }
+  .fm-row .fm-spouse input { width: auto; }
+  .fm-row .btn { flex: 0 0 auto; }
+</style>
+</head>
+<body>
+<main class="card wide">
+  <div class="row between">
+    <h1>👥 Users</h1>
+    <a class="btn ghost small" href="/admin">← Admin</a>
+  </div>
+
+  <div class="searchbar">
+    <input id="q" class="search" placeholder="Search by name…" autocomplete="off" autofocus>
+    <button id="searchBtn" class="btn" type="button">Search</button>
+  </div>
+
+  <div id="list" class="list"></div>
+  <div id="editor"></div>
+</main>
+
+<script>
+const listEl = document.getElementById('list');
+const editorEl = document.getElementById('editor');
+let current = null;     // full loaded user
+let LANGS = [{ code: 'en', name: 'English' }];
+
+// True when we arrived from the check-in page (its Edit button). Save and Cancel
+// then return there with the same user pulled up, instead of just closing.
+const cameFromCheckin = /\/admin\/checkin(\/|\?|#|$)/.test(document.referrer || '');
+
+function esc(v) { return v == null ? '' : String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+function debounce(fn, ms) { let t; return function () { clearTimeout(t); const a = arguments; t = setTimeout(() => fn.apply(null, a), ms); }; }
+
+function row(u) {
+  const div = document.createElement('div');
+  div.className = 'list-row';
+  div.innerHTML = '<strong>' + esc(u.name_string || u.username || '(no name)') + '</strong>' +
+    '<span class="muted small">' + esc(u.last_check_in_date || 'never') + '</span>';
+  div.onclick = () => loadUser(u.uuid);
+  return div;
+}
+
+async function search() {
+  const v = document.getElementById('q').value.trim();
+  if (v.length < 2) { listEl.innerHTML = '<p class="muted small">Type at least 2 letters.</p>'; return; }
+  listEl.innerHTML = 'Searching…';
+  const data = await (await fetch('/admin/user/search/fuzzy/' + encodeURIComponent(v))).json();
+  renderList(data.result || []);
+}
+const liveSearch = debounce(search, 250);
+
+function renderList(users) {
+  listEl.innerHTML = '';
+  if (!users.length) { listEl.innerHTML = '<p class="muted">No users found.</p>'; return; }
+  users.forEach(u => listEl.appendChild(row(u)));
+}
+
+async function loadUser(uuid) {
+  const data = await (await fetch('/admin/user/get/' + uuid)).json();
+  current = data.result || data;
+  history.replaceState(null, '', '/admin/users/' + uuid); // keep URL navigable/back-able
+  renderEditor(current);
+  editorEl.scrollIntoView({ behavior: 'smooth' });
+}
+
+function field(label, value, key) {
+  return '<label class="field"><span class="field-head">' + label + '</span>' +
+    '<input data-key="' + key + '" value="' + esc(value) + '"></label>';
+}
+
+function langOptions(selected) {
+  return LANGS.map(l => '<option value="' + l.code + '"' + (l.code === selected ? ' selected' : '') + '>' + esc(l.name) + '</option>').join('');
+}
+
+function renderEditor(u) {
+  const id = u.identity || {}, ad = id.address || {};
+  const lang = u.language || (u.spanish ? 'es' : 'en');
+  editorEl.innerHTML =
+    '<section class="section"><div class="row between"><h2 style="margin:0">Edit — ' + esc(u.name_string || '') + '</h2>' +
+      '<span><span id="verifiedSlot"></span> <button class="btn ghost small" id="cancelBtn">✕ Cancel</button></span></div>' +
+    '<div class="grid">' +
+      field('First name', id.first_name, 'identity.first_name') +
+      field('Middle name', id.middle_name, 'identity.middle_name') +
+      field('Last name', id.last_name, 'identity.last_name') +
+      field('Email', u.email_address, 'email_address') +
+      field('Phone', u.phone_number, 'phone_number') +
+      '<label class="field"><span class="field-head">Family size <span class="muted small" style="font-weight:400">(calculated)</span></span>' +
+        '<input data-key="family_size" value="' + esc(u.family_size) + '" readonly tabindex="-1" ' +
+        'title="Calculated from the family members below (self + members)" ' +
+        'style="background:var(--bg);color:var(--muted);cursor:not-allowed"></label>' +
+      field('Street #', ad.street_number, 'identity.address.street_number') +
+      field('Street name', ad.street_name, 'identity.address.street_name') +
+      field('City', ad.city, 'identity.address.city') +
+      field('State', ad.state, 'identity.address.state') +
+      field('Zip', ad.zipcode, 'identity.address.zipcode') +
+      '<label class="field"><span class="field-head">Ticket language</span>' +
+        '<select id="langSel">' + langOptions(lang) + '</select></label>' +
+    '</div>' +
+    '<div class="field"><span class="field-head">Family members</span>' +
+      '<div id="fmList"></div>' +
+      '<button class="btn ghost small" id="addFmBtn" type="button" style="align-self:flex-start">＋ Add family member</button>' +
+    '</div>' +
+    '<div class="field"><span class="field-head">Barcodes</span>' +
+      '<div id="bcList"></div>' +
+      '<button class="btn ghost small" id="addBcBtn" type="button" style="align-self:flex-start">＋ Add barcode</button>' +
+    '</div>' +
+    '<div class="row" style="margin-top:12px">' +
+      '<button class="btn" id="saveBtn">Save</button>' +
+      '<a class="btn ghost" href="/admin/checkin/' + u.uuid + '">🛒 Check in</a>' +
+      '<button class="btn ghost" id="qrBtn">Show Handoff QR</button>' +
+      '<button class="btn danger" id="delBtn">Delete</button>' +
+      '<span id="estatus" class="muted small"></span>' +
+    '</div>' +
+    '<div id="qrBox" class="center"></div></section>';
+
+  const bcList = document.getElementById('bcList');
+  (u.barcodes || []).forEach(addBarcodeRow);
+  document.getElementById('addBcBtn').onclick = () => addBarcodeRow('');
+  (u.family_members || []).forEach(addFamilyMemberRow);
+  document.getElementById('addFmBtn').onclick = () => addFamilyMemberRow();
+  document.getElementById('saveBtn').onclick = saveUser;
+  document.getElementById('delBtn').onclick = deleteUser;
+  document.getElementById('cancelBtn').onclick = closeEditor;
+  document.getElementById('qrBtn').onclick = toggleQR;
+
+  // Verified toggle (top-right) + zip 45424 auto-verify.
+  const vctl = renderVerified(document.getElementById('verifiedSlot'), !!u.verified, v => { current.verified = v; });
+  const zipInput = editorEl.querySelector('input[data-key="identity.address.zipcode"]');
+  if (zipInput) zipInput.addEventListener('input', e => {
+    if (e.target.value.trim() === '45424') { current.verified = true; vctl.set(true); }
+  });
+}
+
+function addBarcodeRow(value) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bc-row';
+  const input = document.createElement('input');
+  input.className = 'bc-input';
+  input.value = value || '';
+  input.placeholder = 'barcode';
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'btn ghost small';
+  del.textContent = '🗑';
+  del.title = 'Remove barcode';
+  del.onclick = () => {
+    const label = input.value.trim() || 'this empty barcode';
+    if (confirm('Remove ' + label + '? (applies when you Save)')) wrap.remove();
+  };
+  wrap.appendChild(input);
+  wrap.appendChild(del);
+  document.getElementById('bcList').appendChild(wrap);
+}
+
+// Family size is calculated (read-only) = account holder + each itemized member.
+// When no members are itemized (e.g. a user created before this editor existed),
+// leave the stored size untouched rather than collapsing it to 1.
+function syncFamilySize() {
+  const fs = editorEl.querySelector('input[data-key="family_size"]');
+  if (!fs) return;
+  const rows = document.querySelectorAll('#fmList .fm-row');
+  if (rows.length === 0) return;
+  let n = 0;
+  rows.forEach(r => { if ((r.querySelector('.fm-age').value || '').trim() !== '') n++; });
+  fs.value = n + 1;
+}
+
+function addFamilyMemberRow(member) {
+  member = member || {};
+  const wrap = document.createElement('div');
+  wrap.className = 'fm-row';
+
+  const age = document.createElement('input');
+  age.type = 'number'; age.min = '0'; age.className = 'fm-age'; age.placeholder = 'Age';
+  if (member.age != null && member.age >= 0) age.value = member.age;
+
+  const sex = document.createElement('select');
+  sex.className = 'fm-sex';
+  sex.innerHTML = '<option value="">Sex…</option><option value="male">Male</option><option value="female">Female</option>';
+  if (member.sex) sex.value = member.sex;
+
+  // The stored value stays male/female; only the visible labels swap by age, so
+  // an under-18 reads Boy/Girl and 18+ reads Man/Woman — the same split the
+  // check-in screen counts by. Labels stay generic until a valid age is entered.
+  function syncSexLabels() {
+    const a = parseInt(age.value, 10);
+    const known = !isNaN(a) && a >= 0;
+    sex.options[1].text = !known ? 'Male' : (a < 18 ? 'Boy' : 'Man');
+    sex.options[2].text = !known ? 'Female' : (a < 18 ? 'Girl' : 'Woman');
+  }
+
+  const spouseLabel = document.createElement('label');
+  spouseLabel.className = 'fm-spouse';
+  const spouse = document.createElement('input');
+  spouse.type = 'checkbox';
+  spouse.checked = !!member.spouse;
+  spouseLabel.appendChild(spouse);
+  spouseLabel.appendChild(document.createTextNode('Spouse'));
+
+  // Spouse only applies to adults (18+), matching v1.
+  function syncSpouse() {
+    const adult = parseInt(age.value || '0', 10) >= 18;
+    spouse.disabled = !adult;
+    if (!adult) spouse.checked = false;
+    spouseLabel.style.opacity = adult ? '1' : '.45';
+  }
+  age.addEventListener('input', () => { syncSpouse(); syncSexLabels(); syncFamilySize(); });
+  syncSpouse();
+  syncSexLabels();
+
+  const del = document.createElement('button');
+  del.type = 'button'; del.className = 'btn ghost small'; del.textContent = '🗑'; del.title = 'Remove';
+  del.onclick = () => { wrap.remove(); syncFamilySize(); };
+
+  wrap.appendChild(age); wrap.appendChild(sex); wrap.appendChild(spouseLabel); wrap.appendChild(del);
+  document.getElementById('fmList').appendChild(wrap);
+  syncFamilySize();
+}
+
+// Collect member rows, dropping blank ones (v1 filtered age > -1).
+function collectFamilyMembers() {
+  return Array.from(document.querySelectorAll('#fmList .fm-row')).map(r => ({
+    age: parseInt(r.querySelector('.fm-age').value || '-1', 10),
+    sex: r.querySelector('.fm-sex').value,
+    spouse: r.querySelector('input[type=checkbox]').checked
+  })).filter(m => m.age > -1);
+}
+
+function setPath(obj, path, value) {
+  const keys = path.split('.');
+  let o = obj;
+  for (let i = 0; i < keys.length - 1; i++) { o[keys[i]] = o[keys[i]] || {}; o = o[keys[i]]; }
+  o[keys[keys.length - 1]] = value;
+}
+
+async function saveUser() {
+  editorEl.querySelectorAll('input[data-key]').forEach(el => {
+    const key = el.dataset.key;
+    if (key === 'family_size') setPath(current, key, parseInt(el.value || '1', 10));
+    else setPath(current, key, el.value);
+  });
+  current.barcodes = Array.from(editorEl.querySelectorAll('.bc-input')).map(i => i.value.trim()).filter(Boolean);
+  current.family_members = collectFamilyMembers();
+  const lang = document.getElementById('langSel').value;
+  current.language = lang;
+  current.spanish = (lang === 'es');
+
+  const st = document.getElementById('estatus');
+  st.textContent = 'Saving…';
+  const data = await (await fetch('/admin/user/edit', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(current)
+  })).json();
+  st.innerHTML = data.result ? '✓ Saved' : '<span class="err">' + (data.error || 'Error') + '</span>';
+  if (data.user) current = data.user;
+  // If we got here via the check-in page's Edit button, go back to it with the
+  // same user pulled up once the save succeeds.
+  if (data.result && cameFromCheckin) {
+    window.location = '/admin/checkin/' + current.uuid;
+  }
+}
+
+function toggleQR() {
+  const box = document.getElementById('qrBox');
+  box.style.paddingTop = '20px';
+  const btn = document.getElementById('qrBtn');
+  if (box.innerHTML) { box.innerHTML = ''; btn.textContent = 'Show Handoff QR'; }
+  else { renderHandoffQR(box, current.uuid, { size: 240 }); btn.textContent = 'Hide Handoff QR'; }
+}
+
+function closeEditor() {
+  // Came from the check-in page? Return to it with this user selected, mirroring
+  // Save — so Cancel doesn't strand you back on an empty Users page.
+  if (current && cameFromCheckin) { window.location = '/admin/checkin/' + current.uuid; return; }
+  editorEl.innerHTML = '';
+  current = null;
+  history.replaceState(null, '', '/admin/users'); // drop the deep-link uuid
+}
+
+async function deleteUser() {
+  if (!confirm('Delete ' + (current.name_string || 'this user') + ' permanently?')) return;
+  const data = await (await fetch('/admin/user/' + current.uuid, { method: 'DELETE' })).json();
+  if (data.ok) { closeEditor(); search(); }
+}
+
+document.getElementById('searchBtn').onclick = search;
+document.getElementById('q').addEventListener('input', liveSearch);
+document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+
+// Load supported languages, then honor a /<uuid> deep-link (Edit from check-in).
+fetch('/admin/languages').then(r => r.json()).then(d => { if (d.result && d.result.length) LANGS = d.result; })
+  .finally(() => {
+    const presel = (location.pathname.match(/\/admin\/users\/([^\/?#]+)/) || [])[1] || '';
+    if (presel) loadUser(presel);
+  });
+</script>
+<script src="/static/verified.js"></script>
+<script src="/static/qr-code-styling.min.js"></script>
+<script src="/static/qr.js"></script>
+</body>
+</html>

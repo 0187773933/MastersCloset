@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New User — Admin</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  /* Family-member rows: age + sex + spouse on one line (wraps on mobile). */
+  .fm-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .fm-row .fm-age { width: 90px; flex: 0 0 auto; }
+  .fm-row .fm-sex { width: 130px; flex: 0 0 auto; }
+  .fm-row .fm-spouse { display: flex; align-items: center; gap: 6px; font-size: .85rem; white-space: nowrap; }
+  .fm-row .fm-spouse input { width: auto; }
+  .fm-row .btn { flex: 0 0 auto; }
+</style>
+</head>
+<body>
+<main class="card wide">
+  <div class="row between">
+    <h1>➕ New User</h1>
+    <span><span id="verifiedSlot"></span> <a class="btn ghost small" href="/admin">← Admin</a></span>
+  </div>
+
+  <div id="formWrap">
+    <form id="f">
+      <div class="grid">
+        <label class="field"><span class="field-head">First name</span><input name="first_name" required></label>
+        <label class="field"><span class="field-head">Middle name</span><input name="middle_name"></label>
+        <label class="field"><span class="field-head">Last name</span><input name="last_name" required></label>
+        <label class="field"><span class="field-head">Email</span><input name="email_address" type="email"></label>
+        <label class="field"><span class="field-head">Phone</span><input name="phone_number" type="tel"></label>
+        <label class="field"><span class="field-head">Family size</span><input name="family_size" type="number" value="1" min="1"></label>
+        <label class="field"><span class="field-head">Street #</span><input name="street_number"></label>
+        <label class="field"><span class="field-head">Street name</span><input name="street_name"></label>
+        <label class="field"><span class="field-head">City</span><input name="city"></label>
+        <label class="field"><span class="field-head">State</span><input name="state"></label>
+        <label class="field"><span class="field-head">Zip</span><input name="zipcode" id="zip"></label>
+      </div>
+
+      <div class="field"><span class="field-head">Family members</span>
+        <div id="fmList"></div>
+        <button class="btn ghost small" id="addFmBtn" type="button" style="align-self:flex-start">＋ Add family member</button>
+      </div>
+
+      <div class="field"><span class="field-head">Barcodes</span>
+        <div id="bcList"></div>
+        <button class="btn ghost small" id="addBcBtn" type="button" style="align-self:flex-start">＋ Add barcode</button>
+      </div>
+
+      <button class="btn" type="submit">Create user</button>
+      <span id="msg" class="muted small"></span>
+    </form>
+  </div>
+
+  <div id="done" style="display:none" class="center">
+    <div class="status ok">✓ Created <span id="who"></span></div>
+    <p class="muted">Have the guest scan this to finish onboarding:</p>
+    <div id="qr" class="center" style="display:inline-block"></div>
+    <p class="small"><a id="freshLink" href="#" target="_blank"></a></p>
+    <div class="actions">
+      <a id="checkinLink" class="btn" href="#">🛒 Check this user in</a>
+      <a class="btn ghost" href="/admin/user/new" onclick="location.reload()">Create another</a>
+    </div>
+  </div>
+</main>
+
+<script src="/static/verified.js"></script>
+<script>
+let verified = false;
+const vctl = renderVerified(document.getElementById('verifiedSlot'), false, v => { verified = v; });
+
+function addBarcodeRow(value) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bc-row';
+  const input = document.createElement('input');
+  input.className = 'bc-input'; input.value = value || ''; input.placeholder = 'barcode';
+  const del = document.createElement('button');
+  del.type = 'button'; del.className = 'btn ghost small'; del.textContent = '🗑'; del.title = 'Remove';
+  del.onclick = () => { if (confirm('Remove ' + (input.value.trim() || 'this empty barcode') + '?')) wrap.remove(); };
+  wrap.appendChild(input); wrap.appendChild(del);
+  document.getElementById('bcList').appendChild(wrap);
+}
+document.getElementById('addBcBtn').onclick = () => addBarcodeRow('');
+
+// Family size mirrors the account holder + every member row that has an age.
+function syncFamilySize() {
+  let n = 0;
+  document.querySelectorAll('#fmList .fm-row').forEach(r => {
+    if ((r.querySelector('.fm-age').value || '').trim() !== '') n++;
+  });
+  const fs = document.querySelector('input[name="family_size"]');
+  if (fs) fs.value = n + 1;
+}
+
+function addFamilyMemberRow(member) {
+  member = member || {};
+  const wrap = document.createElement('div');
+  wrap.className = 'fm-row';
+
+  const age = document.createElement('input');
+  age.type = 'number'; age.min = '0'; age.className = 'fm-age'; age.placeholder = 'Age';
+  if (member.age != null && member.age >= 0) age.value = member.age;
+
+  const sex = document.createElement('select');
+  sex.className = 'fm-sex';
+  sex.innerHTML = '<option value="">Sex…</option><option value="male">Male</option><option value="female">Female</option>';
+  if (member.sex) sex.value = member.sex;
+
+  // The stored value stays male/female; only the visible labels swap by age, so
+  // an under-18 reads Boy/Girl and 18+ reads Man/Woman — the same split the
+  // check-in screen counts by. Labels stay generic until a valid age is entered.
+  function syncSexLabels() {
+    const a = parseInt(age.value, 10);
+    const known = !isNaN(a) && a >= 0;
+    sex.options[1].text = !known ? 'Male' : (a < 18 ? 'Boy' : 'Man');
+    sex.options[2].text = !known ? 'Female' : (a < 18 ? 'Girl' : 'Woman');
+  }
+
+  const spouseLabel = document.createElement('label');
+  spouseLabel.className = 'fm-spouse';
+  const spouse = document.createElement('input');
+  spouse.type = 'checkbox';
+  spouse.checked = !!member.spouse;
+  spouseLabel.appendChild(spouse);
+  spouseLabel.appendChild(document.createTextNode('Spouse'));
+
+  // Spouse only applies to adults (18+), matching v1.
+  function syncSpouse() {
+    const adult = parseInt(age.value || '0', 10) >= 18;
+    spouse.disabled = !adult;
+    if (!adult) spouse.checked = false;
+    spouseLabel.style.opacity = adult ? '1' : '.45';
+  }
+  age.addEventListener('input', () => { syncSpouse(); syncSexLabels(); syncFamilySize(); });
+  syncSpouse();
+  syncSexLabels();
+
+  const del = document.createElement('button');
+  del.type = 'button'; del.className = 'btn ghost small'; del.textContent = '🗑'; del.title = 'Remove';
+  del.onclick = () => { wrap.remove(); syncFamilySize(); };
+
+  wrap.appendChild(age); wrap.appendChild(sex); wrap.appendChild(spouseLabel); wrap.appendChild(del);
+  document.getElementById('fmList').appendChild(wrap);
+  syncFamilySize();
+}
+document.getElementById('addFmBtn').onclick = () => addFamilyMemberRow();
+
+// Collect member rows, dropping blank ones (v1 filtered age > -1).
+function collectFamilyMembers() {
+  return Array.from(document.querySelectorAll('#fmList .fm-row')).map(r => ({
+    age: parseInt(r.querySelector('.fm-age').value || '-1', 10),
+    sex: r.querySelector('.fm-sex').value,
+    spouse: r.querySelector('input[type=checkbox]').checked
+  })).filter(m => m.age > -1);
+}
+
+// Locals (zip 45424) auto-verify.
+document.getElementById('zip').addEventListener('input', e => {
+  if (e.target.value.trim() === '45424') { verified = true; vctl.set(true); }
+});
+
+document.getElementById('f').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const v = (k) => (fd.get(k) || '').toString().trim();
+  const barcodes = Array.from(document.querySelectorAll('#bcList .bc-input')).map(i => i.value.trim()).filter(Boolean);
+  const body = {
+    identity: {
+      first_name: v('first_name'), middle_name: v('middle_name'), last_name: v('last_name'),
+      address: { street_number: v('street_number'), street_name: v('street_name'), city: v('city'), state: v('state'), zipcode: v('zipcode') }
+    },
+    email_address: v('email_address'), phone_number: v('phone_number'),
+    family_size: parseInt(v('family_size') || '1', 10),
+    family_members: collectFamilyMembers(),
+    barcodes: barcodes,
+    verified: verified
+  };
+  const msg = document.getElementById('msg');
+  msg.textContent = 'Creating…';
+  const res = await fetch('/admin/user/new', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok || !data.result) { msg.innerHTML = '<span class="err">' + (data.error || 'Error') + '</span>'; return; }
+  const u = data.result;
+  document.getElementById('formWrap').style.display = 'none';
+  document.getElementById('done').style.display = 'block';
+  document.getElementById('who').textContent = u.name_string;
+  const fresh = '/user/login/fresh/' + u.uuid;
+  const a = document.getElementById('freshLink'); a.href = fresh; a.textContent = fresh;
+  document.getElementById('checkinLink').href = '/admin/checkin/' + u.uuid;
+  renderHandoffQR(document.getElementById('qr'), u.uuid);
+});
+</script>
+<script src="/static/qr-code-styling.min.js"></script>
+<script src="/static/qr.js"></script>
+</body>
+</html>

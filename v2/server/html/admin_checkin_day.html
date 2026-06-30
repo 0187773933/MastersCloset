@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check-Ins — Day — Admin</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 16px; font-size: .86rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; user-select: none; }
+  th.num, td.num { text-align: right; }
+  tr.dup { background: #fff5f5; }
+  .scroll { overflow-x: auto; }
+  .del { color: var(--err); cursor: pointer; border: 0; background: none; font-size: 1rem; }
+  .pill { background: var(--line); color: var(--muted); border-radius: 20px; padding: 3px 11px; font-size: .78rem; font-weight: 700; }
+  .pill.b { background: #f3e8ef; color: var(--brand); }
+  .pill.dup { background: var(--wait-bg); color: var(--err); }
+</style>
+</head>
+<body>
+<main class="card wide">
+  <div class="row between">
+    <h1 id="title">📅 Check-Ins</h1>
+    <span>
+      <a id="dl" class="btn small" href="#">⬇ Download this day</a>
+      <a class="btn ghost small" href="/admin/checkins">← All days</a>
+    </span>
+  </div>
+
+  <div class="row" style="gap:8px;margin:6px 0 2px" id="pills"></div>
+  <div id="content"></div>
+</main>
+
+<script>
+const DATE = decodeURIComponent((location.pathname.split('/day/')[1] || '').replace(/\/+$/, ''));
+let ROWS = [];
+let sortKey = 'time', sortAsc = true;
+function esc(v) { return v == null ? '' : String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+document.getElementById('title').textContent = '📅 ' + DATE;
+document.getElementById('dl').href = '/admin/checkins/day/' + encodeURIComponent(DATE) + '/export.xlsx';
+
+async function load() {
+  document.getElementById('content').innerHTML = 'Loading…';
+  ROWS = (await (await fetch('/admin/checkins/date/' + encodeURIComponent(DATE))).json()).result || [];
+  render();
+}
+
+function dupIds(rows) {
+  const seen = {}, dups = new Set();
+  rows.forEach(ci => { if (seen[ci.uuid]) dups.add(ci.ULID); else seen[ci.uuid] = true; });
+  return dups;
+}
+
+function sortRows(rows) {
+  return rows.slice().sort((a, b) => {
+    let x, y;
+    if (sortKey === 'name') { x = (a.name || '').toLowerCase(); y = (b.name || '').toLowerCase(); }
+    else if (sortKey === 'for') { x = a.shopping.shopping_for; y = b.shopping.shopping_for; }
+    else { x = a.time; y = b.time; }
+    return (x < y ? -1 : x > y ? 1 : 0) * (sortAsc ? 1 : -1);
+  });
+}
+
+function render() {
+  const dups = dupIds(ROWS);
+  const shopped = ROWS.reduce((s, ci) => s + (ci.shopping.shopping_for || 0), 0);
+  const pills = document.getElementById('pills');
+  pills.innerHTML = '<span class="pill">' + ROWS.length + ' check-ins</span>' +
+    '<span class="pill b">' + shopped + ' people shopped for</span>' +
+    (dups.size ? '<span class="pill dup">' + dups.size + ' duplicate' + (dups.size > 1 ? 's' : '') + '</span>' : '');
+  if (dups.size) {
+    const btn = document.createElement('button');
+    btn.className = 'btn danger small'; btn.textContent = 'Delete duplicates';
+    btn.onclick = deleteDuplicates; pills.appendChild(btn);
+  }
+
+  const c = document.getElementById('content');
+  if (!ROWS.length) { c.innerHTML = '<p class="muted">No check-ins on this day.</p>'; return; }
+
+  const cols = [['name', 'Name'], ['time', 'Time'], ['type', 'Type'], ['for', 'For'],
+    ['tops', 'Tp'], ['bottoms', 'Bt'], ['dresses', 'Dr'], ['shoes', 'Sh'], ['seasonals', 'Se'], ['accessories', 'Ac'], ['guests', 'Gu']];
+  let html = '<div class="scroll"><table><thead><tr>';
+  cols.forEach(col => {
+    const sortable = (col[0] === 'name' || col[0] === 'time' || col[0] === 'for');
+    html += '<th data-k="' + col[0] + '"' + (sortable ? ' style="cursor:pointer"' : '') + '>' + col[1] +
+      (sortable && sortKey === col[0] ? (sortAsc ? ' ▲' : ' ▼') : '') + '</th>';
+  });
+  html += '<th></th></tr></thead><tbody>';
+  sortRows(ROWS).forEach(ci => {
+    const s = ci.shopping || {};
+    html += '<tr class="' + (dups.has(ci.ULID) ? 'dup' : '') + '">' +
+      '<td>' + esc(ci.name) + '</td><td>' + esc(ci.time) + '</td><td>' + esc(ci.type) + '</td>' +
+      '<td class="num">' + (s.shopping_for || 0) + '</td>' +
+      ['tops', 'bottoms', 'dresses', 'shoes', 'seasonals', 'accessories', 'guests'].map(k => '<td class="num">' + (s[k] || 0) + '</td>').join('') +
+      '<td><button class="del" data-uuid="' + ci.uuid + '" data-ulid="' + ci.ULID + '" title="Delete">🗑</button></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  c.innerHTML = html;
+  c.querySelectorAll('th[data-k]').forEach(th => {
+    const k = th.dataset.k;
+    if (k === 'name' || k === 'time' || k === 'for') th.onclick = () => { if (sortKey === k) sortAsc = !sortAsc; else { sortKey = k; sortAsc = true; } render(); };
+  });
+  c.querySelectorAll('.del').forEach(b => b.onclick = () => deleteOne(b.dataset.uuid, b.dataset.ulid));
+}
+
+async function deleteOne(uuid, ulid) {
+  if (!confirm('Delete this check-in?')) return;
+  await fetch('/admin/checkin/' + uuid + '/' + ulid, { method: 'DELETE' });
+  await load();
+}
+
+async function deleteDuplicates() {
+  const dups = dupIds(ROWS);
+  const targets = ROWS.filter(ci => dups.has(ci.ULID));
+  if (!confirm('Delete ' + targets.length + ' duplicate check-in(s)? (keeps the first per person)')) return;
+  for (const ci of targets) await fetch('/admin/checkin/' + ci.uuid + '/' + ci.ULID, { method: 'DELETE' });
+  await load();
+}
+
+load();
+</script>
+</body>
+</html>

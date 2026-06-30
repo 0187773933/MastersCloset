@@ -1,99 +1,121 @@
+// Command mct is the v2 Master's Closet server. Boot order is intentional and
+// resolves the chicken-and-egg between config and the database (the db path +
+// encryption key live in config, but config itself lives in the db): the JSON
+// file passed as the first argument is parsed only to learn those bootstrap
+// fields, the db is opened, and then the live config is loaded from (or seeded
+// into) the db.
+//
+// The v1 server still exists, isolated under ./legacy (build: go build ./legacy).
 package main
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"fmt"
-	"strings"
-	// "time"
-	"path/filepath"
-	"context"
+
+	"github.com/0187773933/MastersCloset/v2/config"
+	"github.com/0187773933/MastersCloset/v2/fingerprint"
+	"github.com/0187773933/MastersCloset/v2/logger"
+	"github.com/0187773933/MastersCloset/v2/paths"
+	"github.com/0187773933/MastersCloset/v2/server"
+	"github.com/0187773933/MastersCloset/v2/user"
+	bleve "github.com/blevesearch/bleve/v2"
 	bolt "github.com/boltdb/bolt"
-	server "github.com/0187773933/MastersCloset/v1/server"
-	utils "github.com/0187773933/MastersCloset/v1/utils"
-	remotesync "github.com/0187773933/MastersCloset/v1/remotesync"
-	// log "github.com/0187773933/MastersCloset/v1/log"
-	logger "github.com/0187773933/MastersCloset/v1/logger"
-	types "github.com/0187773933/MastersCloset/v1/types"
 )
 
-var s server.Server
-var db *bolt.DB
-var rs remotesync.RemoteSync
-var rsctx context.Context
-var rsctxcancel context.CancelFunc
-
-func SetupCloseHandler() {
-	c := make( chan os.Signal )
-	signal.Notify( c , os.Interrupt , syscall.SIGTERM , syscall.SIGINT )
-	go func() {
-		<-c
-		fmt.Println( "\r- Ctrl+C pressed in Terminal" )
-		logger.Log.Info( "Shutting Down Master's Closet Tracking Server" )
-		utils.WriteJS_API( "" , "" , "" )
-		s.FiberApp.Shutdown()
-		// log.Close()
-		db.Close()
-		rsctxcancel()
-		utils.WriteJS_API( "" , "" , "" )
-		os.Exit( 0 )
-	}()
-}
-
-func FixDBAndSearchIndex( config *types.ConfigFile ) {
-	home_dir , _ := os.UserHomeDir()
-	dest_dir := filepath.Join( home_dir , ".config" , "mct" )
-	os.MkdirAll( dest_dir , 0755 )
-
-	new_bolt_db_name := strings.TrimSuffix( config.BoltDBPath , ".db" ) + "_" + config.FingerPrint + ".db"
-	new_bolt_db_file_path := filepath.Join( dest_dir , new_bolt_db_name )
-	// new_bolt_db_file_path := new_bolt_db_name
-	_ , new_bolt_err := os.Stat( new_bolt_db_file_path )
-	if os.IsNotExist( new_bolt_err ) {
-		fmt.Println( "Local Bolt DB Didn't Exist ! Making Copy from Dropbox" )
-		utils.CopyFile( config.BoltDBPath , new_bolt_db_file_path )
-	}
-	config.BoltDBPath = new_bolt_db_file_path
-
-	new_bleve_name := strings.TrimSuffix( config.BleveSearchPath , ".bleve" ) + "_" + config.FingerPrint + ".bleve"
-	new_bleve_path := filepath.Join( dest_dir , new_bleve_name )
-	// new_bleve_path := new_bleve_name
-	_ , new_bleve_err := os.Stat( new_bleve_path );
-	if os.IsNotExist( new_bleve_err ) {
-		fmt.Println( "Local Bleve Search Index Didn't Exist ! Making Copy from Dropbox" )
-		utils.CopyDir( config.BleveSearchPath , new_bleve_path )
-	}
-	config.BleveSearchPath = new_bleve_path
-
-}
-
 func main() {
-	// utils.GenerateNewKeys()
+	if len(os.Args) < 2 {
+		fmt.Println("usage: mct <config.json>")
+		os.Exit(1)
+	}
 
-	config_file_path , _ := filepath.Abs( os.Args[ 1 ] )
-	config := utils.ParseConfig( config_file_path )
-	config.FingerPrint = utils.FingerPrintPassive()
+	// 1. Parse the seed file for bootstrap-only fields.
+	seed, err := config.ParseSeedFile(os.Args[1])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	if seed.BoltDBPath == "" {
+		seed.BoltDBPath = "mct.db"
+	}
+	if seed.BleveSearchPath == "" {
+		seed.BleveSearchPath = "mct.bleve"
+	}
 
-	logger.Init()
-	logger.Log.Info( "Hola , Christ Lives" )
-	logger.Log.Debug( fmt.Sprintf( "Loaded Config File From : %s\n" , config_file_path ) )
-	SetupCloseHandler()
+	// 2. Resolve per-machine data paths the v1 way (mct_<fingerprint>.db under
+	//    ~/.config/mct) so an existing install's data is found automatically.
+	//    These become the authoritative bootstrap paths.
+	fp := fingerprint.Short()
+	dbPath := paths.ResolveFingerprinted(seed.BoltDBPath, fp, false)
+	blevePath := paths.ResolveFingerprinted(seed.BleveSearchPath, fp, true)
+	seed.BoltDBPath = dbPath
+	seed.BleveSearchPath = blevePath
+	seed.FingerPrint = fp
 
-	// patch/fix local db and bleve index
-	FixDBAndSearchIndex( &config )
-	fmt.Println( config.BoltDBPath )
-	fmt.Println( config.BleveSearchPath )
+	// 3. Open the database.
+	db, err := bolt.Open(dbPath, 0600, nil)
+	if err != nil {
+		fmt.Printf("could not open db at %s: %v\n", dbPath, err)
+		os.Exit(1)
+	}
 
-	// log.Init( config )
-	utils.WriteJS_API( config.ServerLiveUrl , config.ServerAPIKey , config.LocalHostUrl )
-	db , db_err := bolt.Open( config.BoltDBPath , 0600 , &bolt.Options{} )
-	// db , db_err := bolt.Open( config.BoltDBPath , 0600 , &bolt.Options{ Timeout: ( 3 * time.Second ) } )
-	if db_err != nil { logger.Log.Fatal( db_err.Error() ) }
+	// 3. Load or seed the live config from the db.
+	cfg := config.NewManager(db)
+	seeded, err := cfg.LoadOrSeed(seed)
+	if err != nil {
+		fmt.Printf("config load/seed failed: %v\n", err)
+		os.Exit(1)
+	}
+	snap := cfg.Snapshot()
 
-	s = server.New( config , db )
-	rsctx , rsctxcancel = context.WithCancel( context.Background() )
-	rs = remotesync.New( db , rsctx , &config )
-	rs.Start()
-	s.Start()
+	// 4. Logger (now that we know the timezone).
+	logger.Init(os.Getenv("LOG_LEVEL"), snap.TimeZone)
+	log := logger.GetLogger()
+	if seeded {
+		log.Info(fmt.Sprintf("seeded config into db from %s", os.Args[1]))
+	} else {
+		log.Info("loaded live config from db")
+	}
+	log.Info(fmt.Sprintf("machine fingerprint: %s", fp))
+	log.Info(fmt.Sprintf("db: %s", dbPath))
+
+	// 5. Open or create the Bleve search index.
+	index, err := bleve.Open(blevePath)
+	if err == bleve.ErrorIndexPathDoesNotExist {
+		log.Info(fmt.Sprintf("creating bleve index at %s", blevePath))
+		index, err = bleve.New(blevePath, bleve.NewIndexMapping())
+	}
+	if err != nil {
+		log.Info(fmt.Sprintf("search index unavailable (%v); continuing without search", err))
+		index = nil
+	}
+
+	// 6. Wire the store and server.
+	store := user.NewStore(db, cfg, index)
+	srv := server.New(cfg, db, index, store)
+
+	// 7. Graceful shutdown.
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+		<-c
+		fmt.Println("\r- shutting down")
+		srv.Shutdown()
+		if index != nil {
+			index.Close()
+		}
+		db.Close()
+		logger.Close()
+		cancel()
+		os.Exit(0)
+	}()
+	_ = ctx
+
+	log.Info("Hola , Christ Lives")
+	if err := srv.Start(); err != nil {
+		log.Info(fmt.Sprintf("server stopped: %v", err))
+	}
 }
