@@ -66,6 +66,14 @@ h2 { font-size: .92rem; margin: 22px 0 10px; color: var(--brand); text-transform
 .btn.danger { background: var(--err); }
 
 .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.actions.center-actions { align-items: center; justify-content: center; }
+
+/* Public calendar embed (home page) ----------------------------------------*/
+.calendar { margin-top: 16px; }
+.calendar iframe {
+  display: block; width: 100%; height: 70vh; min-height: 420px;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff;
+}
 
 /* Inputs --------------------------------------------------------------------*/
 input, select, textarea {

@@ -7,13 +7,19 @@
 <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-<main class="card center">
+<main class="card wide center">
   <img class="logo" src="/static/logo.png" alt="Master's Closet">
-  <h1>Master's Closet</h1>
-  <p class="muted">Welcome. Are you a new guest or returning?</p>
-  <div class="actions">
-    <a class="btn" href="/join">I'm new — sign up</a>
-    <a class="btn ghost" href="/checkin">I'm returning — check in</a>
+  <h1>Welcome to the Master's Closet</h1>
+  <div class="actions center-actions">
+    <a class="btn" href="/join">Join</a>
+  </div>
+  <!-- Public Google calendar of open hours (same embed v1 served on "/"). -->
+  <div class="calendar">
+    <iframe
+      title="Master's Closet Calendar"
+      src="https://calendar.google.com/calendar/embed?height=600&amp;wkst=1&amp;ctz=America%2FNew_York&amp;bgcolor=%23ffffff&amp;src=bWFzdGVycy5jbG9zZXQuNTk1MEBnbWFpbC5jb20&amp;color=%23039BE5"
+      frameborder="0"
+      scrolling="no"></iframe>
   </div>
 </main>
 </body>
