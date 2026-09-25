@@ -5,22 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Master's Closet</title>
 <link rel="stylesheet" href="/static/app.css">
+<style>
+  /* The logged-out home page is the calendar (v1 behaviour): full-bleed and
+     full-height. These rules live in the page rather than app.css so the layout
+     cannot break if a browser is holding a stale copy of the stylesheet, and so
+     the card/padding rules every other page wants don't apply here. */
+  body { margin: 0; padding: 0; background: #fff; }
+  .home { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+  .home-head { flex: 0 0 auto; text-align: center; padding: 14px 12px 10px; }
+  .home-head img { display: block; width: 240px; max-width: 70%; height: auto; margin: 0 auto 6px; }
+  .home-head h1 { font-size: 1.25rem; margin: 0; }
+  /* The iframe is the flex item itself: a percentage height would not resolve
+     against an auto-height parent and would silently fall back to the browser's
+     default 150px iframe box. flex:1 fills whatever the header leaves. */
+  .home-cal { flex: 1 1 auto; display: block; width: 100%; min-height: 420px; border: 0; }
+</style>
 </head>
 <body>
-<main class="card wide center">
-  <img class="logo" src="/static/logo.png" alt="Master's Closet">
-  <h1>Welcome to the Master's Closet</h1>
-  <div class="actions center-actions">
-    <a class="btn" href="/join">Join</a>
-  </div>
-  <!-- Public Google calendar of open hours (same embed v1 served on "/"). -->
-  <div class="calendar">
-    <iframe
-      title="Master's Closet Calendar"
-      src="https://calendar.google.com/calendar/embed?height=600&amp;wkst=1&amp;ctz=America%2FNew_York&amp;bgcolor=%23ffffff&amp;src=bWFzdGVycy5jbG9zZXQuNTk1MEBnbWFpbC5jb20&amp;color=%23039BE5"
-      frameborder="0"
-      scrolling="no"></iframe>
-  </div>
-</main>
+<div class="home">
+  <header class="home-head">
+    <img src="/static/logo.png" alt="Master's Closet">
+    <h1>Welcome to the Master's Closet</h1>
+  </header>
+  <!-- Public Google calendar of open hours (the same embed v1 served on "/"). -->
+  <iframe
+    class="home-cal"
+    title="Master's Closet Calendar"
+    src="https://calendar.google.com/calendar/embed?height=600&amp;wkst=1&amp;ctz=America%2FNew_York&amp;bgcolor=%23ffffff&amp;src=bWFzdGVycy5jbG9zZXQuNTk1MEBnbWFpbC5jb20&amp;color=%23039BE5"
+    frameborder="0"
+    scrolling="no"></iframe>
+</div>
 </body>
 </html>
