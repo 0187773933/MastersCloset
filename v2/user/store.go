@@ -18,9 +18,10 @@ const (
 	bucketUsers        = "users"
 	bucketUsernames    = "usernames"
 	bucketBarcodes     = "barcodes"
-	bucketUpload       = "remote-upload" // drainable pool consumed by remotesync
-	bucketMisc         = "misc"          // counters (e.g. virtual-barcode-index)
-	bucketCheckInIndex = "checkin-index" // check-in ULID -> user UUID
+	bucketUpload       = "remote-upload"      // drainable pool consumed by remotesync
+	bucketMisc         = "misc"               // counters (e.g. virtual-barcode-index)
+	bucketCheckInIndex = "checkin-index"      // check-in ULID -> user UUID
+	bucketDayManual    = "checkin-day-manual" // date -> hand-written ticket tally
 )
 
 // SearchItem is what we index into Bleve for name search.
@@ -49,7 +50,7 @@ type Store struct {
 // NewStore wires a store to its db, config manager, and (optional) search index.
 func NewStore(db *bolt.DB, cfg *config.Manager, index bleve.Index) *Store {
 	db.Update(func(tx *bolt.Tx) error {
-		for _, b := range []string{bucketUsers, bucketUsernames, bucketBarcodes, bucketUpload, bucketMisc, bucketCheckInIndex} {
+		for _, b := range []string{bucketUsers, bucketUsernames, bucketBarcodes, bucketUpload, bucketMisc, bucketCheckInIndex, bucketDayManual} {
 			tx.CreateBucketIfNotExists([]byte(b))
 		}
 		return nil

@@ -48,6 +48,9 @@ type PrinterConfig struct {
 	FontPath     string  `json:"font_path"`
 	PrinterName  string  `json:"printer_name"`
 	LogoFilePath string  `json:"logo_file_path"`
+	// SumatraPath points at SumatraPDF.exe, the Windows print helper. Blank means
+	// "search the usual places" (see printer.findSumatra).
+	SumatraPath string `json:"sumatra_path"`
 }
 
 // Config is the whole application configuration. Field tags match v1 so existing
@@ -74,6 +77,7 @@ type Config struct {
 	BleveSearchPath                string `json:"bleve_search_path"`
 	LevenshteinDistanceThreshold   int    `json:"levenshtein_distance_threshold"`
 	CheckInCoolOffDays             int    `json:"check_in_cooloff_days"`
+	MaxFamilySize                  int    `json:"max_family_size"`
 	AutoVerifyZipcode              string `json:"auto_verify_zipcode"`
 	TwilioClientID                 string `json:"twilio_client_id"`
 	TwilioAuthToken                string `json:"twilio_auth_token"`
@@ -106,6 +110,24 @@ type FieldMeta struct {
 // listed here are persisted but hidden from the editor (e.g. finger_print).
 func Fields() []FieldMeta {
 	return []FieldMeta{
+		// Balance and check-in lead the panel: these are the numbers that actually
+		// get changed from one collection day to the next. Note that a section is
+		// created by its FIRST field here — keep each section's rows contiguous.
+		// Max family size heads the block because it multiplies every line under it.
+		{Path: "max_family_size", Label: "Max Family Size", Section: "Balance", Kind: "int", Help: "Largest family an account may have, counting the account holder. 0 = no limit."},
+		{Path: "balance.general.total", Label: "General Total", Section: "Balance", Kind: "int"},
+		{Path: "balance.general.tops", Label: "Tops", Section: "Balance", Kind: "int"},
+		{Path: "balance.general.bottoms", Label: "Bottoms", Section: "Balance", Kind: "int"},
+		{Path: "balance.general.dresses", Label: "Dresses", Section: "Balance", Kind: "int"},
+		{Path: "balance.shoes", Label: "Shoes", Section: "Balance", Kind: "int"},
+		{Path: "balance.seasonals", Label: "Seasonals", Section: "Balance", Kind: "int"},
+		{Path: "balance.accessories", Label: "Accessories", Section: "Balance", Kind: "int"},
+
+		// Check-in behavior — safe to apply live.
+		{Path: "check_in_cooloff_days", Label: "Check-In Cooloff (days)", Section: "Check-In", Kind: "int"},
+		{Path: "levenshtein_distance_threshold", Label: "Similarity Threshold", Section: "Check-In", Kind: "int"},
+		{Path: "auto_verify_zipcode", Label: "Auto-Verify Zipcode", Section: "Check-In", Kind: "string", Help: "Users with this zipcode are auto-marked Verified. Default 45424."},
+
 		// Server / bind — changing these needs a restart.
 		{Path: "server_base_url", Label: "Server Base URL", Section: "Server", Kind: "string", RestartRequired: true},
 		{Path: "server_live_url", Label: "Server Live URL", Section: "Server", Kind: "string", RestartRequired: true},
@@ -124,20 +146,6 @@ func Fields() []FieldMeta {
 		{Path: "bolt_db_path", Label: "BoltDB Path", Section: "Security", Kind: "string", ReadOnly: true, Help: "Bootstrap-only; change via seed file + restart."},
 		{Path: "bolt_db_encryption_key", Label: "BoltDB Encryption Key", Section: "Security", Kind: "string", Secret: true, ReadOnly: true, Help: "Bootstrap-only; changing it would orphan existing records."},
 		{Path: "bleve_search_path", Label: "Bleve Search Path", Section: "Security", Kind: "string", ReadOnly: true},
-
-		// Check-in behavior — safe to apply live.
-		{Path: "check_in_cooloff_days", Label: "Check-In Cooloff (days)", Section: "Check-In", Kind: "int"},
-		{Path: "levenshtein_distance_threshold", Label: "Similarity Threshold", Section: "Check-In", Kind: "int"},
-		{Path: "auto_verify_zipcode", Label: "Auto-Verify Zipcode", Section: "Check-In", Kind: "string", Help: "Users with this zipcode are auto-marked Verified. Default 45424."},
-
-		// Balance allowances — safe to apply live.
-		{Path: "balance.general.total", Label: "General Total", Section: "Balance", Kind: "int"},
-		{Path: "balance.general.tops", Label: "Tops", Section: "Balance", Kind: "int"},
-		{Path: "balance.general.bottoms", Label: "Bottoms", Section: "Balance", Kind: "int"},
-		{Path: "balance.general.dresses", Label: "Dresses", Section: "Balance", Kind: "int"},
-		{Path: "balance.shoes", Label: "Shoes", Section: "Balance", Kind: "int"},
-		{Path: "balance.seasonals", Label: "Seasonals", Section: "Balance", Kind: "int"},
-		{Path: "balance.accessories", Label: "Accessories", Section: "Balance", Kind: "int"},
 
 		// Email.
 		{Path: "email.smtp_server", Label: "SMTP Server", Section: "Email", Kind: "string"},
@@ -167,6 +175,7 @@ func Fields() []FieldMeta {
 		{Path: "printer.page_height", Label: "Page Height", Section: "Printer", Kind: "float"},
 		{Path: "printer.font_name", Label: "Font Name", Section: "Printer", Kind: "string"},
 		{Path: "printer.printer_name", Label: "Printer Name", Section: "Printer", Kind: "string"},
+		{Path: "printer.sumatra_path", Label: "SumatraPDF Path", Section: "Printer", Kind: "string", Help: "Windows only: path to SumatraPDF.exe. Blank searches beside the app, ~/.config/mct, the working directory, then PATH."},
 
 		// Redis.
 		{Path: "redis.host", Label: "Redis Host", Section: "Redis", Kind: "string"},

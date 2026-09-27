@@ -47,6 +47,8 @@ func TestTicketLinesFit(t *testing.T) {
 		}
 
 		check("family", fmt.Sprintf(ts.FamilySize, 8), 20, 12, centerMaxW)
+		check("guest1", fmt.Sprintf(guestsLineFmt(ts, 1), 1), 16, 9, centerMaxW)
+		check("guests", fmt.Sprintf(guestsLineFmt(ts, 8), 8), 16, 9, centerMaxW)
 		check("total", fmt.Sprintf(ts.TotalItems, 88), 16, 9, centerMaxW)
 		check("perperson", ts.PerPerson, 12, 8, rightEdge-0.19)
 		check("clothing", fmt.Sprintf(ts.ClothingItems, 6), 12, 8, rightEdge-0.44)

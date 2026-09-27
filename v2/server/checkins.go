@@ -52,18 +52,25 @@ func writeTotalsSheet(f *excelize.File, sheet string, days []user.DayCheckIns) {
 	f.SetCellValue(sheet, "A4", "Date")
 	f.SetCellValue(sheet, "B4", "Check-Ins")
 	f.SetCellValue(sheet, "C4", "People Shopped For")
-	row, gc, gs := 5, 0, 0
+	f.SetCellValue(sheet, "D4", "Manual (People)")
+	f.SetCellValue(sheet, "E4", "Total People")
+	row, gc, gs, gm := 5, 0, 0, 0
 	for _, d := range days {
 		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), d.Date)
 		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), d.Count)
 		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), d.ShoppedFor)
+		f.SetCellValue(sheet, fmt.Sprintf("D%d", row), d.ManualShoppedFor)
+		f.SetCellValue(sheet, fmt.Sprintf("E%d", row), d.ShoppedFor+d.ManualShoppedFor)
 		gc += d.Count
 		gs += d.ShoppedFor
+		gm += d.ManualShoppedFor
 		row++
 	}
 	f.SetCellValue(sheet, fmt.Sprintf("A%d", row), "GRAND TOTAL")
 	f.SetCellValue(sheet, fmt.Sprintf("B%d", row), gc)
 	f.SetCellValue(sheet, fmt.Sprintf("C%d", row), gs)
+	f.SetCellValue(sheet, fmt.Sprintf("D%d", row), gm)
+	f.SetCellValue(sheet, fmt.Sprintf("E%d", row), gs+gm)
 }
 
 // writeDaySheet writes one collection day's check-ins onto a sheet.
@@ -121,7 +128,10 @@ func (s *Server) AdminCheckInDayXLSX(c *fiber.Ctx) error {
 	for _, ci := range checkins {
 		shopped += ci.Shopping.ShoppingFor
 	}
-	summary := []user.DayCheckIns{{Date: date, Count: len(checkins), ShoppedFor: shopped}}
+	summary := []user.DayCheckIns{{
+		Date: date, Count: len(checkins), ShoppedFor: shopped,
+		ManualShoppedFor: s.Users.GetDayManual(date).ShoppedFor,
+	}}
 
 	f := excelize.NewFile()
 	defer f.Close()

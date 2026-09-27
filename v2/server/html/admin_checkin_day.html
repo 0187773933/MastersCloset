@@ -10,12 +10,17 @@
   th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
   th { color: var(--muted); font-weight: 600; user-select: none; }
   th.num, td.num { text-align: right; }
-  tr.dup { background: #fff5f5; }
+  /* Rows the "Delete duplicates" button will remove: a step darker than the
+     --wait-bg the duplicate pill uses, plus a red edge to catch the eye. */
+  tr.dup { background: #fecaca; box-shadow: inset 3px 0 0 var(--err); }
   .scroll { overflow-x: auto; }
   .del { color: var(--err); cursor: pointer; border: 0; background: none; font-size: 1rem; }
   .pill { background: var(--line); color: var(--muted); border-radius: 20px; padding: 3px 11px; font-size: .78rem; font-weight: 700; }
   .pill.b { background: #f3e8ef; color: var(--brand); }
   .pill.dup { background: var(--wait-bg); color: var(--err); }
+  .pill.m { background: var(--warn-bg); color: var(--warn); }
+  .manual { display: flex; align-items: center; gap: 6px; font-size: .82rem; }
+  .manual input { width: 74px; padding: 5px 8px; }
 </style>
 </head>
 <body>
@@ -35,6 +40,7 @@
 <script>
 const DATE = decodeURIComponent((location.pathname.split('/day/')[1] || '').replace(/\/+$/, ''));
 let ROWS = [];
+let MANUAL = 0;   // people served on hand-written tickets, entered below
 let sortKey = 'time', sortAsc = true;
 function esc(v) { return v == null ? '' : String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 
@@ -43,7 +49,9 @@ document.getElementById('dl').href = '/admin/checkins/day/' + encodeURIComponent
 
 async function load() {
   document.getElementById('content').innerHTML = 'Loading…';
-  ROWS = (await (await fetch('/admin/checkins/date/' + encodeURIComponent(DATE))).json()).result || [];
+  const data = await (await fetch('/admin/checkins/date/' + encodeURIComponent(DATE))).json();
+  ROWS = data.result || [];
+  MANUAL = (data.manual || {}).shopped_for || 0;
   render();
 }
 
@@ -67,14 +75,18 @@ function render() {
   const dups = dupIds(ROWS);
   const shopped = ROWS.reduce((s, ci) => s + (ci.shopping.shopping_for || 0), 0);
   const pills = document.getElementById('pills');
+  // The headline figure is what actually happened that day: app check-ins plus
+  // whoever was served on paper.
   pills.innerHTML = '<span class="pill">' + ROWS.length + ' check-ins</span>' +
-    '<span class="pill b">' + shopped + ' people shopped for</span>' +
+    '<span class="pill b">' + (shopped + MANUAL) + ' people shopped for</span>' +
+    (MANUAL ? '<span class="pill m">' + shopped + ' here + ' + MANUAL + ' manual</span>' : '') +
     (dups.size ? '<span class="pill dup">' + dups.size + ' duplicate' + (dups.size > 1 ? 's' : '') + '</span>' : '');
   if (dups.size) {
     const btn = document.createElement('button');
     btn.className = 'btn danger small'; btn.textContent = 'Delete duplicates';
     btn.onclick = deleteDuplicates; pills.appendChild(btn);
   }
+  pills.appendChild(manualEditor());
 
   const c = document.getElementById('content');
   if (!ROWS.length) { c.innerHTML = '<p class="muted">No check-ins on this day.</p>'; return; }
@@ -103,6 +115,35 @@ function render() {
     if (k === 'name' || k === 'time' || k === 'for') th.onclick = () => { if (sortKey === k) sortAsc = !sortAsc; else { sortKey = k; sortAsc = true; } render(); };
   });
   c.querySelectorAll('.del').forEach(b => b.onclick = () => deleteOne(b.dataset.uuid, b.dataset.ulid));
+}
+
+// Manual tally: people served with hand-written tickets that never went through
+// the app. Stored per day (not per user), so the totals can be made truthful
+// after the fact.
+function manualEditor() {
+  const wrap = document.createElement('label');
+  wrap.className = 'manual';
+  wrap.appendChild(document.createTextNode('🖊 Manual people:'));
+  const input = document.createElement('input');
+  input.type = 'number'; input.min = '0'; input.value = MANUAL;
+  const save = document.createElement('button');
+  save.className = 'btn ghost small'; save.type = 'button'; save.textContent = 'Save';
+  const msg = document.createElement('span');
+  msg.className = 'muted small';
+  save.onclick = async () => {
+    const n = parseInt(input.value || '0', 10) || 0;
+    msg.textContent = 'Saving…';
+    const res = await fetch('/admin/checkins/day/' + encodeURIComponent(DATE) + '/manual', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shopped_for: n })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.result) { msg.innerHTML = '<span class="err">' + esc(data.error || 'Error') + '</span>'; return; }
+    msg.textContent = '';
+    MANUAL = n;
+    render();
+  };
+  wrap.appendChild(input); wrap.appendChild(save); wrap.appendChild(msg);
+  return wrap;
 }
 
 async function deleteOne(uuid, ulid) {

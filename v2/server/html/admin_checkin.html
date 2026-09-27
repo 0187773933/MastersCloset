@@ -14,6 +14,7 @@
   .ticket img.logo { width: 150px; margin: 0 auto 12px; }
   .ticket .t-fam { font-size: 1.25rem; font-weight: 800; margin: 4px 0; }
   .ticket .t-total { font-size: 1rem; margin-bottom: 12px; }
+  .ticket .t-guests { font-size: 1rem; font-weight: 700; margin: -4px 0 12px; }
   .ticket .t-per { text-align: left; display: inline-block; }
   .ticket .t-per .hdr { font-weight: 700; margin: 4px 0; }
   .ticket .t-per .item { margin: 5px 0; white-space: nowrap; }
@@ -36,11 +37,28 @@
     <a class="btn ghost small" href="/admin">← Admin</a>
   </div>
 
+  <!-- Last person's confirmation. Lives outside #panel because printing clears
+       the panel away, and the operator still needs to see what just happened. -->
+  <div id="flash" class="status ok" style="display:none"></div>
+
   <div class="searchbar">
     <input id="lookup" class="search" placeholder="Scan a barcode, or type a name…" autofocus autocomplete="off">
+    <button id="newUserBtn" class="btn ghost" type="button">＋ New User</button>
     <button id="clearBtn" class="btn ghost" type="button">Clear</button>
   </div>
   <div id="results" class="list"></div>
+
+  <!-- Walk-ins get created here rather than on /admin/user/new, so the desk never
+       navigates away mid-queue. Same form module as that page. -->
+  <div id="newUserPanel" class="section" style="display:none">
+    <h2 style="margin-top:0">New User</h2>
+    <div id="newUserForm"></div>
+    <div class="row">
+      <button id="createUserBtn" class="btn" type="button">Create &amp; check in</button>
+      <button id="cancelUserBtn" class="btn ghost" type="button">Cancel</button>
+      <span id="newUserMsg" class="muted small"></span>
+    </div>
+  </div>
 
   <div id="panel" style="display:none">
     <section class="section">
@@ -49,7 +67,7 @@
 
       <!-- Primary action first, for a fast check-in -->
       <div class="row" style="margin:8px 0">
-        <button id="checkinBtn" class="btn" style="font-size:1.05rem;padding:14px 26px">✓ Check In</button>
+        <button id="checkinBtn" class="btn" style="font-size:1.05rem;padding:14px 26px">🖨 Print</button>
         <span id="result" class="muted small"></span>
         <button id="editBtn" class="btn ghost small" type="button">✏️ Edit</button>
         <button id="qrBtn" class="btn ghost small" type="button">Show Handoff QR</button>
@@ -62,6 +80,11 @@
       <div id="shopFor" style="margin:10px 0 4px">
         <div id="shopChips" class="row" style="gap:8px"></div>
         <div id="guestNote" class="muted small" style="margin-top:6px"></div>
+        <div id="guestPrintWrap" class="row small" style="display:none;gap:6px;margin-top:4px">
+          <label class="row" style="gap:6px;margin:0;font-weight:600">
+            <input type="checkbox" id="guestPrint" style="width:auto;margin:0"> Also print individual guest tickets
+          </label>
+        </div>
       </div>
 
       <h2>Ticket :</h2>
@@ -72,6 +95,7 @@
         <img class="logo" src="/static/logo.png" alt="Master's Closet">
         <div class="t-fam" id="line_fam"><span class="pre"></span><input id="t_for" class="tnum" type="number" min="0" value="1"><span class="post"></span></div>
         <div class="t-total" id="line_total"><span class="pre"></span><span id="t_total">6</span><span class="post"></span></div>
+        <div class="t-guests" id="line_guests" style="display:none"><span class="pre"></span><span id="t_guests">0</span><span class="post"></span></div>
         <div class="t-per">
           <div class="hdr" id="line_perperson"></div>
           <div class="item" id="line_clothing"><span class="pre"></span><input id="t_clothing" class="tnum" type="number" min="0" value="6"><span class="post"></span></div>
@@ -91,6 +115,7 @@
 </main>
 
 <script src="/static/verified.js"></script>
+<script src="/static/user_form.js"></script>
 <script>
 const lookup = document.getElementById('lookup');
 const results = document.getElementById('results');
@@ -107,6 +132,7 @@ const pathUuid = (location.pathname.match(/\/admin\/checkin\/([^\/?#]+)/) || [])
 const PRINT_WARN = { ar: 1, fa: 1, ur: 1, hi: 1 };
 
 function num(id) { return parseInt(document.getElementById(id).value || '0', 10); }
+function esc(v) { return v == null ? '' : String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 
 function langData(code) { return LANGS.find(l => l.code === code) || LANGS.find(l => l.code === 'en') || null; }
 function plural(n, sing, plur) { return n === 1 ? sing : plur; }
@@ -130,6 +156,8 @@ function renderTicketText() {
   const s = d.strings, rtl = !!d.rtl;
   setLine('line_fam', s.family_size, rtl);
   setLine('line_total', s.total_items, rtl);
+  const gN = countVal('guests');
+  setLine('line_guests', plural(gN, s.guests_line_singular, s.guests_line_plural) || 'Guests ( %d )', rtl);
   const hp = document.getElementById('line_perperson'); hp.textContent = s.per_person; hp.dir = rtl ? 'rtl' : 'ltr';
   setLine('line_clothing', s.clothing_items, rtl);
   setLine('line_pants', s.pants_limit, rtl);
@@ -157,6 +185,7 @@ function fitLineEl(el, minPx) {
 function fitPreview() {
   fitLineEl(document.getElementById('line_fam'), 11);
   fitLineEl(document.getElementById('line_total'), 8);
+  fitLineEl(document.getElementById('line_guests'), 8);
   const tper = document.querySelector('.t-per'), ticket = document.querySelector('.ticket');
   if (!tper || !ticket) return;
   const cs = getComputedStyle(ticket);
@@ -283,14 +312,24 @@ function recomputeShopFor() {
   if (people < 0) people = 0; // 0 is allowed — no family ticket prints, but guests still can
   document.getElementById('t_for').value = people;
   recomputeTotal();
-  // Guests don't change the family ticket — they print their own. Note both the
-  // zero-family case (no family ticket) and how many guest tickets will print.
+  // Guests never change the family's allowance. They ride along as a count on the
+  // family ticket, and only get labels of their own when the opt-in is ticked.
+  const g = countVal('guests');
+  document.getElementById('t_guests').textContent = g;
+  document.getElementById('line_guests').style.display = g > 0 ? '' : 'none';
+  renderTicketText(); // g flips Guest/Guests, and re-fits the ticket
+  const wrap = document.getElementById('guestPrintWrap');
+  if (wrap) wrap.style.display = g > 0 ? 'flex' : 'none';
   const gn = document.getElementById('guestNote');
   if (gn) {
-    const g = countVal('guests');
+    const own = document.getElementById('guestPrint').checked;
     const parts = [];
     if (people === 0) parts.push('⚠ No family ticket will print (shopping for 0).');
-    if (g > 0) parts.push('🎟 + ' + g + ' guest ticket' + (g === 1 ? '' : 's') + ' will also print (same barcode).');
+    if (g > 0) {
+      if (own) parts.push('🎟 + ' + g + ' separate guest ticket' + (g === 1 ? '' : 's') + ' will also print (same barcode).');
+      else if (people === 0) parts.push('🎟 ' + g + ' guest' + (g === 1 ? '' : 's') + ' recorded, but nothing will print — tick the box for guest labels.');
+      else parts.push('🎟 ' + g + ' guest' + (g === 1 ? '' : 's') + ' shown on the family ticket — no separate labels.');
+    }
     gn.textContent = parts.join('   ');
   }
 }
@@ -306,15 +345,107 @@ function shopDemographics() {
   return { boys: countVal('boys'), girls: countVal('girls'), men, women, guests: countVal('guests') };
 }
 
+function showFlash(html, bad) {
+  const f = document.getElementById('flash');
+  f.className = 'status ' + (bad ? 'wait' : 'ok');
+  f.innerHTML = html;
+  f.style.display = '';
+}
+function hideFlash() {
+  const f = document.getElementById('flash');
+  f.style.display = 'none';
+  f.innerHTML = '';
+}
+
+// Per-guest labels are an explicit, per-visit choice: always start unticked so a
+// one-off "print guest tickets too" never carries into the next family.
+function resetGuestPrint() {
+  const cb = document.getElementById('guestPrint');
+  if (cb) cb.checked = false;
+  const wrap = document.getElementById('guestPrintWrap');
+  if (wrap) wrap.style.display = 'none';
+}
+
+// Hand the page back empty and focused, ready for the next scan. This now runs
+// automatically after every print, so it has to clear the DOM-only state too —
+// load() overwrites most fields, but never #result, #guestNote or #shopChips.
 function clearAll() {
   lookup.value = '';
   results.innerHTML = '';
   document.getElementById('panel').style.display = 'none';
   resetQR();
-  uuid = null;
+  hideFlash();
+  resetGuestPrint();
+  newUserClose();
+  document.getElementById('result').innerHTML = '';
+  document.getElementById('who').textContent = '';
+  document.getElementById('cooloff').textContent = '';
+  document.getElementById('cooloff').className = 'status';
+  document.getElementById('guestNote').textContent = '';
+  document.getElementById('shopChips').innerHTML = '';
+  document.getElementById('verifiedSlot').innerHTML = '';
+  document.querySelector('#balance tbody').innerHTML = '';
+  document.getElementById('line_guests').style.display = 'none';
+  uuid = null; CUR = null; BALCFG = null; SHOP = null; TLANG = 'en';
   history.replaceState(null, '', '/admin/checkin'); // drop the deep-link uuid
   lookup.focus();
 }
+
+// --- inline New User --------------------------------------------------------
+// The form is built lazily on first open (one fetch for languages + the family
+// cap), then reused. Creating loads the new family straight into the check-in
+// panel, so a walk-in goes from "not in the system" to "ready to Print" without
+// ever leaving this page.
+let NEWFORM = null;
+const newUserPanel = document.getElementById('newUserPanel');
+
+function newUserOpen() {
+  newUserPanel.style.display = 'block';
+  document.getElementById('panel').style.display = 'none';
+  results.innerHTML = '';
+  document.getElementById('newUserMsg').textContent = '';
+  const build = NEWFORM
+    ? Promise.resolve()
+    : userFormOptions().then(opts => {
+        // This page already has the language list from /admin/ticket/strings
+        // (code + name), so don't make the form fetch it a second time.
+        if (LANGS.length) opts = Object.assign({}, opts, { languages: LANGS });
+        NEWFORM = renderUserForm(document.getElementById('newUserForm'), opts);
+      });
+  build.then(() => { NEWFORM.focus(); newUserPanel.scrollIntoView({ behavior: 'smooth' }); });
+}
+
+function newUserClose() {
+  newUserPanel.style.display = 'none';
+  document.getElementById('newUserMsg').textContent = '';
+}
+
+async function createUser() {
+  if (!NEWFORM) return;
+  const msg = document.getElementById('newUserMsg');
+  if (!NEWFORM.valid()) { msg.innerHTML = '<span class="err">First and last name are required.</span>'; return; }
+  msg.textContent = 'Creating…';
+  const res = await fetch('/admin/user/new', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(NEWFORM.collect())
+  });
+  const data = await res.json();
+  if (!res.ok || !data.result) { msg.innerHTML = '<span class="err">' + (data.error || 'Error') + '</span>'; return; }
+  const u = data.result;
+  NEWFORM = null;                                   // next open starts blank
+  document.getElementById('newUserForm').innerHTML = '';
+  newUserClose();
+  await load(u.uuid);                               // pull them up, ready to Print
+  showFlash('✓ Created ' + esc(u.name_string) + ' — ready to check in');
+}
+
+document.getElementById('newUserBtn').onclick = newUserOpen;
+document.getElementById('cancelUserBtn').onclick = () => {
+  newUserClose();
+  // Cancelling shouldn't strand whoever was pulled up before the form opened.
+  // (clearAll also closes the panel, but there the reset is the point.)
+  if (uuid) document.getElementById('panel').style.display = 'block';
+};
+document.getElementById('createUserBtn').onclick = createUser;
 
 // Edit / Handoff QR actions for the selected user (same as the Users page).
 document.getElementById('editBtn').onclick = () => { if (uuid) window.location = '/admin/users/' + uuid; };
@@ -391,6 +522,10 @@ async function load(id) {
   uuid = id;
   history.replaceState(null, '', '/admin/checkin/' + id); // keep URL navigable/back-able
   resetQR();
+  hideFlash();          // the last person's confirmation is done with
+  resetGuestPrint();    // decided fresh for this family
+  newUserClose();
+  document.getElementById('result').innerHTML = '';
   const data = await (await fetch('/admin/user/checkin/test/' + id)).json();
   const u = data.user, out = data.result;
   CUR = u;
@@ -437,10 +572,11 @@ async function checkin() {
     accessories_limit: num('t_acc'),
     seasonal_limit: num('t_seasonal'),
     family_name: document.getElementById('t_name').value.trim(),
-    language: TLANG // print in the language shown in the preview
+    language: TLANG, // print in the language shown in the preview
+    print_guest_tickets: document.getElementById('guestPrint').checked
   }, shopDemographics()); // boys/girls/men/women/guests from the overview
   const r = document.getElementById('result');
-  r.textContent = 'Checking in…';
+  r.textContent = 'Printing…';
   const res = await fetch('/admin/user/checkin/' + uuid, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req)
   });
@@ -453,11 +589,24 @@ async function checkin() {
   else if (data.print_error) printMsg = '<span class="err">⚠ Print failed: ' + data.print_error + '</span>';
   else printMsg = '<span class="muted">(no printer configured)</span>';
   if (data.guests_printed) printMsg += ' · 🎟 ' + data.guests_printed + ' guest ticket' + (data.guests_printed === 1 ? '' : 's');
-  r.innerHTML = '✓ Checked in — ' + data.check_in.date + ' ' + data.check_in.time + ' · ' + printMsg +
-    ' · <a href="/admin/checkin/' + ulid + '/ticket.pdf" target="_blank">View / reprint ticket</a>';
-  load(uuid); // refresh balances
+  const msg = '✓ ' + esc(data.check_in.name || 'Checked in') + ' — ' + data.check_in.date + ' ' + data.check_in.time +
+    ' · ' + printMsg + ' · <a href="/admin/checkin/' + ulid + '/ticket.pdf" target="_blank">View / reprint ticket</a>';
+  // The visit is recorded either way, but a failed print keeps the family on
+  // screen so the printer can be sorted out. Refresh the balances FIRST — load()
+  // clears #result — then leave the error sitting there. Pressing Print again
+  // would record a second visit, so point at the ticket link instead.
+  if (data.print_error) {
+    await load(uuid);
+    r.innerHTML = msg + ' <span class="muted">— the visit is already recorded; re-print from the ticket link rather than pressing Print again.</span>';
+    return;
+  }
+  // Printed (or there was nothing to print): reset for the next person and carry
+  // the confirmation up to the flash line, which outlives the panel.
+  clearAll();
+  showFlash(msg);
 }
 document.getElementById('checkinBtn').onclick = checkin;
+document.getElementById('guestPrint').addEventListener('change', recomputeShopFor); // note follows the choice
 document.getElementById('t_for').addEventListener('input', recomputeTotal);      // people changes -> total updates
 document.getElementById('t_clothing').addEventListener('input', recomputeTotal); // clothing/person changes -> total updates
 // Shoe/accessory/seasonal counts flip singular/plural wording — re-localize.

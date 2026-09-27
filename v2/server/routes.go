@@ -103,6 +103,7 @@ func (s *Server) registerRoutes() {
 	admin.Get("/checkins/day/:date", func(c *fiber.Ctx) error { return s.sendPage(c, "admin_checkin_day.html") })
 	admin.Get("/checkins/day/:date/export.xlsx", s.AdminCheckInDayXLSX)
 	admin.Get("/checkins/date/:date", s.AdminCheckInsByDate)
+	admin.Post("/checkins/day/:date/manual", s.AdminSetDayManual)
 	admin.Get("/checkin/:ulid/ticket.pdf", s.HandleTicketPDF)
 	// Single check-in record ops keyed by ULID. They live two segments deep
 	// (mirroring Delete) so the one-segment `/checkin/:uuid` page route above
@@ -113,6 +114,7 @@ func (s *Server) registerRoutes() {
 
 	// Printing (reprint a recorded ticket, or print a custom job).
 	admin.Get("/languages", s.HandleLanguages)
+	admin.Get("/limits", s.HandleLimits)
 	admin.Get("/ticket/strings", s.HandleTicketStrings)
 	admin.Post("/print", s.HandlePrint)
 

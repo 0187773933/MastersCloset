@@ -103,6 +103,23 @@ func centered(pdf *gofpdf.Fpdf, text, fontName string, size, min, maxW, y float6
 	pdf.Text(x, y, text)
 }
 
+// guestsLineFmt is the family ticket's guest-count format for n guests, picking
+// singular vs plural and falling back to English for the languages that have no
+// translated line yet.
+func guestsLineFmt(t TicketStrings, n int) string {
+	en := translations["en"]
+	if n == 1 {
+		if t.GuestsLineSingular != "" {
+			return t.GuestsLineSingular
+		}
+		return en.GuestsLineSingular
+	}
+	if t.GuestsLinePlural != "" {
+		return t.GuestsLinePlural
+	}
+	return en.GuestsLinePlural
+}
+
 func pluralText(n int, singular, plural string) string {
 	if n == 1 {
 		return fmt.Sprintf("( %d ) %s", n, singular)
@@ -175,13 +192,27 @@ func Render(cfg config.PrinterConfig, job Job) ([]byte, error) {
 	centerMaxW := width - 0.5
 	rightEdge := width - 0.25
 
-	// Guest tickets carry an extra "Guest ( N )" line under the logo, which on its
-	// own would crowd the logo. Nudge the whole upper block (guest line, family
-	// size, total, per-person) down a touch; the family name and barcode keep
-	// their fixed positions near the bottom. Normal tickets are unaffected.
-	guestShift := 0.0
+	// Two extra lines can appear, and each needs vertical room without pushing the
+	// family name / barcode off their fixed positions near the bottom:
+	//
+	//   topShift   — a guest's own ticket gets a "Guest ( N )" line under the logo,
+	//                which on its own would crowd it, so the whole upper block
+	//                (guest line, family size, total, per-person) slides down.
+	//   blockShift — a FAMILY ticket carrying guests gets a "Guests ( N )" count
+	//                line under the total, so only the per-person block below it
+	//                needs to move.
+	//
+	// A normal ticket with no guests is unaffected by both.
+	topShift := 0.0
 	if job.GuestNumber > 0 {
-		guestShift = 0.4
+		topShift = 0.4
+	}
+	// Guests are counted on the family ticket only; a guest's own ticket is titled
+	// with its number instead and must not also report the whole party.
+	showGuestCount := job.GuestNumber == 0 && job.Guests > 0
+	blockShift := topShift
+	if showGuestCount {
+		blockShift += 0.3
 	}
 
 	// Guest header: on a guest's own ticket, call it out above the family size.
@@ -191,15 +222,20 @@ func Render(cfg config.PrinterConfig, job Job) ([]byte, error) {
 		if guestFmt == "" {
 			guestFmt = "Guest ( %d )"
 		}
-		centered(pdf, fmt.Sprintf(guestFmt, job.GuestNumber), fontName, 18, 11, centerMaxW, 1.45+guestShift)
+		centered(pdf, fmt.Sprintf(guestFmt, job.GuestNumber), fontName, 18, 11, centerMaxW, 1.45+topShift)
 	}
 
 	// Family size + total.
-	centered(pdf, fmt.Sprintf(t.FamilySize, job.FamilySize), fontName, 20, 12, centerMaxW, 1.8+guestShift)
-	centered(pdf, fmt.Sprintf(t.TotalItems, job.TotalClothingItems), fontName, 16, 9, centerMaxW, 2.1+guestShift)
+	centered(pdf, fmt.Sprintf(t.FamilySize, job.FamilySize), fontName, 20, 12, centerMaxW, 1.8+topShift)
+	centered(pdf, fmt.Sprintf(t.TotalItems, job.TotalClothingItems), fontName, 16, 9, centerMaxW, 2.1+topShift)
+
+	// Guest count, between the total and the per-person block.
+	if showGuestCount {
+		centered(pdf, fmt.Sprintf(guestsLineFmt(t, job.Guests), job.Guests), fontName, 16, 9, centerMaxW, 2.4)
+	}
 
 	// Per-person limits.
-	yStart, yStep := 2.5+guestShift, 0.3
+	yStart, yStep := 2.5+blockShift, 0.3
 	offset := 0.19
 	indent := offset + 0.25
 	indent2 := offset + 0.50
@@ -297,10 +333,16 @@ func send(cfg config.PrinterConfig, pdfPath string) (bool, error) {
 		}
 		return true, nil
 	case "windows":
-		// SumatraPDF.exe must sit beside the binary or be on PATH (as in v1).
-		cmd := exec.Command("SumatraPDF.exe", "-print-to", cfg.PrinterName, pdfPath)
-		if err := cmd.Run(); err != nil {
-			return false, fmt.Errorf("SumatraPDF failed: %v", err)
+		// Always hand exec.Command an ABSOLUTE path: a bare name would go through
+		// exec.LookPath, which since Go 1.19 refuses a hit in the working directory
+		// (exec.ErrDot) — the exact regression from v1. See sumatra.go.
+		exePath, tried := findSumatra(cfg.SumatraPath)
+		if exePath == "" {
+			return false, sumatraNotFound(tried)
+		}
+		cmd := exec.Command(exePath, "-print-to", cfg.PrinterName, pdfPath)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return false, fmt.Errorf("%s failed: %v: %s", exePath, err, bytes.TrimSpace(out))
 		}
 		return true, nil
 	default:

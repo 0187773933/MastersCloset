@@ -45,6 +45,11 @@ type TicketStrings struct {
 	SeasonalSingular  string `json:"seasonal_singular"`
 	SeasonalPlural    string `json:"seasonal_plural"`
 	Guest             string `json:"guest"` // "...( %d )"; printed only on a guest's own ticket
+	// The guest COUNT line on a family ticket — distinct from Guest above, which
+	// titles a single guest's own ticket. Pluralized like the shoe/accessory lines,
+	// so one guest reads "Guest ( 1 )". Empty entries fall back to English.
+	GuestsLineSingular string `json:"guests_line_singular"` // "...( %d )"
+	GuestsLinePlural   string `json:"guests_line_plural"`   // "...( %d )"
 }
 
 var translations = map[string]TicketStrings{
@@ -54,7 +59,7 @@ var translations = map[string]TicketStrings{
 		ShoeSingular: "Pair of Shoes", ShoePlural: "Pairs of Shoes",
 		AccessorySingular: "Accessory", AccessoryPlural: "Accessories",
 		SeasonalSingular: "Seasonal Item", SeasonalPlural: "Seasonal Items",
-		Guest: "Guest ( %d )",
+		Guest: "Guest ( %d )", GuestsLineSingular: "Guest ( %d )", GuestsLinePlural: "Guests ( %d )",
 	},
 	"es": {
 		FamilySize: "Tamaño Familiar ( %d )", TotalItems: "Total Vestir Para La Familia ( %d )",
@@ -62,7 +67,7 @@ var translations = map[string]TicketStrings{
 		ShoeSingular: "Par de Zapatos", ShoePlural: "Pares de Zapatos",
 		AccessorySingular: "Accesorio", AccessoryPlural: "Accesorios",
 		SeasonalSingular: "Artículo de Temporada", SeasonalPlural: "Artículos de Temporada",
-		Guest: "Invitado ( %d )",
+		Guest: "Invitado ( %d )", GuestsLineSingular: "Invitado ( %d )", GuestsLinePlural: "Invitados ( %d )",
 	},
 	"fr": {
 		FamilySize: "Taille de la Famille ( %d )", TotalItems: "Total de Vêtements pour la Famille ( %d )",
@@ -221,28 +226,30 @@ type Language struct {
 }
 
 // langOrder fixes the display order of the language pickers. Add a code here and
-// a translations entry above to support another language.
+// a translations entry above to support another language. Names read "English
+// (Native)" so an English-speaking volunteer can scan the list while the guest
+// still recognizes their own language; English needs no parenthetical.
 var langOrder = []Language{
 	{"en", "English"},
-	{"es", "Español"},
-	{"fr", "Français"},
-	{"de", "Deutsch"},
-	{"pt", "Português"},
-	{"it", "Italiano"},
-	{"nl", "Nederlands"},
-	{"pl", "Polski"},
-	{"ro", "Română"},
-	{"tr", "Türkçe"},
-	{"sw", "Kiswahili"},
-	{"ht", "Kreyòl Ayisyen"},
-	{"ru", "Русский"},
-	{"uk", "Українська"},
-	{"el", "Ελληνικά"},
-	{"vi", "Tiếng Việt"},
-	{"ar", "العربية"},
-	{"fa", "فارسی"},
-	{"ur", "اردو"},
-	{"hi", "हिन्दी"},
+	{"es", "Spanish (Español)"},
+	{"fr", "French (Français)"},
+	{"de", "German (Deutsch)"},
+	{"pt", "Portuguese (Português)"},
+	{"it", "Italian (Italiano)"},
+	{"nl", "Dutch (Nederlands)"},
+	{"pl", "Polish (Polski)"},
+	{"ro", "Romanian (Română)"},
+	{"tr", "Turkish (Türkçe)"},
+	{"sw", "Swahili (Kiswahili)"},
+	{"ht", "Haitian Creole (Kreyòl Ayisyen)"},
+	{"ru", "Russian (Русский)"},
+	{"uk", "Ukrainian (Українська)"},
+	{"el", "Greek (Ελληνικά)"},
+	{"vi", "Vietnamese (Tiếng Việt)"},
+	{"ar", "Arabic (العربية)"},
+	{"fa", "Persian (فارسی)"},
+	{"ur", "Urdu (اردو)"},
+	{"hi", "Hindi (हिन्दी)"},
 }
 
 // Languages lists the supported ticket languages for the admin UI, in a stable

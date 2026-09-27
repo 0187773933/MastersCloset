@@ -9,6 +9,7 @@
   .day-link { text-decoration: none; color: inherit; }
   .pill { background: var(--line); color: var(--muted); border-radius: 20px; padding: 3px 11px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
   .pill.b { background: #f3e8ef; color: var(--brand); }
+  .pill.m { background: var(--warn-bg); color: var(--warn); }
   .date { font-size: 1.05rem; font-weight: 700; }
   .totals { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 6px; }
   .stat { flex: 1 1 120px; background: #f3e8ef; border-radius: 12px; padding: 14px 16px; text-align: center; }
@@ -53,6 +54,10 @@ async function load() {
   render();
 }
 
+// People actually served that day: app check-ins plus the manual tally entered
+// on the day page for hand-written tickets.
+function served(d) { return (d.shopped_for || 0) + (d.manual_shopped_for || 0); }
+
 function stat(n, label) {
   return '<div class="stat"><div class="num">' + n.toLocaleString() + '</div><div class="lbl">' + label + '</div></div>';
 }
@@ -62,10 +67,10 @@ function render() {
   let days = DAYS.slice();              // backend gives newest-first
   if (order === 'asc') days.reverse();
   else if (order === 'busy') days.sort((a, b) => b.count - a.count);
-  else if (order === 'shopped') days.sort((a, b) => b.shopped_for - a.shopped_for);
+  else if (order === 'shopped') days.sort((a, b) => served(b) - served(a));
 
   const tc = DAYS.reduce((s, d) => s + d.count, 0);
-  const ts = DAYS.reduce((s, d) => s + d.shopped_for, 0);
+  const ts = DAYS.reduce((s, d) => s + served(d), 0);
   document.getElementById('banner').innerHTML =
     stat(DAYS.length, 'Collection Days') + stat(tc, 'Total Check-Ins') + stat(ts, 'People Shopped For');
 
@@ -81,7 +86,8 @@ function render() {
     a.innerHTML = '<span class="date">' + esc(d.date) + '</span>' +
       '<span class="row" style="gap:6px">' +
         '<span class="pill">' + d.count + ' check-ins</span>' +
-        '<span class="pill b">' + d.shopped_for + ' shopped for</span>' +
+        '<span class="pill b">' + served(d) + ' shopped for</span>' +
+        (d.manual_shopped_for ? '<span class="pill m">🖊 ' + d.manual_shopped_for + ' manual</span>' : '') +
       '</span>';
     el.appendChild(a);
   });

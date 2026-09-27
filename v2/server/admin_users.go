@@ -65,7 +65,9 @@ func (s *Server) AdminUserCreate(c *fiber.Ctx) error {
 	if in.FamilySize < 1 {
 		in.FamilySize = 1
 	}
-	user.ApplyBalance(&in, s.Cfg.Snapshot().Balance, in.FamilySize)
+	snap := s.Cfg.Snapshot()
+	user.ClampFamily(&in, snap.MaxFamilySize, 0) // new record: nothing to preserve
+	user.ApplyBalance(&in, snap.Balance, in.FamilySize)
 	if err := s.Users.Save(&in, user.SaveOptions{Remote: true}); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

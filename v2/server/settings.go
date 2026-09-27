@@ -21,6 +21,15 @@ func (s *Server) HandleSettingsGet(c *fiber.Ctx) error {
 	})
 }
 
+// HandleLimits exposes the handful of config values the user editors need to
+// enforce client-side. Kept separate from the settings API, which is the whole
+// (secret-bearing) config.
+func (s *Server) HandleLimits(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{"result": fiber.Map{
+		"max_family_size": s.Cfg.Snapshot().MaxFamilySize,
+	}})
+}
+
 // HandleSettingsPost applies edited config: it validates, persists to BoltDB,
 // and swaps the live snapshot. Safe fields take effect immediately; any
 // restart-required fields that changed are reported back to the panel.

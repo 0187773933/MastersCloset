@@ -53,6 +53,9 @@ func (m *Manager) LoadOrSeed(seed Config) (seeded bool, err error) {
 	if seed.AutoVerifyZipcode == "" {
 		seed.AutoVerifyZipcode = "45424" // default; editable in the settings panel
 	}
+	if seed.MaxFamilySize == 0 {
+		seed.MaxFamilySize = 6 // account holder + 5; 0 means no limit
+	}
 	err = m.db.Update(func(tx *bolt.Tx) error {
 		b, e := tx.CreateBucketIfNotExists([]byte(bucketName))
 		if e != nil {
@@ -78,6 +81,9 @@ func (m *Manager) LoadOrSeed(seed Config) (seeded bool, err error) {
 		}
 		if loaded.AutoVerifyZipcode == "" {
 			loaded.AutoVerifyZipcode = seed.AutoVerifyZipcode // backfill for older dbs
+		}
+		if loaded.MaxFamilySize == 0 {
+			loaded.MaxFamilySize = seed.MaxFamilySize // backfill for older dbs
 		}
 		m.cfg = loaded
 		return nil
@@ -162,6 +168,9 @@ func validate(c Config) error {
 	}
 	if c.LevenshteinDistanceThreshold < 0 {
 		return fmt.Errorf("levenshtein_distance_threshold cannot be negative")
+	}
+	if c.MaxFamilySize < 0 {
+		return fmt.Errorf("max_family_size cannot be negative (use 0 for no limit)")
 	}
 	if c.TimeZone != "" {
 		if _, err := time.LoadLocation(c.TimeZone); err != nil {

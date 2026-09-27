@@ -2,8 +2,10 @@ package user
 
 import (
 	json "encoding/json"
+	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	bolt "github.com/boltdb/bolt"
@@ -185,11 +187,89 @@ func (s *Store) DeleteCheckIn(userUUID, checkInULID string) bool {
 }
 
 // DayCheckIns is one collection day with its check-ins (sorted by time).
+// ManualShoppedFor covers people served on hand-written tickets that never went
+// through the app; it is kept separate from ShoppedFor so the recorded and the
+// entered figures stay distinguishable, and summed for display.
 type DayCheckIns struct {
-	Date       string    `json:"date"`
-	Count      int       `json:"count"`
-	ShoppedFor int       `json:"shopped_for"`
-	CheckIns   []CheckIn `json:"check_ins"`
+	Date             string    `json:"date"`
+	Count            int       `json:"count"`
+	ShoppedFor       int       `json:"shopped_for"`
+	ManualShoppedFor int       `json:"manual_shopped_for"`
+	CheckIns         []CheckIn `json:"check_ins"`
+}
+
+// DayManual is the per-day hand-written-ticket tally. Unlike every other record
+// in the db it belongs to a DATE, not a user, so it lives in its own bucket.
+type DayManual struct {
+	Date       string `json:"date"`
+	ShoppedFor int    `json:"shopped_for"`
+	Note       string `json:"note"`
+	Modified   string `json:"modified"`
+}
+
+// ValidDayKey reports whether d is a real stored day key ("27JUN2026"). The date
+// arrives as a URL param and becomes a bucket key, so it is checked before write.
+func ValidDayKey(d string) bool {
+	if d == "" || d != strings.ToUpper(d) {
+		return false
+	}
+	_, err := time.Parse("02Jan2006", d)
+	return err == nil
+}
+
+// SetDayManual records (or clears, when n <= 0 and note is empty) the manual
+// tally for one collection day.
+func (s *Store) SetDayManual(date string, n int, note string) error {
+	if !ValidDayKey(date) {
+		return fmt.Errorf("invalid date %q", date)
+	}
+	if n < 0 {
+		n = 0
+	}
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucketDayManual))
+		if n == 0 && note == "" {
+			return b.Delete([]byte(date))
+		}
+		now := s.now()
+		data, err := json.Marshal(DayManual{
+			Date: date, ShoppedFor: n, Note: note,
+			Modified: dateString(now) + " " + timeString(now),
+		})
+		if err != nil {
+			return err
+		}
+		return b.Put([]byte(date), data)
+	})
+}
+
+// GetDayManual returns one day's manual record.
+func (s *Store) GetDayManual(date string) DayManual {
+	var out DayManual
+	s.db.View(func(tx *bolt.Tx) error {
+		raw := tx.Bucket([]byte(bucketDayManual)).Get([]byte(date))
+		if raw != nil {
+			json.Unmarshal(raw, &out)
+		}
+		return nil
+	})
+	out.Date = date
+	return out
+}
+
+// AllDayManual returns every day's manual tally, keyed by date.
+func (s *Store) AllDayManual() map[string]int {
+	out := map[string]int{}
+	s.db.View(func(tx *bolt.Tx) error {
+		return tx.Bucket([]byte(bucketDayManual)).ForEach(func(k, v []byte) error {
+			var m DayManual
+			if json.Unmarshal(v, &m) == nil && m.ShoppedFor > 0 {
+				out[string(k)] = m.ShoppedFor
+			}
+			return nil
+		})
+	})
+	return out
 }
 
 // parseDayKey parses a stored "27JUN2026" date for chronological sorting.
@@ -212,9 +292,17 @@ func (s *Store) CheckInsByDay() []DayCheckIns {
 			byDate[ci.Date] = append(byDate[ci.Date], ci)
 		}
 	})
-	dates := make([]string, 0, len(byDate))
+	// Days come from the user records, so a day served entirely on paper would not
+	// exist at all — union in the manual dates so it still shows up.
+	manual := s.AllDayManual()
+	dates := make([]string, 0, len(byDate)+len(manual))
 	for d := range byDate {
 		dates = append(dates, d)
+	}
+	for d := range manual {
+		if _, ok := byDate[d]; !ok {
+			dates = append(dates, d)
+		}
 	}
 	sort.Slice(dates, func(i, j int) bool { return parseDayKey(dates[i]).After(parseDayKey(dates[j])) })
 
@@ -226,7 +314,10 @@ func (s *Store) CheckInsByDay() []DayCheckIns {
 		for _, ci := range cis {
 			shopped += ci.Shopping.ShoppingFor // normalized: people on the ticket
 		}
-		out = append(out, DayCheckIns{Date: d, Count: len(cis), ShoppedFor: shopped, CheckIns: cis})
+		out = append(out, DayCheckIns{
+			Date: d, Count: len(cis), ShoppedFor: shopped,
+			ManualShoppedFor: manual[d], CheckIns: cis,
+		})
 	}
 	return out
 }
@@ -299,6 +390,14 @@ func (s *Store) Update(raw []byte) (User, error) {
 	if err := json.Unmarshal(raw, &u); err != nil {
 		return u, err
 	}
+	// The posted record is whatever the browser sent, so the family cap is applied
+	// here rather than trusted from the client. The existing size is the floor: an
+	// already-oversized account can still be edited and saved.
+	existing := 0
+	if prev, ok := s.Get(u.UUID); ok {
+		existing = prev.FamilySize
+	}
+	ClampFamily(&u, s.cfg.Snapshot().MaxFamilySize, existing)
 	if err := s.Save(&u, SaveOptions{Remote: true}); err != nil {
 		return u, err
 	}

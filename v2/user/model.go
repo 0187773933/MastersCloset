@@ -225,6 +225,28 @@ func FormatUsername(u *User) {
 
 // FamilySize returns members + the account holder, keeping the cached field in
 // sync. Returns the computed size and whether it changed.
+// ClampFamily caps a user's family at max (0 = no limit), but never below what
+// the record already had. Growth past the cap is refused; an account that is
+// already larger — created before the setting existed, or before it was lowered —
+// keeps every member it has. Family size multiplies every allowance (ApplyBalance,
+// CheckInShopping), which is why this is enforced on the server and not just in
+// the editors.
+func ClampFamily(u *User, max, existingSize int) {
+	if max <= 0 {
+		return
+	}
+	allowed := max
+	if existingSize > allowed {
+		allowed = existingSize
+	}
+	if len(u.FamilyMembers) > allowed-1 {
+		u.FamilyMembers = u.FamilyMembers[:allowed-1]
+	}
+	if u.FamilySize > allowed {
+		u.FamilySize = allowed
+	}
+}
+
 func (u *User) computeFamilySize() (size int, changed bool) {
 	size = len(u.FamilyMembers) + 1
 	if u.FamilySize != size {

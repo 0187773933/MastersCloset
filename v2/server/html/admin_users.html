@@ -36,6 +36,7 @@ const listEl = document.getElementById('list');
 const editorEl = document.getElementById('editor');
 let current = null;     // full loaded user
 let LANGS = [{ code: 'en', name: 'English' }];
+let MAXFAM = 0;   // largest family incl. the account holder; 0 = no limit
 
 // True when we arrived from the check-in page (its Edit button). Save and Cancel
 // then return there with the same user pulled up, instead of just closing.
@@ -112,6 +113,7 @@ function renderEditor(u) {
     '<div class="field"><span class="field-head">Family members</span>' +
       '<div id="fmList"></div>' +
       '<button class="btn ghost small" id="addFmBtn" type="button" style="align-self:flex-start">＋ Add family member</button>' +
+      '<span id="fmNote" class="muted small"></span>' +
     '</div>' +
     '<div class="field"><span class="field-head">Barcodes</span>' +
       '<div id="bcList"></div>' +
@@ -172,13 +174,31 @@ function syncFamilySize() {
   const fs = editorEl.querySelector('input[data-key="family_size"]');
   if (!fs) return;
   const rows = document.querySelectorAll('#fmList .fm-row');
+  syncFamilyCap(rows.length);
   if (rows.length === 0) return;
   let n = 0;
   rows.forEach(r => { if ((r.querySelector('.fm-age').value || '').trim() !== '') n++; });
   fs.value = n + 1;
 }
 
+// Stop the row count growing past the Max Family Size setting. An account that is
+// already over it keeps every member (the server clamps growth, never what is
+// stored) — the button is simply already disabled.
+function syncFamilyCap(rowCount) {
+  const btn = document.getElementById('addFmBtn');
+  const note = document.getElementById('fmNote');
+  if (!btn) return;
+  if (MAXFAM <= 0) { btn.disabled = false; btn.style.opacity = ''; if (note) note.textContent = ''; return; }
+  const full = rowCount >= MAXFAM - 1;
+  btn.disabled = full;
+  btn.style.opacity = full ? '.45' : '';
+  if (note) note.textContent = full ? 'Max family size is ' + MAXFAM + ' (including this account) — set in Settings.' : '';
+}
+
 function addFamilyMemberRow(member) {
+  // Guard the button path only: `member` is passed when rehydrating a stored
+  // record, and those must always render in full even if they exceed the cap.
+  if (!member && MAXFAM > 0 && document.querySelectorAll('#fmList .fm-row').length >= MAXFAM - 1) return;
   member = member || {};
   const wrap = document.createElement('div');
   wrap.className = 'fm-row';
@@ -300,7 +320,10 @@ document.getElementById('q').addEventListener('input', liveSearch);
 document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
 
 // Load supported languages, then honor a /<uuid> deep-link (Edit from check-in).
-fetch('/admin/languages').then(r => r.json()).then(d => { if (d.result && d.result.length) LANGS = d.result; })
+Promise.all([
+  fetch('/admin/languages').then(r => r.json()).then(d => { if (d.result && d.result.length) LANGS = d.result; }),
+  fetch('/admin/limits').then(r => r.json()).then(d => { MAXFAM = parseInt((d.result || {}).max_family_size || 0, 10) || 0; })
+].map(p => p.catch(() => {})))
   .finally(() => {
     const presel = (location.pathname.match(/\/admin\/users\/([^\/?#]+)/) || [])[1] || '';
     if (presel) loadUser(presel);

@@ -43,6 +43,10 @@ type checkinRequest struct {
 	Men    int `json:"men"`
 	Women  int `json:"women"`
 	Guests int `json:"guests"`
+	// PrintGuestTickets opts in to one extra label per guest. Off by default: the
+	// guest count already prints on the family ticket, which is all most visits
+	// need, and the per-guest batch has an open mis-feed bug.
+	PrintGuestTickets bool `json:"print_guest_tickets"`
 }
 
 // AdminCheckInShopping records the visit and prints the (edited) ticket exactly
@@ -111,6 +115,7 @@ func (s *Server) AdminCheckInShopping(c *fiber.Ctx) error {
 			FamilyName:         name,
 			BarcodeNumber:      barcode,
 			Language:           lang,
+			Guests:             req.Guests, // printed as a count on the family ticket
 		}
 		// Skip the family ticket entirely when nobody in the family is shopping
 		// (n == 0); the guests below still print on their own.
@@ -122,23 +127,27 @@ func (s *Server) AdminCheckInShopping(c *fiber.Ctx) error {
 			}
 		}
 
-		// Each guest gets its own full ticket — a 1-person allowance titled
-		// "Guest ( N )" carrying the same barcode, so it scans to this user.
-		for g := 1; g <= req.Guests; g++ {
-			guestJob := job
-			guestJob.GuestNumber = g
-			guestJob.FamilySize = 1
-			guestJob.TotalClothingItems = clothing
-			gPrinted, gErr := printer.Print(s.Cfg.Snapshot().Printer, guestJob)
-			if gErr != nil {
-				if printErr == "" {
-					printErr = gErr.Error()
+		// Opt-in: each guest also gets its own full ticket — a 1-person allowance
+		// titled "Guest ( N )" carrying the same barcode, so it scans to this user.
+		// Left off, the guests still show as a count on the family ticket above.
+		if req.PrintGuestTickets {
+			for g := 1; g <= req.Guests; g++ {
+				guestJob := job
+				guestJob.GuestNumber = g
+				guestJob.FamilySize = 1
+				guestJob.TotalClothingItems = clothing
+				guestJob.Guests = 0 // this ticket is one guest, not the whole party
+				gPrinted, gErr := printer.Print(s.Cfg.Snapshot().Printer, guestJob)
+				if gErr != nil {
+					if printErr == "" {
+						printErr = gErr.Error()
+					}
+					logger.GetLogger().Info("guest ticket print failed: " + gErr.Error())
+					continue
 				}
-				logger.GetLogger().Info("guest ticket print failed: " + gErr.Error())
-				continue
-			}
-			if gPrinted {
-				guestsPrinted++
+				if gPrinted {
+					guestsPrinted++
+				}
 			}
 		}
 	}
@@ -150,10 +159,35 @@ func (s *Server) AdminCheckInTotals(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"result": s.Users.CheckInTotals()})
 }
 
-// AdminCheckInsByDate lists every check-in on a given (uppercase) date.
+// AdminCheckInsByDate lists every check-in on a given (uppercase) date, plus the
+// day's manual tally so the page can show a true total.
 func (s *Server) AdminCheckInsByDate(c *fiber.Ctx) error {
 	date := c.Params("date")
-	return c.JSON(fiber.Map{"date": date, "result": s.Users.CheckInsByDate(date)})
+	return c.JSON(fiber.Map{
+		"date":   date,
+		"result": s.Users.CheckInsByDate(date),
+		"manual": s.Users.GetDayManual(date),
+	})
+}
+
+// manualRequest is the hand-written-ticket tally for one collection day.
+type manualRequest struct {
+	ShoppedFor int    `json:"shopped_for"`
+	Note       string `json:"note"`
+}
+
+// AdminSetDayManual records how many people were served on manual tickets that
+// never went through the app, so the day's totals reflect reality.
+func (s *Server) AdminSetDayManual(c *fiber.Ctx) error {
+	var req manualRequest
+	if err := json.Unmarshal(c.Body(), &req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid body"})
+	}
+	date := c.Params("date")
+	if err := s.Users.SetDayManual(date, req.ShoppedFor, req.Note); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{"result": true, "manual": s.Users.GetDayManual(date)})
 }
 
 // AdminGetCheckIn returns one check-in by ULID.
