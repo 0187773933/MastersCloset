@@ -20,6 +20,51 @@
     <a class="btn ghost" href="/admin/user/new">➕ New User</a>
     <a class="btn ghost" href="/admin/settings">⚙ Settings</a>
   </nav>
+  <div class="section row between" id="sync" hidden>
+    <span class="small" id="sync-text">Remote sync …</span>
+    <button class="btn ghost small" id="sync-now" type="button">⟳ Sync Now</button>
+  </div>
 </main>
+<script>
+(function () {
+  var box = document.getElementById("sync");
+  var text = document.getElementById("sync-text");
+  var btn = document.getElementById("sync-now");
+  function ago(iso) {
+    var t = Date.parse(iso);
+    if (!t || t < 0) return "never";
+    var s = Math.round((Date.now() - t) / 1000);
+    if (s < 60) return s + "s ago";
+    if (s < 3600) return Math.round(s / 60) + " min ago";
+    return new Date(t).toLocaleString();
+  }
+  function show(st) {
+    box.hidden = false;
+    if (!st.enabled) {
+      text.textContent = "Remote sync is off (set Remote Host URL in Settings). " + st.pending + " changes waiting.";
+      btn.hidden = true;
+      return;
+    }
+    btn.hidden = false;
+    var msg = "Remote sync: last OK " + ago(st.last_success) + " · " + st.pending + " waiting to push";
+    if (st.last_error) msg += " · ⚠ " + st.last_error;
+    text.textContent = msg;
+    text.style.color = st.last_error ? "var(--err)" : "";
+  }
+  function refresh() {
+    fetch("/admin/sync/status", { credentials: "same-origin" })
+      .then(function (r) { return r.json(); }).then(show).catch(function () {});
+  }
+  btn.addEventListener("click", function () {
+    btn.disabled = true;
+    text.textContent = "Syncing …";
+    fetch("/admin/sync/now", { method: "POST", credentials: "same-origin" })
+      .then(function (r) { return r.json(); }).then(show).catch(function () {})
+      .then(function () { btn.disabled = false; });
+  });
+  refresh();
+  setInterval(refresh, 10000);
+})();
+</script>
 </body>
 </html>

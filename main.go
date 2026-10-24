@@ -14,11 +14,15 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	// Embed the IANA tz database. Windows ships none, so without this
+	// time.LoadLocation("America/New_York") fails there.
+	_ "time/tzdata"
 
 	"github.com/0187773933/MastersCloset/v2/config"
 	"github.com/0187773933/MastersCloset/v2/fingerprint"
 	"github.com/0187773933/MastersCloset/v2/logger"
 	"github.com/0187773933/MastersCloset/v2/paths"
+	"github.com/0187773933/MastersCloset/v2/remotesync"
 	"github.com/0187773933/MastersCloset/v2/server"
 	"github.com/0187773933/MastersCloset/v2/user"
 	bleve "github.com/blevesearch/bleve/v2"
@@ -92,27 +96,34 @@ func main() {
 		index = nil
 	}
 
-	// 6. Wire the store and server.
+	// 6. Wire the store, remote db sync, and server.
 	store := user.NewStore(db, cfg, index)
-	srv := server.New(cfg, db, index, store)
+	syncer := remotesync.New(db, cfg, store, fp)
+	srv := server.New(cfg, db, index, store, syncer)
 
 	// 7. Graceful shutdown.
 	ctx, cancel := context.WithCancel(context.Background())
+	if snap.RemoteHostURL != "" {
+		log.Info(fmt.Sprintf("remote sync: %s (%d local changes waiting to push)", snap.RemoteHostURL, store.PendingCount()))
+	} else {
+		log.Info("remote sync: off (no remote_host_url set)")
+	}
+	syncer.Start(ctx)
 	go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 		<-c
 		fmt.Println("\r- shutting down")
+		cancel()
+		syncer.Wait()
 		srv.Shutdown()
 		if index != nil {
 			index.Close()
 		}
 		db.Close()
 		logger.Close()
-		cancel()
 		os.Exit(0)
 	}()
-	_ = ctx
 
 	log.Info("Hola , Christ Lives")
 	if err := srv.Start(); err != nil {

@@ -163,7 +163,7 @@ func Fields() []FieldMeta {
 		{Path: "open_ai_api_key", Label: "OpenAI API Key", Section: "Integrations", Kind: "string", Secret: true},
 		{Path: "ip_info_token", Label: "IPInfo Token", Section: "Integrations", Kind: "string", Secret: true},
 
-		// Remote sync (deferred functionally, but configurable).
+		// Remote sync (v2/remotesync). Empty URL or key turns it off.
 		{Path: "remote_host_url", Label: "Remote Host URL", Section: "Remote Sync", Kind: "string"},
 		{Path: "remote_host_api_key", Label: "Remote Host API Key", Section: "Remote Sync", Kind: "string", Secret: true},
 		{Path: "remote_host_header_prefix", Label: "Remote Header Prefix", Section: "Remote Sync", Kind: "string"},

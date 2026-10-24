@@ -79,6 +79,7 @@ path to override and pin a specific file.
 | `GET /admin/checkins` (totals) · `/checkins/date/:date` · `GET/POST /admin/checkin/:ulid` · `DELETE /admin/checkin/:uuid/:ulid` | check-in history |
 | `GET /admin/checkin/:ulid/ticket.pdf` | render/reprint a check-in's ticket |
 | `POST /admin/print` | print a custom job |
+| `GET /admin/sync/status` · `POST /admin/sync/now` | remote db sync state / run a round now |
 
 The admin check-in is a **shopping transaction**: it decrements per-category
 balances (refilling from the configured limit when dry), mints a virtual barcode
@@ -99,5 +100,17 @@ sending (useful on dev boxes with no label printer).
 ## Deferred to later passes
 
 **Email/SMS** (single + bulk), user **reports** (main / MailChimp / check-ins),
-the audio→user transcription helper, and **remotesync v2**. v1 remains the
-reference for these; they port onto the v2 `Store` / `Manager`.
+and the audio→user transcription helper. v1 remains the reference for these;
+they port onto the v2 `Store` / `Manager`.
+
+## Remote sync
+
+`v2/remotesync` keeps each machine in step with the shared remote db
+(`remote_host_url`, the MastersClosetRemoteDB server) using v1's wire protocol.
+Every 12s (and on start, and via **Sync Now** on the admin dashboard) it pulls
+changes newer than its cursor (`MISC/remote-last-sequence`, same key as v1),
+then pushes the `remote-upload` pool, which every `Save` with `Remote: true`
+fills. If a pulled user also has an unpushed local edit, the two are merged:
+check-ins and barcodes are unioned, and profile fields come from whichever side
+was edited more recently. The merged record is then pushed back. Deletes are not
+synced (same as v1). `GET /admin/sync/status` shows the state.

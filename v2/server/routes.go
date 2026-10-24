@@ -79,6 +79,10 @@ func (s *Server) registerRoutes() {
 	admin.Get("/settings/api", s.HandleSettingsGet)
 	admin.Post("/settings/api", s.HandleSettingsPost)
 
+	// Remote db sync.
+	admin.Get("/sync/status", s.HandleSyncStatus)
+	admin.Post("/sync/now", s.HandleSyncNow)
+
 	// User management API.
 	admin.Get("/user/all", s.AdminUserList)
 	admin.Get("/user/get/:uuid", s.HandleAdminUserGet)

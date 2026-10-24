@@ -33,9 +33,12 @@ type SearchItem struct {
 // SaveOptions tunes a Save. Remote mirrors the record into the remote-upload
 // pool (v1 had a whole duplicate SaveLocal method just to skip this). Reindex
 // updates the Bleve search index (default on; set SkipReindex to bypass).
+// KeepModified preserves the record's own modified timestamps (used when
+// applying a version pulled from the remote db).
 type SaveOptions struct {
-	Remote      bool
-	SkipReindex bool
+	Remote       bool
+	SkipReindex  bool
+	KeepModified bool
 }
 
 // Store is the persistence boundary for users. It reads config (notably the
@@ -168,6 +171,17 @@ func (s *Store) UsernameExists(username string) (bool, string) {
 // modified timestamps (v1 wrongly overwrote CreatedDate on every save), and
 // updates the search index. This single method replaces v1's Save + SaveLocal.
 func (s *Store) Save(u *User, opts SaveOptions) error {
+	_, err := s.saveIf(u, opts, nil)
+	return err
+}
+
+// errPrecondition aborts a saveIf transaction whose guard rejected the write.
+var errPrecondition = fmt.Errorf("save precondition failed")
+
+// saveIf is Save with an optional guard evaluated inside the write
+// transaction; when it returns false nothing is written and saved is false.
+// Remote sync uses it to avoid clobbering a local edit made mid-merge.
+func (s *Store) saveIf(u *User, opts SaveOptions, guard func(tx *bolt.Tx) bool) (saved bool, err error) {
 	now := s.now()
 	FormatUsername(u)
 
@@ -185,17 +199,22 @@ func (s *Store) Save(u *User, opts SaveOptions) error {
 		u.CreatedDate = dateString(now)
 		u.CreatedTime = timeString(now)
 	}
-	u.ModifiedDate = dateString(now)
-	u.ModifiedTime = timeString(now)
+	if !opts.KeepModified || u.ModifiedDate == "" {
+		u.ModifiedDate = dateString(now)
+		u.ModifiedTime = timeString(now)
+	}
 
 	key := s.encryptionKey()
 	payload, err := json.Marshal(u)
 	if err != nil {
-		return fmt.Errorf("marshal user: %w", err)
+		return false, fmt.Errorf("marshal user: %w", err)
 	}
 	enc := encryption.ChaChaEncryptBytes(key, payload)
 
 	err = s.db.Update(func(tx *bolt.Tx) error {
+		if guard != nil && !guard(tx) {
+			return errPrecondition
+		}
 		users := tx.Bucket([]byte(bucketUsers))
 		usernames := tx.Bucket([]byte(bucketUsernames))
 		barcodes := tx.Bucket([]byte(bucketBarcodes))
@@ -223,20 +242,31 @@ func (s *Store) Save(u *User, opts SaveOptions) error {
 				barcodes.Put([]byte(bc), []byte(u.UUID))
 			}
 		}
+		// Keep the ULID index complete, so check-ins that arrive via remote
+		// sync can be fetched, edited, and reprinted like local ones.
+		ciIndex := tx.Bucket([]byte(bucketCheckInIndex))
+		for _, ci := range u.CheckIns {
+			if ci.ULID != "" {
+				ciIndex.Put([]byte(ci.ULID), []byte(u.UUID))
+			}
+		}
 		users.Put([]byte(u.UUID), enc)
 		if opts.Remote {
 			tx.Bucket([]byte(bucketUpload)).Put([]byte(u.UUID), enc)
 		}
 		return nil
 	})
+	if err == errPrecondition {
+		return false, nil
+	}
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if !opts.SkipReindex && s.index != nil {
 		s.index.Index(u.UUID, SearchItem{UUID: u.UUID, Name: u.SearchString})
 	}
-	return nil
+	return true, nil
 }
 
 // Delete removes a user and every index entry pointing at it. v1's Delete was

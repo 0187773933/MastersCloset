@@ -11,6 +11,7 @@ import (
 
 	"github.com/0187773933/MastersCloset/v2/config"
 	"github.com/0187773933/MastersCloset/v2/logger"
+	"github.com/0187773933/MastersCloset/v2/remotesync"
 	"github.com/0187773933/MastersCloset/v2/user"
 	bleve "github.com/blevesearch/bleve/v2"
 	bolt "github.com/boltdb/bolt"
@@ -26,16 +27,18 @@ type Server struct {
 	DB    *bolt.DB
 	Index bleve.Index
 	Users *user.Store
+	Sync  *remotesync.Syncer
 }
 
 // New builds a configured (but not yet listening) server.
-func New(cfg *config.Manager, db *bolt.DB, index bleve.Index, users *user.Store) *Server {
+func New(cfg *config.Manager, db *bolt.DB, index bleve.Index, users *user.Store, sync *remotesync.Syncer) *Server {
 	s := &Server{
 		App:   fiber.New(fiber.Config{DisableStartupMessage: true}),
 		Cfg:   cfg,
 		DB:    db,
 		Index: index,
 		Users: users,
+		Sync:  sync,
 	}
 
 	snap := cfg.Snapshot()
