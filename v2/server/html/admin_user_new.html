@@ -10,7 +10,7 @@
 <main class="card wide">
   <div class="row between">
     <h1>➕ New User</h1>
-    <span><span id="verifiedSlot"></span> <a class="btn ghost small" href="/admin">← Admin</a></span>
+    <span class="row nowrap" style="gap:14px"><span id="verifiedSlot"></span><a class="btn ghost small" href="/admin">← Admin</a></span>
   </div>
 
   <!-- The form itself is /static/user_form.js, shared with the check-in page's
@@ -35,6 +35,7 @@
 </main>
 
 <script src="/static/verified.js"></script>
+<script src="/static/field_labels.js"></script>
 <script src="/static/user_form.js"></script>
 <script>
 let FORM = null;

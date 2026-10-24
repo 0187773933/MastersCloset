@@ -11,7 +11,7 @@
 //   const form = renderUserForm(container, opts);  // paints into container
 //   const body = form.collect();                   // -> POST /admin/user/new
 //
-// Requires verified.js (renderVerified) to be loaded first.
+// Requires verified.js (renderVerified) and field_labels.js to be loaded first.
 
 let _userFormOptions = null;
 
@@ -41,8 +41,9 @@ function ufEsc(v) {
   return v == null ? '' : String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 }
 
-function ufField(label, name, extra) {
-  return '<label class="field"><span class="field-head">' + label + '</span>' +
+// lk is the field_labels.js key for the label's translation.
+function ufField(label, name, lk, extra) {
+  return '<label class="field"><span class="field-head">' + label + fieldTr(lk) + '</span>' +
     '<input name="' + name + '"' + (extra || '') + '></label>';
 }
 
@@ -60,29 +61,31 @@ function renderUserForm(container, opts) {
     '<option value="' + ufEsc(l.code) + '"' + (l.code === 'en' ? ' selected' : '') + '>' + ufEsc(l.name) + '</option>'
   ).join('');
 
+  // The badge renders in the caller's header when it gives a slot; otherwise in
+  // its own row here, top-right like everywhere else.
   container.innerHTML =
-    '<div class="row between" style="margin-bottom:8px"><span class="uf-verified"></span></div>' +
+    (opts.verifiedSlot ? '' : '<div class="row" style="justify-content:flex-end;margin-bottom:8px"><span class="uf-verified"></span></div>') +
     '<div class="grid">' +
-      ufField('First name', 'first_name', ' required') +
-      ufField('Middle name', 'middle_name') +
-      ufField('Last name', 'last_name', ' required') +
-      ufField('Email', 'email_address', ' type="email"') +
-      ufField('Phone', 'phone_number', ' type="tel"') +
-      ufField('Family size', 'family_size', ' type="number" value="1" min="1"' + (max > 0 ? ' max="' + max + '"' : '')) +
-      ufField('Street #', 'street_number') +
-      ufField('Street name', 'street_name') +
-      ufField('City', 'city') +
-      ufField('State', 'state') +
-      ufField('Zip', 'zipcode') +
-      '<label class="field"><span class="field-head">Ticket language</span>' +
+      ufField('First name', 'first_name', 'first_name', ' required') +
+      ufField('Middle name', 'middle_name', 'middle_name') +
+      ufField('Last name', 'last_name', 'last_name', ' required') +
+      ufField('Email', 'email_address', 'email', ' type="email"') +
+      ufField('Phone', 'phone_number', 'phone', ' type="tel"') +
+      ufField('Family size', 'family_size', 'family_size', ' type="number" value="1" min="1"' + (max > 0 ? ' max="' + max + '"' : '')) +
+      ufField('Street #', 'street_number', 'street_number') +
+      ufField('Street name', 'street_name', 'street_name') +
+      ufField('City', 'city', 'city') +
+      ufField('State', 'state', 'state') +
+      ufField('Zip', 'zipcode', 'zip') +
+      '<label class="field"><span class="field-head">Ticket language' + fieldTr('language') + '</span>' +
         '<select name="language">' + langOpts + '</select></label>' +
     '</div>' +
-    '<div class="field"><span class="field-head">Family members</span>' +
+    '<div class="field"><span class="field-head">Family members' + fieldTr('family_members') + '</span>' +
       '<div class="uf-fm"></div>' +
       '<button class="btn ghost small uf-add-fm" type="button" style="align-self:flex-start">＋ Add family member</button>' +
       '<span class="uf-fm-note muted small"></span>' +
     '</div>' +
-    '<div class="field"><span class="field-head">Barcodes</span>' +
+    '<div class="field"><span class="field-head">Barcodes' + fieldTr('barcodes') + '</span>' +
       '<div class="uf-bc"></div>' +
       '<button class="btn ghost small uf-add-bc" type="button" style="align-self:flex-start">＋ Add barcode</button>' +
     '</div>';
@@ -188,6 +191,11 @@ function renderUserForm(container, opts) {
   }
   addFmBtn.onclick = () => addFamilyMemberRow();
   syncCap(0);
+
+  // Show each label in the chosen ticket language too, e.g. "Last name ( Apellido )".
+  const langSel = container.querySelector('select[name="language"]');
+  langSel.addEventListener('change', () => applyFieldLabels(container, langSel.value));
+  applyFieldLabels(container, langSel.value);
 
   // Locals (zip 45424) auto-verify.
   container.querySelector('input[name="zipcode"]').addEventListener('input', e => {

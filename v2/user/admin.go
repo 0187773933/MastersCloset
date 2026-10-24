@@ -18,6 +18,7 @@ type Summary struct {
 	Username        string `json:"username"`
 	NameString      string `json:"name_string"`
 	LastCheckInDate string `json:"last_check_in_date"`
+	LastCheckInTime string `json:"last_check_in_time,omitempty"`
 	CheckInCount    int    `json:"check_in_count"`
 }
 
@@ -380,6 +381,46 @@ func (s *Store) Summaries() []Summary {
 		}
 		out = append(out, sum)
 	})
+	return out
+}
+
+// RecentCheckIns returns up to n users ordered by their latest successful
+// check-in, newest first — the default list on the Users page. Failed attempts
+// (cooloff rejections) don't count as having checked in.
+func (s *Store) RecentCheckIns(n int) []Summary {
+	type entry struct {
+		sum Summary
+		at  time.Time
+	}
+	var all []entry
+	s.ForEach(func(u User) {
+		var last *CheckIn
+		var lastAt time.Time
+		for i := range u.CheckIns {
+			ci := &u.CheckIns[i]
+			if !ci.Result {
+				continue
+			}
+			if at := checkInAt(*ci); last == nil || !at.Before(lastAt) {
+				last, lastAt = ci, at
+			}
+		}
+		if last == nil {
+			return
+		}
+		all = append(all, entry{Summary{
+			UUID: u.UUID, Username: u.Username, NameString: u.NameString,
+			LastCheckInDate: last.Date, LastCheckInTime: last.Time, CheckInCount: len(u.CheckIns),
+		}, lastAt})
+	})
+	sort.SliceStable(all, func(i, j int) bool { return all[i].at.After(all[j].at) })
+	if n > 0 && len(all) > n {
+		all = all[:n]
+	}
+	out := make([]Summary, len(all))
+	for i, e := range all {
+		out[i] = e.sum
+	}
 	return out
 }
 

@@ -85,6 +85,7 @@ func (s *Server) registerRoutes() {
 
 	// User management API.
 	admin.Get("/user/all", s.AdminUserList)
+	admin.Get("/user/recent", s.AdminUserRecent)
 	admin.Get("/user/get/:uuid", s.HandleAdminUserGet)
 	admin.Get("/user/barcode/:barcode", s.AdminUserByBarcode)
 	admin.Get("/user/search/fuzzy/:query", s.AdminUserSearchFuzzy)

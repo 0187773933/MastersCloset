@@ -100,7 +100,9 @@ form label, .field { display: flex; flex-direction: column; gap: 5px; margin-bot
 .section { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 8px; }
 .grid { display: grid; grid-template-columns: 1fr; gap: 0 16px; }
 
-.field-head { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.field-head { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-weight: 600; }
+.field-tr { font-weight: 400; color: var(--muted); }  /* "( Apellido )" beside a label; see field_labels.js */
+.field-tr:empty { display: none; }
 .badge { font-size: .65rem; text-transform: uppercase; letter-spacing: .05em; background: var(--line); color: var(--muted); padding: 2px 6px; border-radius: 5px; font-weight: 700; }
 .badge.warn { background: var(--warn-bg); color: var(--warn); }
 .reveal { align-self: flex-start; background: none; border: 0; color: var(--brand); cursor: pointer; font-size: .78rem; padding: 4px 0; }

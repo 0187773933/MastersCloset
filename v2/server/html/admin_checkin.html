@@ -51,7 +51,7 @@
   <!-- Walk-ins get created here rather than on /admin/user/new, so the desk never
        navigates away mid-queue. Same form module as that page. -->
   <div id="newUserPanel" class="section" style="display:none">
-    <h2 style="margin-top:0">New User</h2>
+    <div class="row between" style="margin-bottom:8px"><h2 style="margin:0">New User</h2><span id="newUserVerified"></span></div>
     <div id="newUserForm"></div>
     <div class="row">
       <button id="createUserBtn" class="btn" type="button">Create &amp; check in</button>
@@ -115,6 +115,7 @@
 </main>
 
 <script src="/static/verified.js"></script>
+<script src="/static/field_labels.js"></script>
 <script src="/static/user_form.js"></script>
 <script>
 const lookup = document.getElementById('lookup');
@@ -410,6 +411,8 @@ function newUserOpen() {
         // This page already has the language list from /admin/ticket/strings
         // (code + name), so don't make the form fetch it a second time.
         if (LANGS.length) opts = Object.assign({}, opts, { languages: LANGS });
+        // Badge goes top-right beside the "New User" title, as on the Edit page.
+        opts = Object.assign({}, opts, { verifiedSlot: document.getElementById('newUserVerified') });
         NEWFORM = renderUserForm(document.getElementById('newUserForm'), opts);
       });
   build.then(() => { NEWFORM.focus(); newUserPanel.scrollIntoView({ behavior: 'smooth' }); });

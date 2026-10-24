@@ -48,20 +48,40 @@ function debounce(fn, ms) { let t; return function () { clearTimeout(t); const a
 function row(u) {
   const div = document.createElement('div');
   div.className = 'list-row';
+  // Recent rows carry the time too; trim it to HH:MM.
+  const when = u.last_check_in_date
+    ? u.last_check_in_date + (u.last_check_in_time ? ' ' + u.last_check_in_time.slice(0, 5) : '')
+    : 'never';
   div.innerHTML = '<strong>' + esc(u.name_string || u.username || '(no name)') + '</strong>' +
-    '<span class="muted small">' + esc(u.last_check_in_date || 'never') + '</span>';
+    '<span class="muted small">' + esc(when) + '</span>';
   div.onclick = () => loadUser(u.uuid);
   return div;
 }
 
 async function search() {
   const v = document.getElementById('q').value.trim();
+  if (v === '') { loadRecent(); return; }
   if (v.length < 2) { listEl.innerHTML = '<p class="muted small">Type at least 2 letters.</p>'; return; }
   listEl.innerHTML = 'Searching…';
   const data = await (await fetch('/admin/user/search/fuzzy/' + encodeURIComponent(v))).json();
   renderList(data.result || []);
 }
 const liveSearch = debounce(search, 250);
+
+// The default list under an empty search box: who came in most recently.
+async function loadRecent() {
+  let users = [];
+  try { users = (await (await fetch('/admin/user/recent?limit=25')).json()).result || []; } catch (e) {}
+  if (document.getElementById('q').value.trim() !== '') return; // the user started typing meanwhile
+  listEl.innerHTML = '';
+  if (!users.length) return;
+  const head = document.createElement('p');
+  head.className = 'muted small';
+  head.style.margin = '0';
+  head.textContent = 'Recently checked in';
+  listEl.appendChild(head);
+  users.forEach(u => listEl.appendChild(row(u)));
+}
 
 function renderList(users) {
   listEl.innerHTML = '';
@@ -77,8 +97,9 @@ async function loadUser(uuid) {
   editorEl.scrollIntoView({ behavior: 'smooth' });
 }
 
-function field(label, value, key) {
-  return '<label class="field"><span class="field-head">' + label + '</span>' +
+// lk is the field_labels.js key for the label's translation.
+function field(label, value, key, lk) {
+  return '<label class="field"><span class="field-head">' + label + fieldTr(lk) + '</span>' +
     '<input data-key="' + key + '" value="' + esc(value) + '"></label>';
 }
 
@@ -91,31 +112,31 @@ function renderEditor(u) {
   const lang = u.language || (u.spanish ? 'es' : 'en');
   editorEl.innerHTML =
     '<section class="section"><div class="row between"><h2 style="margin:0">Edit — ' + esc(u.name_string || '') + '</h2>' +
-      '<span><span id="verifiedSlot"></span> <button class="btn ghost small" id="cancelBtn">✕ Cancel</button></span></div>' +
+      '<span class="row nowrap" style="gap:14px"><span id="verifiedSlot"></span><button class="btn ghost small" id="cancelBtn">✕ Cancel</button></span></div>' +
     '<div class="grid">' +
-      field('First name', id.first_name, 'identity.first_name') +
-      field('Middle name', id.middle_name, 'identity.middle_name') +
-      field('Last name', id.last_name, 'identity.last_name') +
-      field('Email', u.email_address, 'email_address') +
-      field('Phone', u.phone_number, 'phone_number') +
-      '<label class="field"><span class="field-head">Family size <span class="muted small" style="font-weight:400">(calculated)</span></span>' +
+      field('First name', id.first_name, 'identity.first_name', 'first_name') +
+      field('Middle name', id.middle_name, 'identity.middle_name', 'middle_name') +
+      field('Last name', id.last_name, 'identity.last_name', 'last_name') +
+      field('Email', u.email_address, 'email_address', 'email') +
+      field('Phone', u.phone_number, 'phone_number', 'phone') +
+      '<label class="field"><span class="field-head">Family size' + fieldTr('family_size') + '<span class="muted small" style="font-weight:400">(calculated)</span></span>' +
         '<input data-key="family_size" value="' + esc(u.family_size) + '" readonly tabindex="-1" ' +
         'title="Calculated from the family members below (self + members)" ' +
         'style="background:var(--bg);color:var(--muted);cursor:not-allowed"></label>' +
-      field('Street #', ad.street_number, 'identity.address.street_number') +
-      field('Street name', ad.street_name, 'identity.address.street_name') +
-      field('City', ad.city, 'identity.address.city') +
-      field('State', ad.state, 'identity.address.state') +
-      field('Zip', ad.zipcode, 'identity.address.zipcode') +
-      '<label class="field"><span class="field-head">Ticket language</span>' +
+      field('Street #', ad.street_number, 'identity.address.street_number', 'street_number') +
+      field('Street name', ad.street_name, 'identity.address.street_name', 'street_name') +
+      field('City', ad.city, 'identity.address.city', 'city') +
+      field('State', ad.state, 'identity.address.state', 'state') +
+      field('Zip', ad.zipcode, 'identity.address.zipcode', 'zip') +
+      '<label class="field"><span class="field-head">Ticket language' + fieldTr('language') + '</span>' +
         '<select id="langSel">' + langOptions(lang) + '</select></label>' +
     '</div>' +
-    '<div class="field"><span class="field-head">Family members</span>' +
+    '<div class="field"><span class="field-head">Family members' + fieldTr('family_members') + '</span>' +
       '<div id="fmList"></div>' +
       '<button class="btn ghost small" id="addFmBtn" type="button" style="align-self:flex-start">＋ Add family member</button>' +
       '<span id="fmNote" class="muted small"></span>' +
     '</div>' +
-    '<div class="field"><span class="field-head">Barcodes</span>' +
+    '<div class="field"><span class="field-head">Barcodes' + fieldTr('barcodes') + '</span>' +
       '<div id="bcList"></div>' +
       '<button class="btn ghost small" id="addBcBtn" type="button" style="align-self:flex-start">＋ Add barcode</button>' +
     '</div>' +
@@ -137,6 +158,11 @@ function renderEditor(u) {
   document.getElementById('delBtn').onclick = deleteUser;
   document.getElementById('cancelBtn').onclick = closeEditor;
   document.getElementById('qrBtn').onclick = toggleQR;
+
+  // Show each label in the chosen ticket language too, e.g. "Last name ( Apellido )".
+  const langSel = document.getElementById('langSel');
+  langSel.addEventListener('change', () => applyFieldLabels(editorEl, langSel.value));
+  applyFieldLabels(editorEl, lang);
 
   // Verified toggle (top-right) + zip 45424 auto-verify.
   const vctl = renderVerified(document.getElementById('verifiedSlot'), !!u.verified, v => { current.verified = v; });
@@ -327,9 +353,11 @@ Promise.all([
   .finally(() => {
     const presel = (location.pathname.match(/\/admin\/users\/([^\/?#]+)/) || [])[1] || '';
     if (presel) loadUser(presel);
+    loadRecent();
   });
 </script>
 <script src="/static/verified.js"></script>
+<script src="/static/field_labels.js"></script>
 <script src="/static/qr-code-styling.min.js"></script>
 <script src="/static/qr.js"></script>
 </body>

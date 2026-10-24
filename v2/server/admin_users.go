@@ -20,6 +20,15 @@ func (s *Server) AdminUserList(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"result": s.Users.Summaries()})
 }
 
+// AdminUserRecent returns the most recently checked-in users (?limit=, default 25).
+func (s *Server) AdminUserRecent(c *fiber.Ctx) error {
+	n := c.QueryInt("limit", 25)
+	if n < 1 || n > 200 {
+		n = 25
+	}
+	return c.JSON(fiber.Map{"result": s.Users.RecentCheckIns(n)})
+}
+
 // AdminUserSearchExact resolves a UUID from an exact display name.
 func (s *Server) AdminUserSearchExact(c *fiber.Ctx) error {
 	id := s.Users.SearchExact(c.Params("name"))
