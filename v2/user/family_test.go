@@ -54,3 +54,33 @@ func TestClampFamilyZeroMeansUnlimited(t *testing.T) {
 		t.Errorf("0 must mean no limit, got size=%d members=%d", u.FamilySize, len(u.FamilyMembers))
 	}
 }
+
+// A record whose cached size fell behind its members (legacy data, or a size the
+// editor never recomputed) is what made the check-in screen show a family of one.
+func TestEnsureFamilySizeFloorsAtMembers(t *testing.T) {
+	u := User{FamilySize: 1, FamilyMembers: members(4)}
+	EnsureFamilySize(&u)
+	if u.FamilySize != 5 {
+		t.Errorf("family_size = %d, want 5 (self + 4 members)", u.FamilySize)
+	}
+}
+
+// A real size with nothing itemized predates the family-members editor; the
+// check-in screen shows those people as unknowns, so the size must survive.
+func TestEnsureFamilySizeKeepsLargerStoredSize(t *testing.T) {
+	u := User{FamilySize: 6}
+	EnsureFamilySize(&u)
+	if u.FamilySize != 6 {
+		t.Errorf("family_size = %d, want 6 (no members itemized)", u.FamilySize)
+	}
+}
+
+// Run after the cap, the floor can never push a record past it.
+func TestEnsureFamilySizeStaysWithinCap(t *testing.T) {
+	u := User{FamilySize: 1, FamilyMembers: members(8)}
+	ClampFamily(&u, 6, 0)
+	EnsureFamilySize(&u)
+	if u.FamilySize != 6 || len(u.FamilyMembers) != 5 {
+		t.Errorf("got size=%d members=%d, want size=6 members=5", u.FamilySize, len(u.FamilyMembers))
+	}
+}

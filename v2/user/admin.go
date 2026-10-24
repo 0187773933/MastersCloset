@@ -439,6 +439,8 @@ func (s *Store) Update(raw []byte) (User, error) {
 		existing = prev.FamilySize
 	}
 	ClampFamily(&u, s.cfg.Snapshot().MaxFamilySize, existing)
+	// After the cap, never below the members that survived it.
+	EnsureFamilySize(&u)
 	if err := s.Save(&u, SaveOptions{Remote: true}); err != nil {
 		return u, err
 	}

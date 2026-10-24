@@ -113,13 +113,12 @@ function renderUserForm(container, opts) {
   q('.uf-add-bc').onclick = () => addBarcodeRow('');
 
   // --- family members -------------------------------------------------------
-  // Family size mirrors the account holder + every member row that has an age,
-  // and is capped by the Max Family Size setting.
+  // Family size mirrors the account holder + every member row (a row with only a
+  // sex on file is still a person, and is saved as one), capped by the Max Family
+  // Size setting.
   function syncFamilySize() {
     const rows = fmList.querySelectorAll('.fm-row');
-    let n = 0;
-    rows.forEach(r => { if ((r.querySelector('.fm-age').value || '').trim() !== '') n++; });
-    let size = n + 1;
+    let size = rows.length + 1;
     if (max > 0 && size > max) size = max;
     if (sizeInput) sizeInput.value = size;
     syncCap(rows.length);
@@ -202,13 +201,15 @@ function renderUserForm(container, opts) {
     if (e.target.value.trim() === '45424') { verified = true; vctl.set(true); }
   });
 
-  // Collect member rows, dropping blank ones (v1 filtered age > -1).
+  // Every row on screen is a member, saved as one — a half-filled row (age -1
+  // and/or no sex) is kept rather than dropped, matching the family size shown
+  // above and the edit page. Remove with 🗑.
   function collectFamilyMembers() {
     return Array.from(fmList.querySelectorAll('.fm-row')).map(r => ({
       age: parseInt(r.querySelector('.fm-age').value || '-1', 10),
       sex: r.querySelector('.fm-sex').value,
       spouse: r.querySelector('input[type=checkbox]').checked
-    })).filter(m => m.age > -1);
+    }));
   }
 
   function val(name) {

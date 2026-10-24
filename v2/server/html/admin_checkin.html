@@ -135,6 +135,13 @@ const PRINT_WARN = { ar: 1, fa: 1, ur: 1, hi: 1 };
 function num(id) { return parseInt(document.getElementById(id).value || '0', 10); }
 function esc(v) { return v == null ? '' : String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 
+// People on file. The cached family_size can lag behind the itemized members
+// (legacy records, a size never recomputed), so trust whichever is larger.
+function familyCount(u) {
+  if (!u) return 1;
+  return Math.max(parseInt(u.family_size, 10) || 1, 1 + (u.family_members || []).length);
+}
+
 function langData(code) { return LANGS.find(l => l.code === code) || LANGS.find(l => l.code === 'en') || null; }
 function plural(n, sing, plur) { return n === 1 ? sing : plur; }
 
@@ -229,15 +236,18 @@ let SHOP = null;
 const ADULT = 18;
 
 function deriveShop(u) {
-  let boys = 0, girls = 0, men = 0, women = 0, spouse = null;
+  let boys = 0, girls = 0, men = 0, women = 0, unknown = 0, spouse = null;
   (u.family_members || []).forEach(m => {
     const age = parseInt(m.age, 10);
-    if (isNaN(age) || age < 0) return;
+    // Every stored member is a person. The ones that can't be placed in the
+    // age/sex breakdown — v1 created members as { age: -1, sex: "" }, and a row
+    // can still be saved without a sex — go to Unknown instead of vanishing.
+    if (isNaN(age) || age < 0) { unknown++; return; }
     if (!spouse && m.spouse && age >= ADULT) { spouse = m; return; } // pull spouse out
-    if (age < ADULT) { if (m.sex === 'male') boys++; else if (m.sex === 'female') girls++; }
-    else { if (m.sex === 'male') men++; else if (m.sex === 'female') women++; }
+    if (age < ADULT) { if (m.sex === 'male') boys++; else if (m.sex === 'female') girls++; else unknown++; }
+    else { if (m.sex === 'male') men++; else if (m.sex === 'female') women++; else unknown++; }
   });
-  return { boys, girls, men, women, spouse };
+  return { boys, girls, men, women, unknown, spouse };
 }
 
 function spouseLabel(s) {
@@ -289,11 +299,12 @@ function renderShoppingFor(u) {
   if (d.girls) box.appendChild(sfCount('Girl', 'Girls', 'girls', d.girls));
   if (d.men)   box.appendChild(sfCount('Man', 'Men', 'men', d.men));
   if (d.women) box.appendChild(sfCount('Woman', 'Women', 'women', d.women));
-  // Reconcile with the stored family size: members not itemized by age/sex (e.g.
-  // every user created before the family-members editor existed) show up here so
-  // the ticket starts at the real family size and stays adjustable.
-  const accounted = 1 + (d.spouse ? 1 : 0) + d.boys + d.girls + d.men + d.women;
-  const others = Math.max(0, (parseInt(u.family_size, 10) || 1) - accounted);
+  // Everything that isn't itemized by age/sex lands in one Unknown chip: the
+  // stored members we couldn't classify, plus any shortfall against the cached
+  // family size (users created before the family-members editor existed). The
+  // ticket therefore starts at the real family size and stays adjustable.
+  const accounted = 1 + (d.spouse ? 1 : 0) + d.boys + d.girls + d.men + d.women + d.unknown;
+  const others = d.unknown + Math.max(0, (parseInt(u.family_size, 10) || 1) - accounted);
   if (others) {
     const c = sfCount('Unknown', null, 'unknown', others);
     c.querySelector('input').title = 'Family members without an age/sex on file';
@@ -534,8 +545,9 @@ async function load(id) {
   CUR = u;
   BALCFG = data.balance_config || null;
   document.getElementById('panel').style.display = 'block';
-  document.getElementById('who').textContent = u.name_string + '  ·  family of ' + (u.family_size || 1);
-  document.getElementById('t_for').value = u.family_size || 1; // default people = family size
+  const fam = familyCount(u);
+  document.getElementById('who').textContent = u.name_string + '  ·  family of ' + fam;
+  document.getElementById('t_for').value = fam; // default people = family size
   document.getElementById('t_name').value = u.name_string || '';
   document.getElementById('t_barcode').textContent = (u.barcodes && u.barcodes[0]) ? u.barcodes[0] : 'barcode assigned at check-in';
   setTicketFromConfig();                                       // per-person limits from settings

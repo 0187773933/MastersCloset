@@ -247,6 +247,18 @@ func ClampFamily(u *User, max, existingSize int) {
 	}
 }
 
+// EnsureFamilySize floors the cached family size at the people actually on file
+// (the account holder plus every itemized member). A larger stored size is left
+// alone: records predating the family-members editor carry a real size with
+// nothing itemized, and the check-in screen still shows those as unknowns. This
+// is what stops the cached field drifting below the member array, which left the
+// check-in screen showing a family of one.
+func EnsureFamilySize(u *User) {
+	if n := len(u.FamilyMembers) + 1; u.FamilySize < n {
+		u.FamilySize = n
+	}
+}
+
 func (u *User) computeFamilySize() (size int, changed bool) {
 	size = len(u.FamilyMembers) + 1
 	if u.FamilySize != size {

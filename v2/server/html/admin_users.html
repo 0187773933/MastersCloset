@@ -42,6 +42,16 @@ let MAXFAM = 0;   // largest family incl. the account holder; 0 = no limit
 // then return there with the same user pulled up, instead of just closing.
 const cameFromCheckin = /\/admin\/checkin(\/|\?|#|$)/.test(document.referrer || '');
 
+// Deep-linked to one user (/admin/users/<uuid>, e.g. the check-in page's Edit
+// button): the page is an editor, not a browser. The list stays out of the way —
+// it sits above the editor, so loading it pushed the form off the screen — until
+// a search or Cancel asks for it.
+let editorOnly = false;
+function showList(on) {
+  listEl.style.display = on ? '' : 'none';
+  if (!on) listEl.innerHTML = '';
+}
+
 function esc(v) { return v == null ? '' : String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
 function debounce(fn, ms) { let t; return function () { clearTimeout(t); const a = arguments; t = setTimeout(() => fn.apply(null, a), ms); }; }
 
@@ -61,6 +71,8 @@ function row(u) {
 async function search() {
   const v = document.getElementById('q').value.trim();
   if (v === '') { loadRecent(); return; }
+  // Searching is an explicit ask for the list, even on a deep link.
+  if (editorOnly) { editorOnly = false; showList(true); }
   if (v.length < 2) { listEl.innerHTML = '<p class="muted small">Type at least 2 letters.</p>'; return; }
   listEl.innerHTML = 'Searching…';
   const data = await (await fetch('/admin/user/search/fuzzy/' + encodeURIComponent(v))).json();
@@ -70,6 +82,7 @@ const liveSearch = debounce(search, 250);
 
 // The default list under an empty search box: who came in most recently.
 async function loadRecent() {
+  if (editorOnly) return; // deep-linked editor: nothing above the form
   let users = [];
   try { users = (await (await fetch('/admin/user/recent?limit=25')).json()).result || []; } catch (e) {}
   if (document.getElementById('q').value.trim() !== '') return; // the user started typing meanwhile
@@ -194,17 +207,17 @@ function addBarcodeRow(value) {
 }
 
 // Family size is calculated (read-only) = account holder + each itemized member.
-// When no members are itemized (e.g. a user created before this editor existed),
-// leave the stored size untouched rather than collapsing it to 1.
+// Every row counts, age or not — a member with only a sex on file is still a
+// person, and is saved as one. When no members are itemized (e.g. a user created
+// before this editor existed), leave the stored size untouched rather than
+// collapsing it to 1.
 function syncFamilySize() {
   const fs = editorEl.querySelector('input[data-key="family_size"]');
   if (!fs) return;
   const rows = document.querySelectorAll('#fmList .fm-row');
   syncFamilyCap(rows.length);
   if (rows.length === 0) return;
-  let n = 0;
-  rows.forEach(r => { if ((r.querySelector('.fm-age').value || '').trim() !== '') n++; });
-  fs.value = n + 1;
+  fs.value = rows.length + 1;
 }
 
 // Stop the row count growing past the Max Family Size setting. An account that is
@@ -276,13 +289,16 @@ function addFamilyMemberRow(member) {
   syncFamilySize();
 }
 
-// Collect member rows, dropping blank ones (v1 filtered age > -1).
+// Every row on screen is a member, saved as one. Rows exist only because a
+// member is on file or someone pressed ＋, so a half-filled one (age -1 and/or
+// no sex — the shape v1 stored) is kept rather than silently dropped on Save:
+// the check-in screen counts it as an unknown family member. Remove with 🗑.
 function collectFamilyMembers() {
   return Array.from(document.querySelectorAll('#fmList .fm-row')).map(r => ({
     age: parseInt(r.querySelector('.fm-age').value || '-1', 10),
     sex: r.querySelector('.fm-sex').value,
     spouse: r.querySelector('input[type=checkbox]').checked
-  })).filter(m => m.age > -1);
+  }));
 }
 
 function setPath(obj, path, value) {
@@ -333,6 +349,10 @@ function closeEditor() {
   editorEl.innerHTML = '';
   current = null;
   history.replaceState(null, '', '/admin/users'); // drop the deep-link uuid
+  // Closing a deep-linked editor leaves a plain Users page, not a blank one.
+  editorOnly = false;
+  showList(true);
+  loadRecent();
 }
 
 async function deleteUser() {
@@ -352,7 +372,12 @@ Promise.all([
 ].map(p => p.catch(() => {})))
   .finally(() => {
     const presel = (location.pathname.match(/\/admin\/users\/([^\/?#]+)/) || [])[1] || '';
-    if (presel) loadUser(presel);
+    if (presel) {
+      editorOnly = true;
+      showList(false);
+      loadUser(presel);
+      return;
+    }
     loadRecent();
   });
 </script>
